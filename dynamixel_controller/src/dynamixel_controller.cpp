@@ -631,20 +631,11 @@ DynamixelController::~DynamixelController()
 void DynamixelController::startBroadcastingJointStates()
 {
     
-    if (dynamixel_ports_.size() > 1)
-    {
-        broadcast_timer_ = nh_->createTimer(ros::Duration(1.0 / publish_rate_), 
-                &DynamixelController::publishJointStatesThreaded, this);
-    }
-    else
-    {
-        broadcast_timer_ = nh_->createTimer(ros::Duration(1.0 / publish_rate_), 
-                &DynamixelController::publishJointStates, this);
-    }
-
-    broadcast_timer_.start();
-
+    broadcast_timer_ = nh_->createTimer(ros::Duration(1.0 / publish_rate_), 
+            &DynamixelController::publishJointStatesThreaded, this);
 }
+
+
 
 
 /** 
@@ -722,19 +713,40 @@ void DynamixelController::publishJointStatesThreaded(const ros::TimerEvent& even
         first_write_ = false;
     }
 
-    //spawn an IO thread for each port
-    for (int i = 0; i < dynamixel_ports_.size(); i++)
+    //spawn an IO thread for each additional port
+    for (int i = 1; i < dynamixel_ports_.size(); i++)
     {
         reads[i] = sensor_msgs::JointState();
         std::thread readThread(&DynamixelController::multiThreadedIO, this, i, std::ref(reads[i]));
         threads.push_back(move(readThread));
     }
 
+    //get messages for the first port
+    reads[0] = sensor_msgs::JointState();
 
-    //wait for threads to complete
-    for (int i = 0; i < threads.size(); i++)
+    //keep the write message thread safe 
+    std::unique_lock<std::mutex> lock(write_mutex_);
+    sensor_msgs::JointState temp_msg = write_msg_;
+    write_ready_ = false;
+    lock.unlock();
+
+    //perform the IO on the first port
+
+    //perform write
+    multiThreadedWrite(0, temp_msg);
+
+    //perform read
+    multiThreadedRead(0, reads[0]);
+
+
+    //loop and get port information (wait for threads in order if any were created)
+    for (int i = 0; i < dynamixel_ports_.size(); i++)
     {
-        threads[i].join();
+
+        if (i > 0)
+        {
+            threads[i-1].join();
+        }
 
         if (reads[i].name.size() == 0)
         {
@@ -759,69 +771,6 @@ void DynamixelController::publishJointStatesThreaded(const ros::TimerEvent& even
         write_ready_ = false;
         lock.unlock();
     } 
-
-    //publish joint states
-    joint_state_publisher_.publish(read_msg);
-
-}
-
-
-/*
- * Timer callback handling top level control of IO in single thread (single port) applications
- */
-void DynamixelController::publishJointStates(const ros::TimerEvent& event)
-{
-    //don't access the driver after its been cleaned up
-    if (shutting_down_)
-        return;
-
-    sensor_msgs::JointState read_msg;
-
-    //enable torque only once we start receiving commands
-    if (write_ready_ && first_write_)
-    {
-
-        //only one port in this case, loop over all joints and enable
-        std::map<std::string, dynamixelInfo>::iterator it;
-        for(it = dynamixel_ports_[0].joints.begin(); it != dynamixel_ports_[0].joints.end(); it++)
-        {
-
-            dynamixelInfo info = it->second;
-            int32_t priorPos = info.init;
-            
-            //this is to ensure that the motor is enabled at it's current position
-            dynamixel_ports_[0].driver->getPosition(info.id, priorPos);
-            dynamixel_ports_[0].driver->setPosition(info.id, priorPos);
-            
-            //enable motor torque
-            dynamixel_ports_[0].driver->setTorqueEnabled(info.id, 1);
-            if (control_type_ == POSITION_CONTROL)
-            {
-                //set profile velocity
-                int regVal = (int) ((double) (info.joint_speed) * (60/(2.0 * M_PI)) * info.gear_reduction);
-                dynamixel_ports_[0].driver->setProfileVelocity(info.id, regVal);
-            } 
-
-            ROS_INFO("Torque enabled on %s joint", info.joint_name.c_str());
-            info.torque_enabled = true;
-        }
-
-        first_write_ = false;
-    }
-
-
-
-    //keep the write message thread safe 
-    std::unique_lock<std::mutex> lock(write_mutex_);
-    sensor_msgs::JointState temp_msg = write_msg_;
-    write_ready_ = false;
-    lock.unlock();
-
-    //perform write
-    multiThreadedWrite(0, temp_msg);
-
-    //perform read
-    multiThreadedRead(0, read_msg);
 
     //publish joint states
     joint_state_publisher_.publish(read_msg);
@@ -1004,7 +953,6 @@ void DynamixelController::multiThreadedWrite(int port_num, sensor_msgs::JointSta
                     }
                 }
             }
-            ROS_INFO("Torque: %d", torque);
             torques.push_back(torque);
         }
 
