@@ -1,0 +1,5 @@
+<launch>
+	<node name="dynamixel_node" pkg="dynamixel_controller" type="dynamixel_controller_node" output="screen">
+		<rosparam command="load" file="$(find dynamixel_controller)/config/controller_config.yaml" />
+	</node>
+</launch>

@@ -1,0 +1,45 @@
+# This file contains servo parameters specific to each model, used to convert 
+# input positions, velocities and torques into servo register values. 
+# These values should not need to be edited.
+
+- name: H54
+  model_number: 53768 
+  cpr: 502000
+  gear_reduction: 500.0
+  torque_ratio: 32767
+
+- name: H42
+  model_number: 51200
+  cpr: 304000 
+  gear_reduction: 300.0
+  torque_ratio: 32767
+
+- name: H54
+  model_number: 54024 
+  cpr: 502000
+  gear_reduction: 500.0
+  torque_ratio: 32767
+
+- name: MX28
+  model_number: 29 
+  cpr: 4096
+  gear_reduction: 8.772
+  torque_ratio: 1023
+
+- name: MX64
+  model_number: 310
+  cpr: 4096  
+  gear_reduction: 8.772
+  torque_ratio: 1023
+
+- name: MX106
+  model_number: 320 
+  cpr: 4096
+  gear_reduction: 8.772
+  torque_ratio: 1023
+
+- name: XM430
+  model_number: 1020
+  cpr: 4096
+  gear_reduction: 4.367
+  torque_ratio: 1193

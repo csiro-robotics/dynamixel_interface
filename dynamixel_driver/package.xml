@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package>
+  <name>dynamixel_driver</name>
+  <version>1.0.0</version>
+  <description>Driver for abstracting communications with the dynamixel series of servos. used by dynamixel_controller</description>
+
+  <maintainer email="Thomas.Molnar@data61.csiro.au">Tom Molnar</maintainer>
+
+  <license>BSD</license>
+
+  <author email="Thomas.Molnar@data61.csiro.au">Tom Molnar</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>dynamixel_sdk</build_depend>
+  <build_depend>roscpp</build_depend>
+  <run_depend>dynamixel_sdk</run_depend>
+  <run_depend>roscpp</run_depend>
+
+  <export>
+
+  </export>
+</package>

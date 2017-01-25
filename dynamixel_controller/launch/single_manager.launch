@@ -1,0 +1,10 @@
+<launch>
+  <arg name="device" default="/dev/ttyUSB0"/>
+  <arg name="baud" default="1000000"/>
+  <arg name="id" default="0"/>
+
+  <param name="device_name"      value="$(arg device)"/>
+  <param name="baud_rate"        value="$(arg baud)"/>
+  <param name="scan_id"			 value="$(arg id)"/>
+  <node name="dynamixel_manager" pkg="dynamixel_workbench_single_manager" type="dynamixel_workbench_single_manager" required="true" output="screen"/>
+</launch>
