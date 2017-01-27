@@ -40,18 +40,16 @@
 /**
  * @file   dynamixel_driver.h
  * @author Tom Molnar (Tom.Molnar@data61.csiro.au)
- * @date   December, 2016
- * @brief  Defines the register address tables for each series of dynamixel,
- * as well as the control and status codes for communication.
+ * @date   January, 2017
+ * @brief  Defines the hardware abstraction methods for communicating with dynamixels
  */
+
 
 #ifndef DYNAMIXEL_DRIVER_H_
 #define DYNAMIXEL_DRIVER_H_
 
-#include <pthread.h>
 #include <stdint.h>
 
-#include <set>
 #include <map>
 #include <string>
 #include <vector>

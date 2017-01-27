@@ -56,8 +56,6 @@ Private Member Functions</h2></td></tr>
 <tr class="separator:a8ca1a487430a364658c96b4a2249b788"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab837865cbf46f7daabfc837494d0d7f4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdynamixel__controller_1_1DynamixelController.html#ab837865cbf46f7daabfc837494d0d7f4">multiThreadedWrite</a> (int port_num, sensor_msgs::JointState joint_commands)</td></tr>
 <tr class="separator:ab837865cbf46f7daabfc837494d0d7f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a60ccda912a01ea287e68e9ead9c04301"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdynamixel__controller_1_1DynamixelController.html#a60ccda912a01ea287e68e9ead9c04301">publishJointStates</a> (const ros::TimerEvent &amp;event)</td></tr>
-<tr class="separator:a60ccda912a01ea287e68e9ead9c04301"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aabb387bfb62212ba8d92222e6cda367e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdynamixel__controller_1_1DynamixelController.html#aabb387bfb62212ba8d92222e6cda367e">publishJointStatesThreaded</a> (const ros::TimerEvent &amp;event)</td></tr>
 <tr class="separator:aabb387bfb62212ba8d92222e6cda367e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -115,7 +113,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Constructor, loads the motor configuration information from the specified yaml file and intialises The motor states. </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00082">82</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00088">88</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
 
 </div>
 </div>
@@ -133,7 +131,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Destructor, deletes the objects holding the serial ports and disables the motors if required </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00597">597</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00603">603</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
 
 </div>
 </div>
@@ -167,7 +165,7 @@ Private Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00656">656</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00653">653</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
 
 </div>
 </div>
@@ -211,7 +209,7 @@ Private Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00837">837</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00792">792</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
 
 </div>
 </div>
@@ -255,7 +253,7 @@ Private Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l01088">1088</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l01042">1042</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
 
 </div>
 </div>
@@ -299,34 +297,7 @@ Private Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00859">859</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
-
-</div>
-</div>
-<a class="anchor" id="a60ccda912a01ea287e68e9ead9c04301"></a>
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void DynamixelController::publishJointStates </td>
-          <td>(</td>
-          <td class="paramtype">const ros::TimerEvent &amp;&#160;</td>
-          <td class="paramname"><em>event</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">private</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Timer callback handling top level control of IO in single thread (single port) applications </p>
-
-<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00772">772</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00814">814</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
 
 </div>
 </div>
@@ -351,9 +322,10 @@ Private Attributes</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+<p>TimeEvent callback for handling top level control of IO (for multiple ports). Function spawns and waits on a thread for each additional port defined. In cases where no additional ports are</p>
 <p>TimeEvent callback for handling top level control of IO (for multiple ports). Function spawns and waits on a thread for each </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00675">675</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00672">672</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
 
 </div>
 </div>
@@ -371,7 +343,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Start broadcasting JointState messages corresponding to the connected dynamixels </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00631">631</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8cpp_source.html#l00637">637</a> of file <a class="el" href="dynamixel__controller_8cpp_source.html">dynamixel_controller.cpp</a>.</p>
 
 </div>
 </div>
@@ -395,7 +367,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Timer that controls the rate of the IO callback </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00308">308</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00304">304</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -418,7 +390,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>method of control (position/velocity/torque) </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00293">293</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00289">289</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -441,7 +413,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Debug message publisher </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00311">311</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00307">307</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -464,7 +436,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>the vector of all ports in use </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00299">299</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00295">295</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -487,7 +459,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Can echo commands sent to the motors (useful for monitoring write values/rates) </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00280">280</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00276">276</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -509,7 +481,7 @@ Private Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00290">290</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00286">286</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -532,7 +504,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Publishes joint states from reads </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00302">302</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00298">298</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -555,7 +527,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Gets joint states for writes </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00305">305</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00301">301</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -578,7 +550,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>map of model numbers to motor specifications </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00296">296</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00292">292</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -601,7 +573,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Handler for the ROS Node </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00268">268</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00264">264</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -624,7 +596,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Rate at which joint state information is published </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00271">271</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00267">267</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -647,7 +619,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Indicates to callbacks that the controller is shutting down </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00274">274</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00270">270</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -670,7 +642,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Indicates if the motors should be turned off when the controller stops </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00277">277</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00273">273</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -693,7 +665,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Stores the last message received from the write command topic </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00283">283</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00279">279</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -716,7 +688,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Mutex for write_msg, as there are potentially multiple threads </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00286">286</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00282">282</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -739,7 +711,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Booleans indicating if we have received commands </p>
 
-<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00289">289</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
+<p>Definition at line <a class="el" href="dynamixel__controller_8h_source.html#l00285">285</a> of file <a class="el" href="dynamixel__controller_8h_source.html">dynamixel_controller.h</a>.</p>
 
 </div>
 </div>
@@ -753,7 +725,7 @@ Private Attributes</h2></td></tr>
 <hr size="1"><div style="align: right;">
 <a href="http://wiki.ros.org/dynamixel_controller">dynamixel_controller</a><br />
 Author(s): Tom Molnar <tom.molnar@data61.csiro.au></br />
-<small>autogenerated on Wed Jan 25 2017 12:47:38</small>
+<small>autogenerated on Wed Jan 25 2017 15:24:31</small>
 </div>
 </body>
 </html>

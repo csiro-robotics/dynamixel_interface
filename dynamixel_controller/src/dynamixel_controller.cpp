@@ -37,10 +37,15 @@
  *
  *********************************************************************/
 
+/**
+ * @file   dynamixel_controller.cpp
+ * @author Tom Molnar (Tom.Molnar@data61.csiro.au)
+ * @date   January, 2017
+ * @brief  Implements the dynamixel controller class and defines the main loop of operation
+ */
 
 #include <string>
 #include <stdlib.h>
-#include <sstream>
 #include <fstream>
 #include <chrono>
 #include <thread>
@@ -52,7 +57,6 @@
 
 
 #include "yaml-cpp/yaml.h"
-
 
 #ifdef HAVE_NEW_YAMLCPP
 // The >> operator disappeared in yaml-cpp 0.5, so this function is
@@ -113,7 +117,7 @@ DynamixelController::DynamixelController()
         model_number2specs_[spec.model_number] = spec;
     }
 
-
+    //Stores config variables only used in init function
     std::string mode;
     double global_joint_speed;
     double global_torque_limit;
@@ -167,7 +171,7 @@ DynamixelController::DynamixelController()
             ROS_BREAK();
         }
 
-
+        //number of ports defined
         num_ports = ports.size();
 
         //For every port, load and verify its information
@@ -249,7 +253,7 @@ DynamixelController::DynamixelController()
 
             /************************* Dynamixel initialisation *********************/
 
-            int num_motors = 0;
+            int num_servos = 0;
 
             XmlRpc::XmlRpcValue servos;
             
@@ -264,7 +268,8 @@ DynamixelController::DynamixelController()
                 servos = ports[i]["servos"];
             }
 
-            num_motors = servos.size();
+            //number of servos defined
+            num_servos = servos.size();
 
             //For every servo, load and verify its information
             for (int j = 0; j < servos.size(); j++)
@@ -577,7 +582,7 @@ DynamixelController::DynamixelController()
 
 
     //advertise the sensor feedback topic 
-    joint_state_publisher_  = nh_->advertise<sensor_msgs::JointState>("/hexapod/joint_states", 1);
+    joint_state_publisher_  = nh_->advertise<sensor_msgs::JointState>("/joint_states", 1);
 
     //advertise the debug topic
     if (echo_joint_commands_)
@@ -586,7 +591,7 @@ DynamixelController::DynamixelController()
     }
 
     //Start listening to command messages
-    joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_hexapod_joint_state", 
+    joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_state", 
         1, &DynamixelController::jointStateCallback, this);
 }
 
@@ -914,7 +919,7 @@ void DynamixelController::multiThreadedWrite(int port_num, sensor_msgs::JointSta
 
             //we also need to take an absolute value as each motor series handles negative inputs
             //differently
-            if ((control_type_ == VELOCITY_CONTROL) && (rad_s_vel < 0))
+            if ((control_type_ == VELOCITY_CONTROL) && ((rad_s_vel < 0) != (info.min > info.max)))
             {
 
                 if (port.series == "MX")
@@ -926,6 +931,7 @@ void DynamixelController::multiThreadedWrite(int port_num, sensor_msgs::JointSta
                 {
                     vel = -vel;
                 }
+
             }
 
             //push motor velocity value onto list
@@ -944,15 +950,21 @@ void DynamixelController::multiThreadedWrite(int port_num, sensor_msgs::JointSta
             if (info.torque_ratio != 0)
             {
                 torque = (int) (input_torque * info.torque_ratio);
+                torque = abs(torque);
 
-                if (torque < 0)
+                if ((input_torque < 0) != (info.min > info.max))
                 {
                     if (port.series == "MX")
                     {
-                        torque = 1024 - torque;
+                        torque = 1024 + torque;
+                    }
+                    else
+                    {
+                        torque = -torque;
                     }
                 }
             }
+
             torques.push_back(torque);
         }
 

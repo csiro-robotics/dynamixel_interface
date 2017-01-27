@@ -36,7 +36,7 @@
 /**
  * @file   dynamixel_controller.h
  * @author Tom Molnar (Tom.Molnar@data61.csiro.au)
- * @date   December, 2016
+ * @date   January, 2017
  * @brief  Defines the dynamixel controller class and the types used therein
  */
 
@@ -48,9 +48,7 @@
 #include <mutex>
 
 #include <ros/ros.h>
-#include <ros/callback_queue.h>
 #include <sensor_msgs/JointState.h>
-#include <std_msgs/Int32MultiArray.h>
 
 #include <dynamixel_driver/dynamixel_driver.h>
 
@@ -232,14 +230,10 @@ private:
 
     /**
      * TimeEvent callback for handling top level control of IO (for multiple ports).
-     * Function spawns and waits on a thread for each 
+     * Function spawns and waits on a thread for each additional port defined. In cases where no additional ports are
+     * 
      */
     void publishJointStatesThreaded(const ros::TimerEvent& event);
-
-    /**
-     * Timer callback handling top level control of IO in single thread (single port) applications
-     */
-    void publishJointStates(const ros::TimerEvent& event);
 
     /**
      * Top level control function for each port's IO thread.

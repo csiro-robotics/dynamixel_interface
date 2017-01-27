@@ -37,16 +37,19 @@
  *
  *********************************************************************/
 
-#include <time.h>
-#include <pthread.h>
+/**
+ * @file   dynamixel_driver.cpp
+ * @author Tom Molnar (Tom.Molnar@data61.csiro.au)
+ * @date   January, 2017
+ * @brief  Implements the hardware abstraction for communicating with dynamixels
+ */
+
+
 #include <stdint.h>
 #include <stdio.h>
-#include <iostream> 
 #include <stdlib.h>
 
-#include <sstream>
 #include <map>
-#include <set>
 #include <string>
 #include <vector>
 
