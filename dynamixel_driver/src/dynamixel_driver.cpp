@@ -1,6 +1,80 @@
-/**
+/* CSIRO Open Source Software License Agreement (variation of the BSD / MIT License)
+ * Copyright (c) 2017, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
+ * All rights reserved. CSIRO is willing to grant you a license to the dynamixel_actuator ROS packages on the following 
+ * terms, except where otherwise indicated for third party material. Redistribution and use of this software in source 
+ * and binary forms, with or without modification, are permitted provided that the following conditions are met:
+ * - Redistributions of source code must retain the above copyright notice, this list of conditions and the following 
+ *   disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following 
+ *   disclaimer in the documentation and/or other materials provided with the distribution.
+ * - Neither the name of CSIRO nor the names of its contributors may be used to endorse or promote products derived from 
+ *   this software without specific prior written permission of CSIRO.
+ * 
+ * EXCEPT AS EXPRESSLY STATED IN THIS AGREEMENT AND TO THE FULL EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS 
+ * PROVIDED "AS-IS". CSIRO MAKES NO REPRESENTATIONS, WARRANTIES OR CONDITIONS OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO ANY REPRESENTATIONS, WARRANTIES OR CONDITIONS REGARDING THE CONTENTS OR ACCURACY OF THE SOFTWARE, 
+ * OR OF TITLE, MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, THE ABSENCE OF LATENT OR OTHER 
+ * DEFECTS, OR THE PRESENCE OR ABSENCE OF ERRORS, WHETHER OR NOT DISCOVERABLE.
+ * TO THE FULL EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL CSIRO BE LIABLE ON ANY LEGAL THEORY (INCLUDING, 
+ * WITHOUT LIMITATION, IN AN ACTION FOR BREACH OF CONTRACT, NEGLIGENCE OR OTHERWISE) FOR ANY CLAIM, LOSS, DAMAGES OR 
+ * OTHER LIABILITY HOWSOEVER INCURRED.  WITHOUT LIMITING THE SCOPE OF THE PREVIOUS SENTENCE THE EXCLUSION OF LIABILITY 
+ * SHALL INCLUDE: LOSS OF PRODUCTION OR OPERATION TIME, LOSS, DAMAGE OR CORRUPTION OF DATA OR RECORDS; OR LOSS OF 
+ * ANTICIPATED SAVINGS, OPPORTUNITY, REVENUE, PROFIT OR GOODWILL, OR OTHER ECONOMIC LOSS; OR ANY SPECIAL, INCIDENTAL, 
+ * INDIRECT, CONSEQUENTIAL, PUNITIVE OR EXEMPLARY DAMAGES, ARISING OUT OF OR IN CONNECTION WITH THIS AGREEMENT, ACCESS 
+ * OF THE SOFTWARE OR ANY OTHER DEALINGS WITH THE SOFTWARE, EVEN IF CSIRO HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH 
+ * CLAIM, LOSS, DAMAGES OR OTHER LIABILITY. APPLICABLE LEGISLATION SUCH AS THE AUSTRALIAN CONSUMER LAW MAY APPLY 
+ * REPRESENTATIONS, WARRANTIES, OR CONDITIONS, OR IMPOSES OBLIGATIONS OR LIABILITY ON CSIRO THAT CANNOT BE EXCLUDED, 
+ * RESTRICTED OR MODIFIED TO THE FULL EXTENT SET OUT IN THE EXPRESS TERMS OF THIS CLAUSE ABOVE "CONSUMER GUARANTEES".  
+ * TO THE EXTENT THAT SUCH CONSUMER GUARANTEES CONTINUE TO APPLY, THEN TO THE FULL EXTENT PERMITTED BY THE APPLICABLE 
+ * LEGISLATION, THE LIABILITY OF CSIRO UNDER THE RELEVANT CONSUMER GUARANTEE IS LIMITED (WHERE PERMITTED AT CSIRO'S 
+ * OPTION) TO ONE OF FOLLOWING REMEDIES OR SUBSTANTIALLY EQUIVALENT REMEDIES:
+ * (a)  THE REPLACEMENT OF THE SOFTWARE, THE SUPPLY OF EQUIVALENT SOFTWARE, OR SUPPLYING RELEVANT SERVICES AGAIN;
+ * (b)  THE REPAIR OF THE SOFTWARE;
+ * (c)  THE PAYMENT OF THE COST OF REPLACING THE SOFTWARE, OF ACQUIRING EQUIVALENT SOFTWARE, HAVING THE RELEVANT 
+ *      SERVICES SUPPLIED AGAIN, OR HAVING THE SOFTWARE REPAIRED.
+ * IN THIS CLAUSE, CSIRO INCLUDES ANY THIRD PARTY AUTHOR OR OWNER OF ANY PART OF THE SOFTWARE OR MATERIAL DISTRIBUTED 
+ * WITH IT.  CSIRO MAY ENFORCE ANY RIGHTS ON BEHALF OF THE RELEVANT THIRD PARTY.
+ * 
+ * Third Party Components:
+ * 
+ * The following third party components are distributed with the Software.  You agree to comply with the license terms 
+ * for these components as part of accessing the Software.  Other third party software may also be identified in 
+ * separate files distributed with the Software.
+ * ___________________________________________________________________
+ * 
+ * dynamixel_driver and dynamixel_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
+ * Willow Garage):
+ * 
+ * https://github.com/baxelrod/dynamixel_pro_controller
+ * https://github.com/baxelrod/dynamixel_pro_driver
+ * 
+ * Thus they retain the following notice:
+ * 
+ * Software License Agreement (BSD License)
+ * Copyright (c) 2013, Willow Garage
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the 
+ * following conditions are met: 
+ *  - Redistributions of source code must retain the above copyright notice, this list of conditions and the following 
+ *    disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the 
+ *    following disclaimer in the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Willow Garage nor the names of its contributors may be used to endorse or promote products 
+ *    derived from this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * ___________________________________________________________________
+ */
+
+ /**
  * @file   dynamixel_driver.cpp
- * @author Tom Molnar (Tom.Molnar@data61.csiro.au)
+ * @author Tom Molnar (Tom.Molnar@data61.csiro.au), Brian Axelrod
  * @date   January, 2017
  * @brief  Implements the hardware abstraction for communicating with dynamixels
  */
@@ -1272,6 +1346,213 @@ bool DynamixelDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int
 	return false;
 }
 
+/**
+ * Bulk Reads the following servo state variables in one instruction
+ *
+ *  - goal position
+ *  - goal velocity
+ *  - goal torque (current)
+ *  - present position
+ *  - present velocity
+ *  - present load (current)
+ *  - present voltage
+ *  - present temperature
+ *
+ * @param servo_ids Pointer to a list of ID's to respond. Dynamixels will respond in order of list index
+ * @param responses Pointer map of dynamixel ID's to dynamixel response vectors, response vectors are a list of 
+ * parameter values in the order given above.
+ * @return True on comm success, false otherwise
+ */
+bool DynamixelDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
+                           std::map<int, std::vector<int32_t> >  *responses)
+{
+	
+	std::vector<int32_t> response;
+	std::vector<uint8_t> data;
+
+	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
+
+	uint32_t value = 0;
+
+	if (servo_series_ == 'M')
+	{		
+		//Read data from dynamixels
+		if( bulkRead(servo_ids, DXL_MX_GOAL_POSITION_L, 43, raw) )
+		{
+			//DECODE RAW DATA
+			for (int i = 0; i < servo_ids->size(); i++)
+			{
+
+				//get raw data response
+				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+
+				//get goal position (data[0] - data[1])
+				value = MAKEWORD(data[0], data[1]);
+				response.push_back(value);
+
+				//get goal velocity (data[2] - data[3])
+				value = MAKEWORD(data[2], data[3]);
+				response.push_back(value);
+
+				//get goal torque (data[41] - data[42])
+				value = MAKEWORD(data[41], data[42]);
+				response.push_back(value);
+
+				//get present position (data[6] - data[7])
+				value = MAKEWORD(data[6], data[7]);
+				response.push_back(value);
+
+				//get present velocity (data[8] - data[9])
+				value = MAKEWORD(data[8], data[9]);
+				response.push_back(value);
+
+				//get present torque (data[10] - data[11])
+				value = MAKEWORD(data[10], data[11]);
+				response.push_back(value);
+
+				//get present voltage (data[12])
+				value = data[12];
+				response.push_back(value);
+
+				//get present temperature (data[13])
+				value = data[13];
+				response.push_back(value);
+
+				//place responses into return data
+				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+
+				response.clear();
+				data.clear();
+
+			}
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+
+	}
+	else if (servo_series_ == 'X')
+	{
+		//read data from dynamixels
+		if( syncRead(servo_ids, DXL_X_GOAL_CURRENT, 45, raw) )
+		{
+			//DECODE RAW DATA
+			for (int i = 0; i < servo_ids->size(); i++)
+			{
+
+				//get raw data response
+				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+
+				//get goal position
+				value = MAKEINT(MAKEWORD(data[14], data[15]),MAKEWORD(data[16], data[17]));
+				response.push_back(value);
+
+				//get goal velocity
+				value = MAKEINT(MAKEWORD(data[2], data[3]),MAKEWORD(data[4], data[5]));
+				response.push_back(value);
+
+				//get goal torque
+				value = MAKEWORD(data[0], data[1]);
+				response.push_back(value);
+
+				//get present position
+				value = MAKEINT(MAKEWORD(data[30], data[31]),MAKEWORD(data[32], data[33]));
+				response.push_back(value);
+
+				//get present velocity
+				value = MAKEINT(MAKEWORD(data[26], data[27]),MAKEWORD(data[28], data[29]));
+				response.push_back(value);
+
+				//get present torque
+				value = MAKEWORD(data[24], data[25]);
+				response.push_back(value);
+
+				//get voltage
+				value = MAKEWORD(data[42], data[43]);
+				response.push_back(value);
+
+				//get temperature
+				value = data[44];
+				response.push_back(value);
+
+				//place responses into return data
+				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+
+				response.clear();
+				data.clear();
+			
+			}
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	else if (servo_series_ == 'P')
+	{
+		//read data from dynamixels
+		if( syncRead(servo_ids, DXL_PRO_GOAL_POSITION, 30, raw) )
+		{
+			//DECODE RAW DATA
+			for (int i = 0; i < servo_ids->size(); i++)
+			{
+				//get raw data response
+				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+
+				//get goal position
+				value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
+				response.push_back(value);
+
+				//get goal velocity
+				value = MAKEINT(MAKEWORD(data[4], data[5]),MAKEWORD(data[6], data[7]));
+				response.push_back(value);
+
+				//get goal torque
+				value = MAKEWORD(data[8], data[9]);
+				response.push_back(value);
+
+				//get present position
+				value = MAKEINT(MAKEWORD(data[15], data[16]),MAKEWORD(data[17], data[18]));
+				response.push_back(value);
+
+				//get present velocity
+				value = MAKEINT(MAKEWORD(data[19], data[20]),MAKEWORD(data[21], data[22]));
+				response.push_back(value);
+
+				//get present torque
+				value = MAKEWORD(data[23], data[24]);
+				response.push_back(value);
+
+				//get voltage
+				value = MAKEWORD(data[25], data[26]);
+				response.push_back(value);
+
+				//get temperature
+				value = data[27];
+				response.push_back(value);
+
+				//place responses into return data
+				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+
+				response.clear();
+				data.clear();
+			}
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	else
+	{
+		return false;
+	}
+	return false;
+}
 
 // ********************** Protected Read Methods *********************** //
 

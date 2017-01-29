@@ -1,11 +1,9 @@
 <?xml version="1.0"?>
 <package>
   <name>dynamixel_actuator</name>
-  <version>0.0.0</version>
+  <version>1.0.0</version>
   <description>The dynamixel_actuator package. Provides a fast and easily configurable interface for controlling many dynamixels at once.
-  Supports the Pro, MX and XM series of motors. Features include:
-  - Easily adjustable config file for managing project's with many dynamixels
-  - Multi port compatiability to allow synchronous control of dynamixels on different serial devices
+  Supports the Pro, MX and XM series of motors. 
   </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 

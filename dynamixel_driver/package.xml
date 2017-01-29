@@ -2,7 +2,7 @@
 <package>
   <name>dynamixel_driver</name>
   <version>1.0.0</version>
-  <description>Driver for abstracting communications with the dynamixel series of servos. used by dynamixel_controller</description>
+  <description>Driver for abstracting communications with the dynamixel series of servos. used by dynamixel_controller. Interface is based on the Dynamixel SDK v3.4.1</description>
 
   <maintainer email="Thomas.Molnar@data61.csiro.au">Tom Molnar</maintainer>
 
