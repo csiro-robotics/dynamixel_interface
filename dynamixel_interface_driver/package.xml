@@ -6,9 +6,10 @@
 
   <maintainer email="Thomas.Molnar@data61.csiro.au">Tom Molnar</maintainer>
 
-  <license>BSD</license>
+  <license>CSIRO Open Source Software License Agreement (variation of the BSD / MIT License)</license>
 
-  <author email="Thomas.Molnar@data61.csiro.au">Tom Molnar</author>
+  <!-- This package is based on the dynamixel_pro_driver package written by Brian Axelrod -->  
+  <author>Tom Molnar</author>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>dynamixel_sdk</build_depend>
