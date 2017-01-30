@@ -1,5 +1,5 @@
 
-Dynamixel Controller. Provides a simple abstracted interface that can control many dynamixels across multiple serial ports using only two topics.
+Dynamixel Interface Controller. Provides a simple abstracted interface that can control many dynamixels across multiple serial ports using only two topics.
 
 To use this controller with your robot:
 
@@ -14,7 +14,7 @@ To use this controller with your robot:
 
 3. In the top level launch file for your robot:
 	- launch the file created in step 2 BEFORE launching any higher level controllers
-	
+
 4. During operation:
 
 	- The controller communicates using the sensor_msgs::JointState message.

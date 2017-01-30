@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package>
-  <name>dynamixel_actuator</name>
+  <name>dynamixel_simple_interface</name>
   <version>1.0.0</version>
-  <description>The dynamixel_actuator package. Provides a fast and easily configurable interface for controlling many dynamixels at once.
-  Supports the Pro, MX and XM series of motors. 
+  <description>The dynamixel_simple_interface package. Provides a fast and easily configurable interface for controlling many dynamixels at once.
+  Supports the all variants of the Pro, MX and XM series of motors.
   </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
@@ -43,8 +43,8 @@
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
 
-  <run_depend>dynamixel_driver</run_depend>
-  <run_depend>dynamixel_controller</run_depend>
+  <run_depend>dynamixel_interface_driver</run_depend>
+  <run_depend>dynamixel_interface_controller</run_depend>
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->

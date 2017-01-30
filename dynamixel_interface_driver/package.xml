@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>dynamixel_driver</name>
+  <name>dynamixel_interface_driver</name>
   <version>1.0.0</version>
   <description>Driver for abstracting communications with the dynamixel series of servos. used by dynamixel_controller. Interface is based on the Dynamixel SDK v3.4.1</description>
 

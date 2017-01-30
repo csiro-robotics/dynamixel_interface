@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(dynamixel_controller)
+project(dynamixel_interface_controller)
 
 ################################################################################
 # Packages
@@ -10,7 +10,7 @@ project(dynamixel_controller)
 ## is used, also find other catkin packages
 
 find_package(catkin REQUIRED COMPONENTS
-  dynamixel_driver
+  dynamixel_interface_driver
   dynamixel_sdk
   roscpp
   roslib
@@ -55,8 +55,8 @@ endif(NOT ${yaml-cpp_VERSION} VERSION_LESS "0.5")
 
 catkin_package(
    INCLUDE_DIRS include
-#  LIBRARIES dynamixel_controller
-#  CATKIN_DEPENDS dynamixel_driver dynamixel_sdk roscpp roslib sensor_msgs yaml-cpp
+#  LIBRARIES dynamixel_interface_controller
+#  CATKIN_DEPENDS dynamixel_interface_driver dynamixel_sdk roscpp roslib sensor_msgs yaml-cpp
 #  DEPENDS system_lib
 )
 
@@ -77,9 +77,9 @@ include_directories(
 
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
-add_executable(dynamixel_controller_node src/dynamixel_controller.cpp)
+add_executable(dynamixel_interface_controller_node src/dynamixel_interface_controller.cpp)
 target_link_libraries(
-  dynamixel_controller_node
+  dynamixel_interface_controller_node
   yaml-cpp
 	${catkin_LIBRARIES}
   ${yaml-cpp_LIBRARIES}

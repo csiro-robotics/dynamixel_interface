@@ -42,7 +42,7 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  * 
- * dynamixel_driver and dynamixel_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
+ * dynamixel_interface_driver and dynamixel_interface_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
  * Willow Garage):
  * 
  * https://github.com/baxelrod/dynamixel_pro_controller
@@ -73,7 +73,7 @@
  */
 
 /**
- * @file   dynamixel_controller.cpp
+ * @file   dynamixel_interface_controller.cpp
  * @author Tom Molnar (Tom.Molnar@data61.csiro.au), Brian Axelrod
  * @date   January, 2017
  * @brief  Implements the dynamixel controller class and defines the main loop of operation
@@ -106,11 +106,11 @@ void operator >> (const YAML::Node& node, T& i)
 #include <ros/package.h>
 #include <XmlRpcValue.h>
 
-#include <dynamixel_controller/dynamixel_controller.h>
-#include <dynamixel_driver/dynamixel_driver.h>
+#include <dynamixel_interface_controller/dynamixel_interface_controller.h>
+#include <dynamixel_interface_driver/dynamixel_interface_driver.h>
 
 
-using namespace dynamixel_controller;
+using namespace dynamixel_interface_controller;
 using namespace std;
 
 
@@ -118,13 +118,13 @@ using namespace std;
  * Constructor, loads the motor configuration information from the specified yaml file and intialises 
  * The motor states.
  */
-DynamixelController::DynamixelController()
+DynamixelInterfaceController::DynamixelInterfaceController()
 {
     shutting_down_ = false;
     nh_ = new ros::NodeHandle("~");
 
     //load the file containing model info, we're not using the param server here
-    string path = ros::package::getPath("dynamixel_controller");
+    string path = ros::package::getPath("dynamixel_interface_controller");
     path += "/config/motor_data.yaml";
 
     YAML::Node doc;
@@ -278,7 +278,7 @@ DynamixelController::DynamixelController()
             //Attempt to start driver
             try
             {
-                port.driver = new dynamixel_driver::DynamixelDriver(port.device, port.baudrate, port.series);    
+                port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate, port.series);    
             }
             catch (int n)
             {
@@ -627,17 +627,17 @@ DynamixelController::DynamixelController()
 
     //Start listening to command messages
     joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_state", 
-        1, &DynamixelController::jointStateCallback, this);
+        1, &DynamixelInterfaceController::jointStateCallback, this);
 }
 
 
 /** 
  * Destructor, deletes the objects holding the serial ports and disables the motors if required
  */
-DynamixelController::~DynamixelController()
+DynamixelInterfaceController::~DynamixelInterfaceController()
 {
     
-    ROS_INFO("shutting_down_ dynamixel_controller");
+    ROS_INFO("shutting_down_ dynamixel_interface_controller");
 
     shutting_down_ = false;
     delete nh_;
@@ -668,11 +668,11 @@ DynamixelController::~DynamixelController()
 /**
  * Start broadcasting JointState messages corresponding to the connected dynamixels 
  */
-void DynamixelController::startBroadcastingJointStates()
+void DynamixelInterfaceController::startBroadcastingJointStates()
 {
     
     broadcast_timer_ = nh_->createTimer(ros::Duration(1.0 / publish_rate_), 
-            &DynamixelController::publishJointStatesThreaded, this);
+            &DynamixelInterfaceController::publishJointStatesThreaded, this);
 }
 
 
@@ -684,7 +684,7 @@ void DynamixelController::startBroadcastingJointStates()
  * a flag indicating a new message has been received
  * @param joint_commands the command received from the topic
  */
-void DynamixelController::jointStateCallback(const sensor_msgs::JointState::ConstPtr &joint_commands)
+void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointState::ConstPtr &joint_commands)
 {
     
     std::unique_lock<std::mutex> lock(write_mutex_);
@@ -703,7 +703,7 @@ void DynamixelController::jointStateCallback(const sensor_msgs::JointState::Cons
  * TimeEvent callback for handling top level control of IO (for multiple ports).
  * Function spawns and waits on a thread for each 
  */
-void DynamixelController::publishJointStatesThreaded(const ros::TimerEvent& event)
+void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEvent& event)
 {
     //don't access the driver after its been cleaned up
     if (shutting_down_)
@@ -757,7 +757,7 @@ void DynamixelController::publishJointStatesThreaded(const ros::TimerEvent& even
     for (int i = 1; i < dynamixel_ports_.size(); i++)
     {
         reads[i] = sensor_msgs::JointState();
-        std::thread readThread(&DynamixelController::multiThreadedIO, this, i, std::ref(reads[i]));
+        std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this, i, std::ref(reads[i]));
         threads.push_back(move(readThread));
     }
 
@@ -823,7 +823,7 @@ void DynamixelController::publishJointStatesThreaded(const ros::TimerEvent& even
  * @param port_num index used to retrieve port information from port list
  * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
  */
-void DynamixelController::multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg)
+void DynamixelInterfaceController::multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg)
 {
 
     //keep the write message thread safe
@@ -845,7 +845,7 @@ void DynamixelController::multiThreadedIO(int port_num, sensor_msgs::JointState 
  * @param port_num index used to retrieve port information from port list
  * @param joint_commands message cointaining the commands for each joint
  */
-void DynamixelController::multiThreadedWrite(int port_num, sensor_msgs::JointState joint_commands)
+void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs::JointState joint_commands)
 {
 
     //get this threads port information
@@ -1080,7 +1080,7 @@ void DynamixelController::multiThreadedWrite(int port_num, sensor_msgs::JointSta
  * @param port_num index used to retrieve port information from port list
  * @param read_msg the msg this ports join data is read into.
  */
-void DynamixelController::multiThreadedRead(int port_num, sensor_msgs::JointState &read_msg)
+void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::JointState &read_msg)
 {
 
 
@@ -1196,9 +1196,9 @@ void DynamixelController::multiThreadedRead(int port_num, sensor_msgs::JointStat
 int main(int argc, char **argv)
 {
   
-  ros::init(argc, argv, "dynamixel_controller");
+  ros::init(argc, argv, "dynamixel_interface_controller");
  
-  DynamixelController controller;
+  DynamixelInterfaceController controller;
   
   //Initialize Timer callback, this starts the IO
   controller.startBroadcastingJointStates();

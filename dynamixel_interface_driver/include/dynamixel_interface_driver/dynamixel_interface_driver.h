@@ -42,7 +42,7 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  * 
- * dynamixel_driver and dynamixel_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
+ * dynamixel_interface_driver and dynamixel_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
  * Willow Garage):
  * 
  * https://github.com/baxelrod/dynamixel_pro_controller
@@ -73,15 +73,15 @@
  */
 
  /**
- * @file   dynamixel_driver.h
+ * @file   dynamixel_interface_driver.h
  * @author Tom Molnar (Tom.Molnar@data61.csiro.au), Brian Axelrod
  * @date   January, 2017
  * @brief  Defines the hardware abstraction methods for communicating with dynamixels
  */
 
 
-#ifndef DYNAMIXEL_DRIVER_H_
-#define DYNAMIXEL_DRIVER_H_
+#ifndef DYNAMIXEL_INTERFACE_DRIVER_H_
+#define DYNAMIXEL_INTERFACE_DRIVER_H_
 
 #include <stdint.h>
 
@@ -91,14 +91,14 @@
 
 #include <dynamixel_sdk/dynamixel_sdk.h>
 
-namespace dynamixel_driver 
+namespace dynamixel_interface_driver 
 {
 
 /**
  * Provides the handling of the low level communications between the 
  * dynamixels and the controller
  */
-class DynamixelDriver
+class DynamixelInterfaceDriver
 {
 public:
 
@@ -109,12 +109,12 @@ public:
      * @param baud    The baud rate to use
      * @param series  The servo series in use (MX, XM or Pro)  
      */
-    DynamixelDriver(std::string device, int baud, std::string series);
+    DynamixelInterfaceDriver(std::string device, int baud, std::string series);
 
     /**
      * Destructor. Closes and releases serial port.
      */
-    ~DynamixelDriver();
+    ~DynamixelInterfaceDriver();
 
     /**
      * Ping the specified id, used to check if a dynamixel with that ID is on the bus
@@ -748,4 +748,4 @@ private:
 
 }
 
-#endif //DYNAMIXEL_DRIVER_H_
+#endif //DYNAMIXEL_INTERFACE_DRIVER_H_

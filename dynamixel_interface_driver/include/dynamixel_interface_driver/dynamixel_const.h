@@ -88,7 +88,7 @@
 #include <string>
 
 
-namespace dynamixel_driver
+namespace dynamixel_interface_driver
 {
 
 /**

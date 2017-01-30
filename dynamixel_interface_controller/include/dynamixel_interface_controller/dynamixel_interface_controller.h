@@ -42,7 +42,7 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  * 
- * dynamixel_driver and dynamixel_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
+ * dynamixel_driver and dynamixel_interface_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
  * Willow Garage):
  * 
  * https://github.com/baxelrod/dynamixel_pro_controller
@@ -73,14 +73,14 @@
  */
 
  /**
- * @file   dynamixel_controller.h
+ * @file   dynamixel_interface_controller.h
  * @author Tom Molnar (Tom.Molnar@data61.csiro.au), Brian Axelrod
  * @date   January, 2017
  * @brief  Defines the dynamixel controller class and the types used therein
  */
 
-#ifndef DYNAMIXEL_CONTROLLER_H_
-#define DYNAMIXEL_CONTROLLER_H_
+#ifndef DYNAMIXEL_INTERFACE_CONTROLLER_H_
+#define DYNAMIXEL_INTERFACE_CONTROLLER_H_
 
 #include <string>
 #include <map>
@@ -89,10 +89,10 @@
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 
-#include <dynamixel_driver/dynamixel_driver.h>
+#include <dynamixel_interface_driver/dynamixel_interface_driver.h>
 
 
-namespace dynamixel_controller
+namespace dynamixel_interface_controller
 {
 
 
@@ -183,7 +183,7 @@ struct portInfo
     std::string series;
 
     /** Pointer to the serial driver */
-    dynamixel_driver::DynamixelDriver *driver;
+    dynamixel_interface_driver::DynamixelInterfaceDriver *driver;
 
     /** map of joint names to information */
     std::map<std::string, dynamixelInfo> joints;
@@ -236,7 +236,7 @@ enum controlMode
  * and synchronously through different serial ports. This allows robots with many motors to reduce the overall IO
  * time required for control.
  */
-class DynamixelController
+class DynamixelInterfaceController
 {
 public:
 
@@ -244,12 +244,12 @@ public:
      * Constructor, loads the motor configuration information from the specified yaml file and intialises 
      * The motor states.
      */
-    DynamixelController();
+    DynamixelInterfaceController();
 
     /** 
      * Destructor, deletes the objects holding the serial ports and disables the motors if required
      */
-    ~DynamixelController();
+    ~DynamixelInterfaceController();
 
 
     /**
@@ -347,4 +347,4 @@ private:
 
 }
 
-#endif //DYNAMIXEL_CONTROLLER_H_
+#endif //DYNAMIXEL_INTERFACE_CONTROLLER_H_

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(dynamixel_driver)
+project(dynamixel_interface_driver)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -28,7 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES dynamixel_driver
+  LIBRARIES dynamixel_interface_driver
   CATKIN_DEPENDS dynamixel_sdk
 )
 
@@ -43,13 +43,13 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 ## Declare a cpp library
 
- add_library(dynamixel_driver
-   src/dynamixel_driver.cpp
+ add_library(dynamixel_interface_driver
+   src/dynamixel_interface_driver.cpp
 )
 
 ## Specify libraries to link a library or executable target against
 
- target_link_libraries(dynamixel_driver
+ target_link_libraries(dynamixel_interface_driver
    ${catkin_LIBRARIES}
  )
 
@@ -63,7 +63,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 ## Mark executables and/or libraries for installation
 
-install(TARGETS dynamixel_driver
+install(TARGETS dynamixel_interface_driver
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

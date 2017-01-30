@@ -42,7 +42,7 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  * 
- * dynamixel_driver and dynamixel_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
+ * dynamixel_interface_driver and dynamixel_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
  * Willow Garage):
  * 
  * https://github.com/baxelrod/dynamixel_pro_controller
@@ -73,7 +73,7 @@
  */
 
  /**
- * @file   dynamixel_driver.cpp
+ * @file   dynamixel_interface_driver.cpp
  * @author Tom Molnar (Tom.Molnar@data61.csiro.au), Brian Axelrod
  * @date   January, 2017
  * @brief  Implements the hardware abstraction for communicating with dynamixels
@@ -91,8 +91,8 @@
 #include <ros/ros.h>
 #include <dynamixel_sdk/dynamixel_sdk.h>
 
-#include <dynamixel_driver/dynamixel_const.h>
-#include <dynamixel_driver/dynamixel_driver.h>
+#include <dynamixel_interface_driver/dynamixel_const.h>
+#include <dynamixel_interface_driver/dynamixel_interface_driver.h>
 
 
 //Macros for combining bytes
@@ -107,7 +107,7 @@
 using namespace std;
 
 /*******************  IMPORTANT This code was written for little-endian cpus (forex intel)   ****************/
-namespace dynamixel_driver
+namespace dynamixel_interface_driver
 {
 
 /**
@@ -117,7 +117,7 @@ namespace dynamixel_driver
  * @param baud    The baud rate to use
  * @param series  The servo series in use (MX, XM or Pro)  
  */
-DynamixelDriver::DynamixelDriver(std::string device="/dev/ttyUSB0",
+DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyUSB0",
                          int baud=1000000, std::string series="MX")
 {
 
@@ -180,7 +180,7 @@ DynamixelDriver::DynamixelDriver(std::string device="/dev/ttyUSB0",
 /**
  * Destructor. Closes and releases serial port.
  */
-DynamixelDriver::~DynamixelDriver()
+DynamixelInterfaceDriver::~DynamixelInterfaceDriver()
 {
     portHandler_->closePort();
     delete portHandler_;
@@ -193,7 +193,7 @@ DynamixelDriver::~DynamixelDriver()
  * @param servo_id The ID to ping on the bus.
  * @return True if a dynamixel responds, false otherwise.
  */
-bool DynamixelDriver::ping(int servo_id)
+bool DynamixelInterfaceDriver::ping(int servo_id)
 {
 	uint8_t error;
 	int dxl_comm_result;
@@ -235,7 +235,7 @@ bool DynamixelDriver::ping(int servo_id)
  * @param model_number Stores the model_number returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getModelNumber(int servo_id, uint16_t& model_number)
+bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t& model_number)
 {
 	uint8_t error;
 	int dxl_comm_result;
@@ -273,7 +273,7 @@ bool DynamixelDriver::getModelNumber(int servo_id, uint16_t& model_number)
  * @param model_info Stores the model info returned
  * @return True on comm success with pro or xm series, false otherwise.
  */
-bool DynamixelDriver::getModelInfo(int servo_id, uint32_t& model_info)
+bool DynamixelInterfaceDriver::getModelInfo(int servo_id, uint32_t& model_info)
 {
 	uint8_t error;
 	int dxl_comm_result;
@@ -309,7 +309,7 @@ bool DynamixelDriver::getModelInfo(int servo_id, uint32_t& model_info)
  * @param firmware_version Stores the firmware_version returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getFirmwareVersion(int servo_id, uint8_t& firmware_version)
+bool DynamixelInterfaceDriver::getFirmwareVersion(int servo_id, uint8_t& firmware_version)
 {
 
 	uint8_t error;
@@ -351,7 +351,7 @@ bool DynamixelDriver::getFirmwareVersion(int servo_id, uint8_t& firmware_version
  * @param baud_rate Stores the baud_rate returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getBaudRate(int servo_id, uint8_t& baud_rate)
+bool DynamixelInterfaceDriver::getBaudRate(int servo_id, uint8_t& baud_rate)
 {
 
 	uint8_t error;
@@ -393,7 +393,7 @@ bool DynamixelDriver::getBaudRate(int servo_id, uint8_t& baud_rate)
  * @param return_delay_time Stores the value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getReturnDelayTime(int servo_id, uint8_t& return_delay_time)
+bool DynamixelInterfaceDriver::getReturnDelayTime(int servo_id, uint8_t& return_delay_time)
 {
 
 	uint8_t error;
@@ -435,7 +435,7 @@ bool DynamixelDriver::getReturnDelayTime(int servo_id, uint8_t& return_delay_tim
  * @param operating_mode Stores the value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getOperatingMode(int servo_id, uint8_t &operating_mode)
+bool DynamixelInterfaceDriver::getOperatingMode(int servo_id, uint8_t &operating_mode)
 {
 
 	uint8_t error;
@@ -478,7 +478,7 @@ bool DynamixelDriver::getOperatingMode(int servo_id, uint8_t &operating_mode)
  * @param max_angle_limit Stores the max angle limit returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getAngleLimits(int servo_id, uint32_t& min_angle_limit, uint32_t& max_angle_limit)
+bool DynamixelInterfaceDriver::getAngleLimits(int servo_id, uint32_t& min_angle_limit, uint32_t& max_angle_limit)
 {
 
 	if (getMaxAngleLimit(servo_id, max_angle_limit) == true)
@@ -498,7 +498,7 @@ bool DynamixelDriver::getAngleLimits(int servo_id, uint32_t& min_angle_limit, ui
  * @param angle Stores the value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getMaxAngleLimit(int servo_id, uint32_t& angle)
+bool DynamixelInterfaceDriver::getMaxAngleLimit(int servo_id, uint32_t& angle)
 {
 
 	uint8_t error;
@@ -544,7 +544,7 @@ bool DynamixelDriver::getMaxAngleLimit(int servo_id, uint32_t& angle)
  * @param angle Stores the value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getMinAngleLimit(int servo_id, uint32_t& angle)
+bool DynamixelInterfaceDriver::getMinAngleLimit(int servo_id, uint32_t& angle)
 {
 
 	uint8_t error;
@@ -590,7 +590,7 @@ bool DynamixelDriver::getMinAngleLimit(int servo_id, uint32_t& angle)
  * @param max_voltage_limit Stores the max angle limit returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getVoltageLimits(int servo_id, float& min_voltage_limit, float& max_voltage_limit)
+bool DynamixelInterfaceDriver::getVoltageLimits(int servo_id, float& min_voltage_limit, float& max_voltage_limit)
 {
 
 	if (getMaxVoltageLimit(servo_id, max_voltage_limit) == true)
@@ -610,7 +610,7 @@ bool DynamixelDriver::getVoltageLimits(int servo_id, float& min_voltage_limit, f
  * @param min_voltage_limit Stores value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getMinVoltageLimit(int servo_id, float& min_voltage_limit)
+bool DynamixelInterfaceDriver::getMinVoltageLimit(int servo_id, float& min_voltage_limit)
 {
 
 	uint8_t error;
@@ -657,7 +657,7 @@ bool DynamixelDriver::getMinVoltageLimit(int servo_id, float& min_voltage_limit)
  * @param max_voltage_limit Stores value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getMaxVoltageLimit(int servo_id, float& max_voltage_limit)
+bool DynamixelInterfaceDriver::getMaxVoltageLimit(int servo_id, float& max_voltage_limit)
 {
 
 	uint8_t error;
@@ -704,7 +704,7 @@ bool DynamixelDriver::getMaxVoltageLimit(int servo_id, float& max_voltage_limit)
  * @param max_temperature Stores value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getTemperatureLimit(int servo_id, uint8_t& max_temperature)
+bool DynamixelInterfaceDriver::getTemperatureLimit(int servo_id, uint8_t& max_temperature)
 {
 
 	uint8_t error;
@@ -749,7 +749,7 @@ bool DynamixelDriver::getTemperatureLimit(int servo_id, uint8_t& max_temperature
  * @param max_torque Stores value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getMaxTorque(int servo_id, uint16_t& max_torque)
+bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, uint16_t& max_torque)
 {
 
 
@@ -795,7 +795,7 @@ bool DynamixelDriver::getMaxTorque(int servo_id, uint16_t& max_torque)
  * @param torque_enabled Stores the status of torque enable
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::getTorqueEnabled(int servo_id, bool& torque_enabled)
+bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, bool& torque_enabled)
 {
 
 	uint8_t error;
@@ -839,7 +839,7 @@ bool DynamixelDriver::getTorqueEnabled(int servo_id, bool& torque_enabled)
  * @param target_position Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::getTargetPosition(int servo_id, int32_t& target_position)
+bool DynamixelInterfaceDriver::getTargetPosition(int servo_id, int32_t& target_position)
 {
 	uint8_t error;
 	int dxl_comm_result;
@@ -884,7 +884,7 @@ bool DynamixelDriver::getTargetPosition(int servo_id, int32_t& target_position)
  * @param target_velocity Stores the value returned
  * @return True on comm success, false otherwise.
  */    
-bool DynamixelDriver::getTargetVelocity(int servo_id, int32_t& target_velocity)
+bool DynamixelInterfaceDriver::getTargetVelocity(int servo_id, int32_t& target_velocity)
 {
 
 	uint8_t error;
@@ -931,7 +931,7 @@ bool DynamixelDriver::getTargetVelocity(int servo_id, int32_t& target_velocity)
  * @param position Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::getPosition(int servo_id, int32_t& position)
+bool DynamixelInterfaceDriver::getPosition(int servo_id, int32_t& position)
 {
 
 	uint8_t error;
@@ -978,7 +978,7 @@ bool DynamixelDriver::getPosition(int servo_id, int32_t& position)
  * @param velocity Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::getVelocity(int servo_id, int32_t& velocity)
+bool DynamixelInterfaceDriver::getVelocity(int servo_id, int32_t& velocity)
 {
 
 	uint8_t error;
@@ -1024,7 +1024,7 @@ bool DynamixelDriver::getVelocity(int servo_id, int32_t& velocity)
  * @param current Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::getCurrent(int servo_id, uint16_t& current)
+bool DynamixelInterfaceDriver::getCurrent(int servo_id, uint16_t& current)
 {
 
 	uint8_t error;
@@ -1069,7 +1069,7 @@ bool DynamixelDriver::getCurrent(int servo_id, uint16_t& current)
  * @param voltage Stores the value returned
  * @return True on comm success, false otherwise.
  */ 
-bool DynamixelDriver::getVoltage(int servo_id, float& voltage)
+bool DynamixelInterfaceDriver::getVoltage(int servo_id, float& voltage)
 {
 
 	uint8_t error;
@@ -1116,7 +1116,7 @@ bool DynamixelDriver::getVoltage(int servo_id, float& voltage)
  * @param temperature Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::getTemperature(int servo_id, uint8_t& temperature)
+bool DynamixelInterfaceDriver::getTemperature(int servo_id, uint8_t& temperature)
 {
 	
 	uint8_t error;
@@ -1163,7 +1163,7 @@ bool DynamixelDriver::getTemperature(int servo_id, uint8_t& temperature)
  * @param length The number of bytes to read consecutively from the control table
  * @param response Array to store the raw dynamixel response.
  */
-bool DynamixelDriver::readRegisters(int servo_id, uint32_t address, uint32_t length, uint8_t *response)
+bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uint32_t length, uint8_t *response)
 {
 
 	uint8_t error;
@@ -1213,7 +1213,7 @@ bool DynamixelDriver::readRegisters(int servo_id, uint32_t address, uint32_t len
  * parameter values in the order given above.
  * @return True on comm success, false otherwise
  */
-bool DynamixelDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, std::vector<int32_t> > *responses)
+bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, std::vector<int32_t> > *responses)
 {
 	
 	
@@ -1363,7 +1363,7 @@ bool DynamixelDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int
  * parameter values in the order given above.
  * @return True on comm success, false otherwise
  */
-bool DynamixelDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
+bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
                            std::map<int, std::vector<int32_t> >  *responses)
 {
 	
@@ -1568,7 +1568,7 @@ bool DynamixelDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
  * @param responses Pointer map of dynamixel ID's to dynamixel response vectors, response vectors are a raw array of
  * the bytes read from the control table of each dynamixel
  */
-bool DynamixelDriver::bulkRead(std::vector<int> *servo_ids,
+bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
                        uint16_t address,
                        uint16_t length,
                        std::map<int, std::vector<uint8_t> >  *responses)
@@ -1647,7 +1647,7 @@ bool DynamixelDriver::bulkRead(std::vector<int> *servo_ids,
  * @param responses Pointer map of dynamixel ID's to dynamixel response vectors, response vectors are a raw array of
  * the bytes read from the control table of each dynamixel
  */
-bool DynamixelDriver::syncRead(std::vector<int> *servo_ids,
+bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
                        uint16_t address,
                        uint16_t length,
                        std::map<int, std::vector<uint8_t> >  *responses)
@@ -1727,7 +1727,7 @@ bool DynamixelDriver::syncRead(std::vector<int> *servo_ids,
  * @param new_id The new ID to set this dynamixel to
  * @return True on comm success iff new_id not already in use, false otherwise.
  */  
-bool DynamixelDriver::setId(int servo_id, uint8_t new_id)
+bool DynamixelInterfaceDriver::setId(int servo_id, uint8_t new_id)
 {
 
 	uint8_t error;
@@ -1780,7 +1780,7 @@ bool DynamixelDriver::setId(int servo_id, uint8_t new_id)
  *  - Value = 253,254: 	INVALID, DO NOT SET
  * @return True on comm success and valid baud rate, false otherwise.
  */ 
-bool DynamixelDriver::setBaudRate(int servo_id, uint8_t baud_rate)
+bool DynamixelInterfaceDriver::setBaudRate(int servo_id, uint8_t baud_rate)
 {
 
 	uint8_t error;
@@ -1828,7 +1828,7 @@ bool DynamixelDriver::setBaudRate(int servo_id, uint8_t baud_rate)
  * @param return_delay_time The value to write to the register
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::setReturnDelayTime(int servo_id, uint8_t return_delay_time)
+bool DynamixelInterfaceDriver::setReturnDelayTime(int servo_id, uint8_t return_delay_time)
 {
 
 	uint8_t error;
@@ -1880,7 +1880,7 @@ bool DynamixelDriver::setReturnDelayTime(int servo_id, uint8_t return_delay_time
  *  - 3: Position Control 
  * @return True on comm success and valid operating mode, false otherwise.
  */  
-bool DynamixelDriver::setOperatingMode(int servo_id, uint8_t operating_mode)
+bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_mode)
 {
 	uint8_t error;
 	int dxl_comm_result = 0;
@@ -1969,7 +1969,7 @@ bool DynamixelDriver::setOperatingMode(int servo_id, uint8_t operating_mode)
  * @param servo_id The ID of the servo to write to
  * @param reverse boolean dynamixel direction value (true for reversed, false for normal)
  */
-bool DynamixelDriver::setReverseDirection(int servo_id, bool reverse)
+bool DynamixelInterfaceDriver::setReverseDirection(int servo_id, bool reverse)
 {
 	uint8_t error;
 	int dxl_comm_result;
@@ -2012,7 +2012,7 @@ bool DynamixelDriver::setReverseDirection(int servo_id, bool reverse)
  * @param max_angle the maximum angle limit (in encoder values)
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::setAngleLimits(int servo_id, int32_t min_angle, int32_t max_angle)
+bool DynamixelInterfaceDriver::setAngleLimits(int servo_id, int32_t min_angle, int32_t max_angle)
 {
 
 	if (setMaxAngleLimit(servo_id, max_angle) == true)
@@ -2032,7 +2032,7 @@ bool DynamixelDriver::setAngleLimits(int servo_id, int32_t min_angle, int32_t ma
 * @param angle the minimum angle limit (in encoder values)
 * @return True on comm success, false otherwise.
 */ 
-bool DynamixelDriver::setMinAngleLimit(int servo_id, int32_t angle)
+bool DynamixelInterfaceDriver::setMinAngleLimit(int servo_id, int32_t angle)
 {
 
 	uint8_t error;
@@ -2077,7 +2077,7 @@ bool DynamixelDriver::setMinAngleLimit(int servo_id, int32_t angle)
  * @param angle the maximum angle limit (in encoder values)
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::setMaxAngleLimit(int servo_id, int32_t angle)
+bool DynamixelInterfaceDriver::setMaxAngleLimit(int servo_id, int32_t angle)
 {
 
 	uint8_t error;
@@ -2123,7 +2123,7 @@ bool DynamixelDriver::setMaxAngleLimit(int servo_id, int32_t angle)
  * @param max_temperature the maximum temperature limit
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::setTemperatureLimit(int servo_id, uint8_t max_temperature)
+bool DynamixelInterfaceDriver::setTemperatureLimit(int servo_id, uint8_t max_temperature)
 {
 
 	uint8_t error;
@@ -2168,7 +2168,7 @@ bool DynamixelDriver::setTemperatureLimit(int servo_id, uint8_t max_temperature)
  * @param max_torque the maximum torque limit
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setMaxTorque(int servo_id, uint16_t max_torque)
+bool DynamixelInterfaceDriver::setMaxTorque(int servo_id, uint16_t max_torque)
 {
 
 	uint8_t error;
@@ -2215,7 +2215,7 @@ bool DynamixelDriver::setMaxTorque(int servo_id, uint16_t max_torque)
  * @param on The state of the servo (true = on, false = off).
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::setTorqueEnabled(int servo_id, bool on)
+bool DynamixelInterfaceDriver::setTorqueEnabled(int servo_id, bool on)
 {
 
 	uint8_t error;
@@ -2284,7 +2284,7 @@ bool DynamixelDriver::setTorqueEnabled(int servo_id, bool on)
  * @param d_gain The derivative gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setPIDGains(int servo_id, uint8_t operating_mode, double p_gain, double i_gain, double d_gain)
+bool DynamixelInterfaceDriver::setPIDGains(int servo_id, uint8_t operating_mode, double p_gain, double i_gain, double d_gain)
 {
 
 	uint16_t p_val, i_val, d_val;
@@ -2407,7 +2407,7 @@ bool DynamixelDriver::setPIDGains(int servo_id, uint8_t operating_mode, double p
  * @param gain The proportional gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setPositionProportionalGain(int servo_id, uint16_t gain)
+bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, uint16_t gain)
 {
 
 	uint8_t error;
@@ -2452,7 +2452,7 @@ bool DynamixelDriver::setPositionProportionalGain(int servo_id, uint16_t gain)
  * @param gain The integral gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setPositionIntegralGain(int servo_id, uint16_t gain)
+bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, uint16_t gain)
 {
 
 	uint8_t error;
@@ -2495,7 +2495,7 @@ bool DynamixelDriver::setPositionIntegralGain(int servo_id, uint16_t gain)
  * @param gain The derivative gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setPositionDerivativeGain(int servo_id, uint16_t gain)
+bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, uint16_t gain)
 {
 
 	uint8_t error;
@@ -2538,7 +2538,7 @@ bool DynamixelDriver::setPositionDerivativeGain(int servo_id, uint16_t gain)
  * @param gain The proportional gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setVelocityProportionalGain(int servo_id, uint16_t gain)
+bool DynamixelInterfaceDriver::setVelocityProportionalGain(int servo_id, uint16_t gain)
 {
 
 	uint8_t error;
@@ -2582,7 +2582,7 @@ bool DynamixelDriver::setVelocityProportionalGain(int servo_id, uint16_t gain)
  * @param gain The integral gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setVelocityIntegralGain(int servo_id, uint16_t gain)
+bool DynamixelInterfaceDriver::setVelocityIntegralGain(int servo_id, uint16_t gain)
 {
 
 	uint8_t error;
@@ -2627,7 +2627,7 @@ bool DynamixelDriver::setVelocityIntegralGain(int servo_id, uint16_t gain)
  * @param gain The derivative gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setVelocityDerivativeGain(int servo_id, uint16_t gain)
+bool DynamixelInterfaceDriver::setVelocityDerivativeGain(int servo_id, uint16_t gain)
 {
 
 	uint8_t error;
@@ -2669,7 +2669,7 @@ bool DynamixelDriver::setVelocityDerivativeGain(int servo_id, uint16_t gain)
  * @param gain The proportional gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setTorqueProportionalGain(int servo_id, uint16_t gain)
+bool DynamixelInterfaceDriver::setTorqueProportionalGain(int servo_id, uint16_t gain)
 {
 
 	uint8_t error;
@@ -2711,7 +2711,7 @@ bool DynamixelDriver::setTorqueProportionalGain(int servo_id, uint16_t gain)
  * @param gain The integral gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setTorqueIntegralGain(int servo_id, uint16_t  gain)
+bool DynamixelInterfaceDriver::setTorqueIntegralGain(int servo_id, uint16_t  gain)
 {
 
 	uint8_t error;
@@ -2753,7 +2753,7 @@ bool DynamixelDriver::setTorqueIntegralGain(int servo_id, uint16_t  gain)
  * @param gain The derivative gain value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setTorqueDerivativeGain(int servo_id, uint16_t gain)
+bool DynamixelInterfaceDriver::setTorqueDerivativeGain(int servo_id, uint16_t gain)
 {
 
 	uint8_t error;
@@ -2795,7 +2795,7 @@ bool DynamixelDriver::setTorqueDerivativeGain(int servo_id, uint16_t gain)
  * @param position The position value to write
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelDriver::setPosition(int servo_id, uint32_t position)
+bool DynamixelInterfaceDriver::setPosition(int servo_id, uint32_t position)
 {
 
 	uint8_t error;
@@ -2840,7 +2840,7 @@ bool DynamixelDriver::setPosition(int servo_id, uint32_t position)
  * @param velocity The velocity value to write
  * @return True on comm success, false otherwise.
  */ 
-bool DynamixelDriver::setVelocity(int servo_id, int32_t velocity)
+bool DynamixelInterfaceDriver::setVelocity(int servo_id, int32_t velocity)
 {
 
 	uint8_t error;
@@ -2886,7 +2886,7 @@ bool DynamixelDriver::setVelocity(int servo_id, int32_t velocity)
  * @param velocity The profile velocity value to write
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setProfileVelocity(int servo_id, int32_t velocity)
+bool DynamixelInterfaceDriver::setProfileVelocity(int servo_id, int32_t velocity)
 {
 
 	uint8_t error;
@@ -2936,7 +2936,7 @@ bool DynamixelDriver::setProfileVelocity(int servo_id, int32_t velocity)
  * @param data Array containing the value to be written.
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::writeRegisters(int servo_id, uint32_t address, uint32_t length, uint8_t *data)
+bool DynamixelInterfaceDriver::writeRegisters(int servo_id, uint32_t address, uint32_t length, uint8_t *data)
 {
 
 	uint8_t error;
@@ -2980,7 +2980,7 @@ bool DynamixelDriver::writeRegisters(int servo_id, uint32_t address, uint32_t le
  * @param value_pairs  A vector of tuples, each tuple containing a dynamixel ID and a position value.
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setMultiPosition(std::vector<std::vector<int> > value_pairs)
+bool DynamixelInterfaceDriver::setMultiPosition(std::vector<std::vector<int> > value_pairs)
 {
 	
 	if (servo_series_ == 'M')
@@ -3010,7 +3010,7 @@ bool DynamixelDriver::setMultiPosition(std::vector<std::vector<int> > value_pair
  * velocity value.
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setMultiVelocity(std::vector<std::vector<int> > value_pairs)
+bool DynamixelInterfaceDriver::setMultiVelocity(std::vector<std::vector<int> > value_pairs)
 {
 
 	if (servo_series_ == 'M')
@@ -3039,7 +3039,7 @@ bool DynamixelDriver::setMultiVelocity(std::vector<std::vector<int> > value_pair
  * velocity value.
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setMultiProfileVelocity(std::vector<std::vector<int> > value_pairs)
+bool DynamixelInterfaceDriver::setMultiProfileVelocity(std::vector<std::vector<int> > value_pairs)
 {
 
 	if (servo_series_ == 'M')
@@ -3067,7 +3067,7 @@ bool DynamixelDriver::setMultiProfileVelocity(std::vector<std::vector<int> > val
  * @param value_pairs  A vector of tuples, each tuple containing a dynamixel ID and a torque enabled value (1 or 0).
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setMultiTorqueEnabled(std::vector<std::vector<int> > value_pairs)
+bool DynamixelInterfaceDriver::setMultiTorqueEnabled(std::vector<std::vector<int> > value_pairs)
 {
 
 	if (servo_series_ == 'M')
@@ -3096,7 +3096,7 @@ bool DynamixelDriver::setMultiTorqueEnabled(std::vector<std::vector<int> > value
  * velocity value.
  * @return True on comm success, false otherwise.
  */
-bool DynamixelDriver::setMultiTorque(std::vector<std::vector<int> > value_pairs)
+bool DynamixelInterfaceDriver::setMultiTorque(std::vector<std::vector<int> > value_pairs)
 {
 
 	if (servo_series_ == 'M')
@@ -3133,7 +3133,7 @@ bool DynamixelDriver::setMultiTorque(std::vector<std::vector<int> > value_pairs)
  * @param length The number of bytes to write
  * @param protocol The protocol version to use
  */
-bool DynamixelDriver::syncWrite(std::vector<std::vector<int> > value_pairs, uint32_t address, uint32_t length, 
+bool DynamixelInterfaceDriver::syncWrite(std::vector<std::vector<int> > value_pairs, uint32_t address, uint32_t length, 
 		float protocol) 
 {
 	uint8_t dxl_comm_result;
