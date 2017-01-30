@@ -161,7 +161,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     double global_d_gain;
 
     //load all the info from the param server, with defaults
-    nh_->param<double>("publish_rate_", publish_rate_, 50.0);
+    nh_->param<double>("publish_rate", publish_rate_, 50.0);
     nh_->param<bool>("disable_torque_on_shutdown", stop_motors_on_shutdown_, false);
     nh_->param<bool>("echo_joint_commands", echo_joint_commands_, false);
 
