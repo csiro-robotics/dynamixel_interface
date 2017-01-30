@@ -855,15 +855,15 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
     bool has_pos = false, has_vel = false, has_torque = false;
 
     //figure out which values have been specified
-    if (joint_commands.position.size() > 0)
+    if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == POSITION_CONTROL))
     {
         has_pos = true;
     }
-    if (joint_commands.velocity.size() > 0)
+    if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ != TORQUE_CONTROL))
     {
         has_vel = true;
     }
-    if (joint_commands.effort.size() > 0) 
+    if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == TORQUE_CONTROL))
     {
         has_torque = true; 
     }

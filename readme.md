@@ -41,6 +41,13 @@ USAGE NOTES:
 	- The controller communicates using the sensor_msgs::JointState message.
 	- Current joint states are published to /joint_states
 	- Commands should be sent to /desired_joint_states
+	- For each control mode
+		- Position Control: only position and velocity are considered in the command message, velocity controls the moving speed to the goal position of the dynamixel.
+		  If no velocity is specified the default is used
+		- Velocity Control: only the velocity value is considered
+		- Torque Control: only the effort value is considered
+
+	- Note that all non-empty arrays must have the same length as the array of joint_names, otherwise the command is invalid
 
 	A note on units:
 	- Positions are in radians
