@@ -42,7 +42,7 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  * 
- * dynamixel_driver and dynamixel_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
+ * dynamixel_interface_driver and dynamixel_interface_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
  * Willow Garage):
  * 
  * https://github.com/baxelrod/dynamixel_pro_controller

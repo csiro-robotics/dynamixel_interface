@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>dynamixel_simple_interface</name>
+  <name>dynamixel_interface</name>
   <version>1.0.0</version>
-  <description>The dynamixel_simple_interface package. Provides a fast and easily configurable interface for controlling many dynamixels at once.
+  <description>The dynamixel_interface package. Provides a fast and easily configurable interface for controlling many dynamixels at once.
   Supports the all variants of the Pro, MX and XM series of motors.
   </description>
 
