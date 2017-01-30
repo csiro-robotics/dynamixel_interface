@@ -132,7 +132,7 @@ public:
      * @param model_number Stores the model_number returned
      * @return True on comm success, false otherwise.
      */
-    bool getModelNumber(int servo_id, uint16_t& model_number);
+    bool getModelNumber(int servo_id, uint16_t* model_number);
 
     /**
      * Retrieves the model info values from the dynamixel's eeprom. Pro and XM series only
@@ -140,7 +140,7 @@ public:
      * @param model_info Stores the model info returned
      * @return True on comm success with pro or xm series, false otherwise.
      */
-    bool getModelInfo(int servo_id, uint32_t& model_info);
+    bool getModelInfo(int servo_id, uint32_t* model_info);
 
     /**
      * Retrieves the firmware version number from the dynamixel's eeprom.
@@ -148,7 +148,7 @@ public:
      * @param firmware_version Stores the firmware_version returned
      * @return True on comm success, false otherwise.
      */
-    bool getFirmwareVersion(int servo_id, uint8_t& firmware_version);
+    bool getFirmwareVersion(int servo_id, uint8_t* firmware_version);
 
     /**
      * Retrieves the baud rate from the dynamixel's eeprom. @see setBaudRate
@@ -156,7 +156,7 @@ public:
      * @param baud_rate Stores the baud_rate returned
      * @return True on comm success, false otherwise.
      */
-    bool getBaudRate(int servo_id, uint8_t& baud_rate);
+    bool getBaudRate(int servo_id, uint8_t* baud_rate);
 
     /**
      * Retrieves the return delay time from the dynamixel's eeprom.
@@ -164,7 +164,7 @@ public:
      * @param return_delay_time Stores the value returned
      * @return True on comm success, false otherwise.
      */
-    bool getReturnDelayTime(int servo_id, uint8_t& return_delay_time);
+    bool getReturnDelayTime(int servo_id, uint8_t* return_delay_time);
 
 
     /**
@@ -173,7 +173,7 @@ public:
      * @param operating_mode Stores the value returned
      * @return True on comm success with XM or Pro series, false otherwise.
      */
-    bool getOperatingMode(int servo_id, uint8_t &operating_mode);
+    bool getOperatingMode(int servo_id, uint8_t* operating_mode);
     
     /**
      * Retrieves the angle limits from the dynamixel's eeprom.
@@ -182,7 +182,7 @@ public:
      * @param max_angle_limit Stores the max angle limit returned
      * @return True on comm success, false otherwise.
      */
-    bool getAngleLimits(int servo_id, uint32_t& min_angle_limit, uint32_t& max_angle_limit);
+    bool getAngleLimits(int servo_id, uint32_t* min_angle_limit, uint32_t* max_angle_limit);
 
     /**
      * Retrieves the maximum angle limit from the dynamixel's eeprom.
@@ -190,7 +190,7 @@ public:
      * @param angle Stores the value returned
      * @return True on comm success, false otherwise.
      */
-    bool getMaxAngleLimit(int servo_id, uint32_t& angle);
+    bool getMaxAngleLimit(int servo_id, uint32_t* angle);
 
     /**
      * Retrieves the minimum angle limit from the dynamixel's eeprom.
@@ -198,7 +198,7 @@ public:
      * @param angle Stores the value returned
      * @return True on comm success, false otherwise.
      */
-    bool getMinAngleLimit(int servo_id, uint32_t& angle);
+    bool getMinAngleLimit(int servo_id, uint32_t* angle);
     
     /**
      * Retrieves the voltage limits from the dynamixel's eeprom.
@@ -207,7 +207,7 @@ public:
      * @param max_voltage_limit Stores the max angle limit returned
      * @return True on comm success, false otherwise.
      */
-    bool getVoltageLimits(int servo_id, float& min_voltage_limit, float& max_voltage_limit);
+    bool getVoltageLimits(int servo_id, float* min_voltage_limit, float* max_voltage_limit);
 
     /**
      * Retrieves minimum voltage limit from the dynamixel's eeprom.
@@ -215,7 +215,7 @@ public:
      * @param min_voltage_limit Stores the value returned
      * @return True on comm success, false otherwise.
      */
-    bool getMinVoltageLimit(int servo_id, float& min_voltage_limit);
+    bool getMinVoltageLimit(int servo_id, float* min_voltage_limit);
 
     /**
      * Retrieves the maximum voltage from the dynamixel's eeprom.
@@ -223,7 +223,7 @@ public:
      * @param max_voltage_limit Stores the value returned
      * @return True on comm success, false otherwise.
      */
-    bool getMaxVoltageLimit(int servo_id, float& max_voltage_limit);
+    bool getMaxVoltageLimit(int servo_id, float* max_voltage_limit);
     
     /**
      * Retrieves the maximum temperature limit from the dynamixel's eeprom.
@@ -231,7 +231,7 @@ public:
      * @param max_temperature Stores the value returned
      * @return True on comm success, false otherwise.
      */
-    bool getTemperatureLimit(int servo_id, uint8_t& max_temperature);
+    bool getTemperatureLimit(int servo_id, uint8_t* max_temperature);
 
     /**
      * Retrieves the maximum torque limit from the dynamixel's eeprom.
@@ -239,7 +239,7 @@ public:
      * @param max_torque Stores the value returned
      * @return True on comm success, false otherwise.
      */
-    bool getMaxTorque(int servo_id, uint16_t& max_torque);
+    bool getMaxTorque(int servo_id, uint16_t* max_torque);
 
 
     /**
@@ -248,7 +248,7 @@ public:
      * @param torque_enabled Stores the status of torque enable
      * @return True on comm success, false otherwise.
      */
-    bool getTorqueEnabled(int servo_id, bool& torque_enabled);
+    bool getTorqueEnabled(int servo_id, bool* torque_enabled);
 
     /**
      * Retrieves the current target position from the dynamixel's ram.
@@ -256,7 +256,7 @@ public:
      * @param target_position Stores the value returned
      * @return True on comm success, false otherwise.
      */    
-    bool getTargetPosition(int servo_id, int32_t& target_position);
+    bool getTargetPosition(int servo_id, int32_t* target_position);
 
 
     /**
@@ -265,7 +265,7 @@ public:
      * @param target_velocity Stores the value returned
      * @return True on comm success, false otherwise.
      */    
-    bool getTargetVelocity(int servo_id, int32_t& target_velocity);
+    bool getTargetVelocity(int servo_id, int32_t* target_velocity);
 
     /**
      * Retrieves the current position from the dynamixel's ram.
@@ -273,7 +273,7 @@ public:
      * @param position Stores the value returned
      * @return True on comm success, false otherwise.
      */  
-    bool getPosition(int servo_id, int32_t& position);
+    bool getPosition(int servo_id, int32_t* position);
 
     /**
      * Retrieves the current velocity from the dynamixel's ram.
@@ -281,7 +281,7 @@ public:
      * @param velocity Stores the value returned
      * @return True on comm success, false otherwise.
      */  
-    bool getVelocity(int servo_id, int32_t& velocity);
+    bool getVelocity(int servo_id, int32_t* velocity);
 
     /**
      * Retrieves the current load value from the dynamixel's ram. In the case of XM and Pro series, this value is the 
@@ -291,7 +291,7 @@ public:
      * @param load Stores the value returned
      * @return True on comm success, false otherwise.
      */  
-    bool getLoad(int servo_id, uint16_t& load);
+    bool getLoad(int servo_id, uint16_t* load);
 
 
     /**
@@ -300,7 +300,7 @@ public:
      * @param current Stores the value returned
      * @return True on comm success, false otherwise.
      */  
-    bool getCurrent(int servo_id, uint16_t& current);
+    bool getCurrent(int servo_id, uint16_t* current);
 
     /**
      * Retrieves the current voltage value from the dynamixel's ram.
@@ -308,7 +308,7 @@ public:
      * @param voltage Stores the value returned
      * @return True on comm success, false otherwise.
      */  
-    bool getVoltage(int servo_id, float& voltage);
+    bool getVoltage(int servo_id, float* voltage);
 
     /**
      * Retrieves the current temperature value from the dynamixel's ram.
@@ -316,7 +316,7 @@ public:
      * @param temperature Stores the value returned
      * @return True on comm success, false otherwise.
      */  
-    bool getTemperature(int servo_id, uint8_t& temperature);
+    bool getTemperature(int servo_id, uint8_t* temperature);
     
 
     /** 

@@ -235,7 +235,7 @@ bool DynamixelInterfaceDriver::ping(int servo_id)
  * @param model_number Stores the model_number returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t& model_number)
+bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t* model_number)
 {
 	uint8_t error;
 	int dxl_comm_result;
@@ -244,12 +244,12 @@ bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t& model_numb
 	if (servo_series_ == 'M')
 	{
 		//read in first 2 bytes of eeprom (same for all series)
-		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, 0, &model_number, &error);
+		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, 0, model_number, &error);
 	}
 	else if ((servo_series_ == 'X') || (servo_series_ == 'P'))
 	{
 		//read in first 2 bytes of eeprom (same for all series)
-		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, 0, &model_number, &error);
+		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, 0, model_number, &error);
 	}
 	else
 	{
@@ -273,7 +273,7 @@ bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t& model_numb
  * @param model_info Stores the model info returned
  * @return True on comm success with pro or xm series, false otherwise.
  */
-bool DynamixelInterfaceDriver::getModelInfo(int servo_id, uint32_t& model_info)
+bool DynamixelInterfaceDriver::getModelInfo(int servo_id, uint32_t* model_info)
 {
 	uint8_t error;
 	int dxl_comm_result;
@@ -286,7 +286,7 @@ bool DynamixelInterfaceDriver::getModelInfo(int servo_id, uint32_t& model_info)
 	else if ((servo_series_ == 'X') || (servo_series_ == 'P'))
 	{
 		//address = 2, size = 4
-		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_MODEL_INFO, &model_info, &error);
+		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_MODEL_INFO, model_info, &error);
 
 		if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
 		{
@@ -309,7 +309,7 @@ bool DynamixelInterfaceDriver::getModelInfo(int servo_id, uint32_t& model_info)
  * @param firmware_version Stores the firmware_version returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getFirmwareVersion(int servo_id, uint8_t& firmware_version)
+bool DynamixelInterfaceDriver::getFirmwareVersion(int servo_id, uint8_t* firmware_version)
 {
 
 	uint8_t error;
@@ -318,15 +318,15 @@ bool DynamixelInterfaceDriver::getFirmwareVersion(int servo_id, uint8_t& firmwar
 	//Read address and size always depends on servo series
 	if (servo_series_ == 'M')
 	{
-		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_FIRMWARE_VERSION, &firmware_version, &error);
+		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_FIRMWARE_VERSION, firmware_version, &error);
 	}
 	else if (servo_series_ == 'X')
 	{
-		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_FIRMWARE_VERSION, &firmware_version, &error);
+		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_FIRMWARE_VERSION, firmware_version, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
-		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_FIRMWARE_VERSION, &firmware_version, &error);
+		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_FIRMWARE_VERSION, firmware_version, &error);
 	}
 	else
 	{
@@ -351,7 +351,7 @@ bool DynamixelInterfaceDriver::getFirmwareVersion(int servo_id, uint8_t& firmwar
  * @param baud_rate Stores the baud_rate returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getBaudRate(int servo_id, uint8_t& baud_rate)
+bool DynamixelInterfaceDriver::getBaudRate(int servo_id, uint8_t* baud_rate)
 {
 
 	uint8_t error;
@@ -360,15 +360,15 @@ bool DynamixelInterfaceDriver::getBaudRate(int servo_id, uint8_t& baud_rate)
 	//Read address and size always depends on servo series
 	if (servo_series_ == 'M')
 	{
-		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_BAUD_RATE, &baud_rate, &error);
+		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_BAUD_RATE, baud_rate, &error);
 	}
 	else if (servo_series_ == 'X')
 	{
-		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_BAUD_RATE, &baud_rate, &error);
+		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_BAUD_RATE, baud_rate, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
-		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_BAUD_RATE, &baud_rate, &error);
+		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_BAUD_RATE, baud_rate, &error);
 	}
 	else
 	{
@@ -393,7 +393,7 @@ bool DynamixelInterfaceDriver::getBaudRate(int servo_id, uint8_t& baud_rate)
  * @param return_delay_time Stores the value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getReturnDelayTime(int servo_id, uint8_t& return_delay_time)
+bool DynamixelInterfaceDriver::getReturnDelayTime(int servo_id, uint8_t* return_delay_time)
 {
 
 	uint8_t error;
@@ -402,15 +402,15 @@ bool DynamixelInterfaceDriver::getReturnDelayTime(int servo_id, uint8_t& return_
 	//Read address and size always depends on servo series
 	if (servo_series_ == 'M')
 	{
-		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_RETURN_DELAY_TIME, &return_delay_time, &error);
+		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_RETURN_DELAY_TIME, return_delay_time, &error);
 	}
 	else if (servo_series_ == 'X')
 	{
-		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_RETURN_DELAY_TIME, &return_delay_time, &error);
+		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_RETURN_DELAY_TIME, return_delay_time, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
-		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_RETURN_DELAY_TIME, &return_delay_time, &error);
+		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_RETURN_DELAY_TIME, return_delay_time, &error);
 	}
 	else
 	{
@@ -435,7 +435,7 @@ bool DynamixelInterfaceDriver::getReturnDelayTime(int servo_id, uint8_t& return_
  * @param operating_mode Stores the value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getOperatingMode(int servo_id, uint8_t &operating_mode)
+bool DynamixelInterfaceDriver::getOperatingMode(int servo_id, uint8_t* operating_mode)
 {
 
 	uint8_t error;
@@ -448,11 +448,11 @@ bool DynamixelInterfaceDriver::getOperatingMode(int servo_id, uint8_t &operating
 	}
 	else if (servo_series_ == 'X')
 	{
-		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_OPERATING_MODE, &operating_mode, &error);
+		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_OPERATING_MODE, operating_mode, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
-		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_OPERATING_MODE, &operating_mode, &error);
+		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_OPERATING_MODE, operating_mode, &error);
 	}
 	else
 	{
@@ -478,7 +478,7 @@ bool DynamixelInterfaceDriver::getOperatingMode(int servo_id, uint8_t &operating
  * @param max_angle_limit Stores the max angle limit returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getAngleLimits(int servo_id, uint32_t& min_angle_limit, uint32_t& max_angle_limit)
+bool DynamixelInterfaceDriver::getAngleLimits(int servo_id, uint32_t* min_angle_limit, uint32_t* max_angle_limit)
 {
 
 	if (getMaxAngleLimit(servo_id, max_angle_limit) == true)
@@ -498,7 +498,7 @@ bool DynamixelInterfaceDriver::getAngleLimits(int servo_id, uint32_t& min_angle_
  * @param angle Stores the value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getMaxAngleLimit(int servo_id, uint32_t& angle)
+bool DynamixelInterfaceDriver::getMaxAngleLimit(int servo_id, uint32_t* angle)
 {
 
 	uint8_t error;
@@ -508,18 +508,18 @@ bool DynamixelInterfaceDriver::getMaxAngleLimit(int servo_id, uint32_t& angle)
 	if (servo_series_ == 'M')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_CCW_ANGLE_LIMIT, 
-				(uint16_t*) &angle, &error);
+				(uint16_t*) angle, &error);
 
 	}
 	else if (servo_series_ == 'X')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_MAX_POSITION_LIMIT, 
-				&angle, &error);
+				angle, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_MAX_ANGLE_LIMIT, 
-				&angle, &error);
+				angle, &error);
 	}
 	else
 	{
@@ -544,7 +544,7 @@ bool DynamixelInterfaceDriver::getMaxAngleLimit(int servo_id, uint32_t& angle)
  * @param angle Stores the value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getMinAngleLimit(int servo_id, uint32_t& angle)
+bool DynamixelInterfaceDriver::getMinAngleLimit(int servo_id, uint32_t* angle)
 {
 
 	uint8_t error;
@@ -554,17 +554,17 @@ bool DynamixelInterfaceDriver::getMinAngleLimit(int servo_id, uint32_t& angle)
 	if (servo_series_ == 'M')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_CW_ANGLE_LIMIT, 
-				(uint16_t*) &angle, &error);
+				(uint16_t*) angle, &error);
 	}
 	else if (servo_series_ == 'X')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_MIN_POSITION_LIMIT, 
-				&angle, &error);
+				angle, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_MIN_ANGLE_LIMIT, 
-				&angle, &error);
+				angle, &error);
 	}
 	else
 	{
@@ -590,7 +590,7 @@ bool DynamixelInterfaceDriver::getMinAngleLimit(int servo_id, uint32_t& angle)
  * @param max_voltage_limit Stores the max angle limit returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getVoltageLimits(int servo_id, float& min_voltage_limit, float& max_voltage_limit)
+bool DynamixelInterfaceDriver::getVoltageLimits(int servo_id, float* min_voltage_limit, float* max_voltage_limit)
 {
 
 	if (getMaxVoltageLimit(servo_id, max_voltage_limit) == true)
@@ -610,7 +610,7 @@ bool DynamixelInterfaceDriver::getVoltageLimits(int servo_id, float& min_voltage
  * @param min_voltage_limit Stores value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getMinVoltageLimit(int servo_id, float& min_voltage_limit)
+bool DynamixelInterfaceDriver::getMinVoltageLimit(int servo_id, float* min_voltage_limit)
 {
 
 	uint8_t error;
@@ -641,7 +641,7 @@ bool DynamixelInterfaceDriver::getMinVoltageLimit(int servo_id, float& min_volta
 	// check return value
 	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
 	{
-		min_voltage_limit = (data) / 10;
+		*min_voltage_limit = (float) (data) / 10;
 		return true;
 	}
 	else
@@ -657,7 +657,7 @@ bool DynamixelInterfaceDriver::getMinVoltageLimit(int servo_id, float& min_volta
  * @param max_voltage_limit Stores value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getMaxVoltageLimit(int servo_id, float& max_voltage_limit)
+bool DynamixelInterfaceDriver::getMaxVoltageLimit(int servo_id, float* max_voltage_limit)
 {
 
 	uint8_t error;
@@ -688,7 +688,7 @@ bool DynamixelInterfaceDriver::getMaxVoltageLimit(int servo_id, float& max_volta
 	// check return value
 	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
 	{
-		max_voltage_limit = (data) / 10;
+		*max_voltage_limit = (float) (data) / 10;
 		return true;
 	}
 	else
@@ -704,7 +704,7 @@ bool DynamixelInterfaceDriver::getMaxVoltageLimit(int servo_id, float& max_volta
  * @param max_temperature Stores value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getTemperatureLimit(int servo_id, uint8_t& max_temperature)
+bool DynamixelInterfaceDriver::getTemperatureLimit(int servo_id, uint8_t* max_temperature)
 {
 
 	uint8_t error;
@@ -714,17 +714,17 @@ bool DynamixelInterfaceDriver::getTemperatureLimit(int servo_id, uint8_t& max_te
 	if (servo_series_ == 'M')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_LIMIT_TEMPERATURE, 
-				&max_temperature, &error);
+				max_temperature, &error);
 	}
 	else if (servo_series_ == 'X')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_TEMPERATURE_LIMIT, 
-				&max_temperature, &error);
+				max_temperature, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_LIMIT_TEMPERATURE, 
-				&max_temperature, &error);
+				max_temperature, &error);
 	}
 	else
 	{
@@ -749,7 +749,7 @@ bool DynamixelInterfaceDriver::getTemperatureLimit(int servo_id, uint8_t& max_te
  * @param max_torque Stores value returned
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, uint16_t& max_torque)
+bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, uint16_t* max_torque)
 {
 
 
@@ -760,17 +760,17 @@ bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, uint16_t& max_torque)
 	if (servo_series_ == 'M')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_MAX_TORQUE, 
-				(uint8_t*) &max_torque, &error);
+				(uint8_t*) max_torque, &error);
 	}
 	else if (servo_series_ == 'X')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_X_CURRENT_LIMIT, 
-				&max_torque, &error);
+				max_torque, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_PRO_MAX_TORQUE, 
-				&max_torque, &error);
+				max_torque, &error);
 	}
 	else
 	{
@@ -795,7 +795,7 @@ bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, uint16_t& max_torque)
  * @param torque_enabled Stores the status of torque enable
  * @return True on comm success, false otherwise.
  */
-bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, bool& torque_enabled)
+bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, bool *torque_enabled)
 {
 
 	uint8_t error;
@@ -823,7 +823,7 @@ bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, bool& torque_enabl
 	// check return value
 	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
 	{
-		torque_enabled = (data > 0);
+		*torque_enabled = (data > 0);
 		return true;
 	}
 	else
@@ -839,7 +839,7 @@ bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, bool& torque_enabl
  * @param target_position Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelInterfaceDriver::getTargetPosition(int servo_id, int32_t& target_position)
+bool DynamixelInterfaceDriver::getTargetPosition(int servo_id, int32_t* target_position)
 {
 	uint8_t error;
 	int dxl_comm_result;
@@ -850,17 +850,17 @@ bool DynamixelInterfaceDriver::getTargetPosition(int servo_id, int32_t& target_p
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_GOAL_POSITION_L, 
 				(uint16_t*) &data, &error);
-		target_position = data;
+		*target_position = data;
 	}
 	else if (servo_series_ == 'X')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_GOAL_POSITION, 
-				(uint32_t*) &target_position, &error);
+				(uint32_t*) target_position, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_POSITION, 
-				(uint32_t*) &target_position, &error);
+				(uint32_t*) target_position, &error);
 	}
 	else
 	{
@@ -884,7 +884,7 @@ bool DynamixelInterfaceDriver::getTargetPosition(int servo_id, int32_t& target_p
  * @param target_velocity Stores the value returned
  * @return True on comm success, false otherwise.
  */    
-bool DynamixelInterfaceDriver::getTargetVelocity(int servo_id, int32_t& target_velocity)
+bool DynamixelInterfaceDriver::getTargetVelocity(int servo_id, int32_t* target_velocity)
 {
 
 	uint8_t error;
@@ -896,17 +896,17 @@ bool DynamixelInterfaceDriver::getTargetVelocity(int servo_id, int32_t& target_v
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_GOAL_SPEED_L, 
 				(uint16_t*) &data, &error);
-		target_velocity = data;
+		*target_velocity = data;
 	}
 	else if (servo_series_ == 'X')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_GOAL_VELOCITY, 
-				(uint32_t*) &target_velocity, &error);
+				(uint32_t*) target_velocity, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_VELOCITY, 
-				(uint32_t*) &target_velocity, &error);
+				(uint32_t*) target_velocity, &error);
 	}
 	else
 	{
@@ -931,7 +931,7 @@ bool DynamixelInterfaceDriver::getTargetVelocity(int servo_id, int32_t& target_v
  * @param position Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelInterfaceDriver::getPosition(int servo_id, int32_t& position)
+bool DynamixelInterfaceDriver::getPosition(int servo_id, int32_t* position)
 {
 
 	uint8_t error;
@@ -943,7 +943,7 @@ bool DynamixelInterfaceDriver::getPosition(int servo_id, int32_t& position)
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_PRESENT_POSITION_L, 
 				(uint16_t*) &data, &error);
-		position = data;
+		*position = data;
 	}
 	else if (servo_series_ == 'X')
 	{
@@ -978,7 +978,7 @@ bool DynamixelInterfaceDriver::getPosition(int servo_id, int32_t& position)
  * @param velocity Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelInterfaceDriver::getVelocity(int servo_id, int32_t& velocity)
+bool DynamixelInterfaceDriver::getVelocity(int servo_id, int32_t* velocity)
 {
 
 	uint8_t error;
@@ -994,12 +994,12 @@ bool DynamixelInterfaceDriver::getVelocity(int servo_id, int32_t& velocity)
 	else if (servo_series_ == 'X')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_PRESENT_POSITION, 
-				(uint32_t*) &velocity, &error);
+				(uint32_t*) velocity, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_PRESENT_POSITION, 
-				(uint32_t*) &velocity, &error);
+				(uint32_t*) velocity, &error);
 	}
 	else
 	{
@@ -1024,7 +1024,7 @@ bool DynamixelInterfaceDriver::getVelocity(int servo_id, int32_t& velocity)
  * @param current Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelInterfaceDriver::getCurrent(int servo_id, uint16_t& current)
+bool DynamixelInterfaceDriver::getCurrent(int servo_id, uint16_t* current)
 {
 
 	uint8_t error;
@@ -1034,17 +1034,17 @@ bool DynamixelInterfaceDriver::getCurrent(int servo_id, uint16_t& current)
 	if (servo_series_ == 'M')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_PRESENT_CURRENT_L, 
-				&current, &error);
+				current, &error);
 	}
 	else if (servo_series_ == 'X')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_X_PRESENT_CURRENT, 
-				&current, &error);
+				current, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_PRO_PRESENT_CURRENT, 
-				&current, &error);
+				current, &error);
 	}
 	else
 	{
@@ -1069,7 +1069,7 @@ bool DynamixelInterfaceDriver::getCurrent(int servo_id, uint16_t& current)
  * @param voltage Stores the value returned
  * @return True on comm success, false otherwise.
  */ 
-bool DynamixelInterfaceDriver::getVoltage(int servo_id, float& voltage)
+bool DynamixelInterfaceDriver::getVoltage(int servo_id, float* voltage)
 {
 
 	uint8_t error;
@@ -1100,7 +1100,7 @@ bool DynamixelInterfaceDriver::getVoltage(int servo_id, float& voltage)
 	// check return value
 	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
 	{
-		voltage = (data) / 10;
+		*voltage = (float) (data) / 10;
 		return true;
 	}
 	else
@@ -1116,7 +1116,7 @@ bool DynamixelInterfaceDriver::getVoltage(int servo_id, float& voltage)
  * @param temperature Stores the value returned
  * @return True on comm success, false otherwise.
  */  
-bool DynamixelInterfaceDriver::getTemperature(int servo_id, uint8_t& temperature)
+bool DynamixelInterfaceDriver::getTemperature(int servo_id, uint8_t* temperature)
 {
 	
 	uint8_t error;
@@ -1126,17 +1126,17 @@ bool DynamixelInterfaceDriver::getTemperature(int servo_id, uint8_t& temperature
 	if (servo_series_ == 'M')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_LIMIT_TEMPERATURE, 
-				&temperature, &error);
+				temperature, &error);
 	}
 	else if (servo_series_ == 'X')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_TEMPERATURE_LIMIT, 
-				&temperature, &error);
+				temperature, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_LIMIT_TEMPERATURE, 
-				&temperature, &error);
+				temperature, &error);
 	}
 	else
 	{
@@ -1899,7 +1899,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_
             success = setAngleLimits(servo_id, 0, 4095); //Master mode, normal roatation
          	
          	//Torque control mode, there is actually a register for this
-            success = getModelNumber(servo_id, model_num);
+            success = getModelNumber(servo_id, &model_num);
             if ( (model_num == 310) || (model_num == 320) ) //No torque control on MX-28
             {
      			dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_CONTROL_ENABLE, 
@@ -1912,7 +1912,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_
         	//Velocity control, turn off angle limits
             success = setAngleLimits(servo_id, 0, 0); //Master mode, normal roatation
         	//Torque control mode, there is actually a register for this
-            success = getModelNumber(servo_id, model_num);
+            success = getModelNumber(servo_id, &model_num);
             if ( (model_num == 310) || (model_num == 320) ) //No torque control on MX-28
             {
      			dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_CONTROL_ENABLE, 
@@ -1924,7 +1924,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_
         	//Torque control, turn off angle limits
             success = setAngleLimits(servo_id, 0, 0); //Master mode, normal roatation
         	//Torque control mode, there is actually a register for this
-            success = getModelNumber(servo_id, model_num);
+            success = getModelNumber(servo_id, &model_num);
             if ( (model_num == 310) || (model_num == 320) ) //No torque control on MX-28
             {
      			dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_CONTROL_ENABLE, 
@@ -2225,7 +2225,7 @@ bool DynamixelInterfaceDriver::setTorqueEnabled(int servo_id, bool on)
 	//Read address and size always depends on servo series
 	if (servo_series_ == 'M')
 	{
-		dxl_comm_result = getModelNumber(servo_id, model_num);
+		dxl_comm_result = getModelNumber(servo_id, &model_num);
         if (((model_num == 310) || (model_num == 320) ) && (on == false))
         {
  			dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_CONTROL_ENABLE, 

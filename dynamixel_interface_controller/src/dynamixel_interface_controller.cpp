@@ -482,7 +482,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                     bool success = true;
                     info.model_number = 0;
                     bool t_e;
-                    success &= port.driver->getModelNumber(info.id, info.model_number);
+                    success &= port.driver->getModelNumber(info.id, &info.model_number);
                    
                     //If valid motor, setup in operating mode
                     if ((success) || (info.model_number))
@@ -501,7 +501,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                                 info.model_name.c_str());
                         
                         //maintain torque state in motor
-                        port.driver->getTorqueEnabled(info.id, t_e);
+                        port.driver->getTorqueEnabled(info.id, &t_e);
                         port.driver->setTorqueEnabled(info.id, t_e);
                      
                         //check support for operating mode
@@ -728,7 +728,7 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
                 int32_t priorPos = info.init;
 
                 //this is to ensure that the motor is enabled at it's current position
-                dynamixel_ports_[i].driver->getPosition(info.id, priorPos);
+                dynamixel_ports_[i].driver->getPosition(info.id, &priorPos);
                 dynamixel_ports_[i].driver->setPosition(info.id, priorPos);
 
                 //enable motor torque
@@ -851,6 +851,12 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
     //get this threads port information
     portInfo port = dynamixel_ports_[port_num];
 
+    //ignore empty messages
+    if (joint_commands.name.size() < 1)
+    {
+        return;
+    }
+
     //booleans used to setup which parameters to write
     bool has_pos = false, has_vel = false, has_torque = false;
 
@@ -859,11 +865,11 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
     {
         has_pos = true;
     }
-    if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ != TORQUE_CONTROL))
+    if ((joint_commands.velocity.size() == joint_commands.name.size()) && (control_type_ != TORQUE_CONTROL))
     {
         has_vel = true;
     }
-    if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == TORQUE_CONTROL))
+    if ((joint_commands.effort.size() == joint_commands.name.size()) && (control_type_ == TORQUE_CONTROL))
     {
         has_torque = true; 
     }
@@ -1005,7 +1011,6 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
 
         
     }
-
 
     //use the multi-motor write functions to reduce the bandwidth required to command
     //all the motors
