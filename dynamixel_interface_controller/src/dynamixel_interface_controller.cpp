@@ -791,7 +791,8 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
 
         if (reads[i].name.size() == 0)
         {
-            ROS_ERROR("No values passed back from %s thread", dynamixel_ports_[i].device.c_str());
+            //ROS_ERROR("No values passed back from %s thread", dynamixel_ports_[i].device.c_str());
+            continue;
         } 
 
         //append read values to published message
@@ -1109,6 +1110,12 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
             
             //info struct
             dynamixelInfo info = iter->second;
+
+            //ignore joints that failed to read
+            if(std::find(servo_ids->begin(), servo_ids->end(), info.id) == servo_ids->end())
+            {
+                continue;
+            } 
 
             //response from dynamixel
             std::vector<int32_t> response = responses->at(info.id);

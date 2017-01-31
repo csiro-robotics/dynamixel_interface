@@ -73,32 +73,32 @@ ports:
 
   # # ------------------------------------------------------------------------- #   
 
-  - name: Port_2
-    device: /dev/ttyUSB1
-    baudrate: 2000000
-    series: XM
-    servos:
+  # - name: Port_2
+  #   device: /dev/ttyUSB1
+  #   baudrate: 2000000
+  #   series: XM
+  #   servos:
 
-        - id: 1
-          joint_name: joint_3
-          init: 1000
-          min: 1000
-          max: 3000
-          joint_speed: 1.0
-          torque_limit: 0.5
-          p_gain: 1.0
-          i_gain: 0.0
-          d_gain: 0.0
+  #       - id: 1
+  #         joint_name: joint_3
+  #         init: 1000
+  #         min: 1000
+  #         max: 3000
+  #         joint_speed: 1.0
+  #         torque_limit: 0.5
+  #         p_gain: 1.0
+  #         i_gain: 0.0
+  #         d_gain: 0.0
 
-        - id: 2
-          joint_name: joint_4
-          init: 2048
-          min: 0
-          max: 4095
-          joint_speed: 5.0
-          torque_limit: 1.0
-          p_gain: -1.0
-          i_gain: -1.0
-          d_gain: -1.0
+  #       - id: 2
+  #         joint_name: joint_4
+  #         init: 2048
+  #         min: 0
+  #         max: 4095
+  #         joint_speed: 5.0
+  #         torque_limit: 1.0
+  #         p_gain: -1.0
+  #         i_gain: -1.0
+  #         d_gain: -1.0
 
 # # --------------------------------------------------------------------------- # #   
