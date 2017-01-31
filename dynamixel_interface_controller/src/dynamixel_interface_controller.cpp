@@ -42,8 +42,8 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  * 
- * dynamixel_interface_driver and dynamixel_interface_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
- * Willow Garage):
+ * dynamixel_interface_driver and dynamixel_interface_controller packages are forked from projects authored by Brian 
+ * Axelrod (on behalf of Willow Garage):
  * 
  * https://github.com/baxelrod/dynamixel_pro_controller
  * https://github.com/baxelrod/dynamixel_pro_driver
@@ -71,6 +71,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * ___________________________________________________________________
  */
+
 
 /**
  * @file   dynamixel_interface_controller.cpp
@@ -166,7 +167,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     nh_->param<bool>("echo_joint_commands", echo_joint_commands_, false);
 
     nh_->param<std::string>("control_mode", mode, "Position");
-    nh_->param<double>("global_joint_speed", global_joint_speed, 1.0);
+    nh_->param<double>("global_joint_speed", global_joint_speed, 5.0);
     nh_->param<double>("global_torque_limit", global_torque_limit, 1.0);
     nh_->param<double>("global_p_gain", global_p_gain, -1.0);
     nh_->param<double>("global_i_gain", global_i_gain, -1.0);
@@ -1050,7 +1051,6 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
     {
 
         //set the velocity values for each motor
-
         vector< vector<int> > data;
         for (int i = 0; i < ids.size(); i++)
         {
@@ -1065,7 +1065,6 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
     {
 
         //set the torque values for each motor
-
         vector< vector<int> > data;
         for (int i = 0; i < ids.size(); i++)
         {

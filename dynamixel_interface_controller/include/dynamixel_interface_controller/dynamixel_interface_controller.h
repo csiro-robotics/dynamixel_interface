@@ -42,8 +42,8 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  * 
- * dynamixel_interface_driver and dynamixel_interface_controller packages are adapted from software provided by Brian Axelrod (on behalf of 
- * Willow Garage):
+ * dynamixel_interface_driver and dynamixel_interface_controller packages are forked from projects authored by Brian 
+ * Axelrod (on behalf of Willow Garage):
  * 
  * https://github.com/baxelrod/dynamixel_pro_controller
  * https://github.com/baxelrod/dynamixel_pro_driver
@@ -71,6 +71,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * ___________________________________________________________________
  */
+
 
  /**
  * @file   dynamixel_interface_controller.h

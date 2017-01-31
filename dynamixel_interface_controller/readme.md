@@ -1,4 +1,3 @@
-
 Dynamixel Interface Controller. Provides a simple abstracted interface that can control many dynamixels across multiple serial ports using only two topics.
 
 To use this controller with your robot:

@@ -11,7 +11,7 @@
 publish_rate: 20                  # desired rate for joint state updates. actual rate may be less depending on number
                                   # of dynamixels on each port
 
-control_mode: Torque              # control mode, either 'Position', 'Velocity', or 'Torque'
+control_mode: Position            # control mode, either 'Position', 'Velocity', or 'Torque'
 
 disable_torque_on_shutdown: true  # with this enabled the motors will switch off when the controller closes
 
@@ -20,7 +20,7 @@ echo_joint_commands: false        # debug flag to echo write commands sent to th
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for 
 # the servo below
 
-global_joint_speed: 5.0           # maximum joint speed (rad/s) (in position or velocity control)
+global_joint_speed: 2.0           # maximum joint speed (rad/s) (in position or velocity control)
 
 global_torque_limit: 1.0          # maximum motor torque for all modes, given as a fraction of rated max (0-1)
 
@@ -32,14 +32,13 @@ global_d_gain: -1.0               # derivative gain value (values > 0 are set, -
 # # --------------------------------------------------------------------------- # #   
 
 # PORT AND SERVO CONFIGURATIONS
-
 ports:
 
   # PORT LIST
 
   - name: Port_1                  # name for this port in config
     device: /dev/ttyUSB0          # serial device this port will communicate on
-    baudrate: 2000000             # baudrate in use (see dynamixel_driver.h for valid values)
+    baudrate: 1000000             # baudrate in use (see dynamixel_driver.h for valid values)
     series: MX                    # motor series in use, must be 'MX', 'XM', or 'PRO'
     servos:
         
@@ -63,43 +62,43 @@ ports:
           d_gain: -1.0            # derivative gain value (values > 0 are set, -1.0 indicates to leave on default)
 
 
-        # - id: 2
-        #   joint_name: joint_2
-        #   init: 2048
-        #   min: 0
-        #   max: 4095
-        #   # 
-        #   # This servo doesn't have any optional values defined, the global defaults will be used
-        #   #
+        - id: 2
+          joint_name: joint_2
+          init: 2048
+          min: 0
+          max: 4095
+          # 
+          # This servo doesn't have any optional values defined, the global defaults will be used
+          #
 
-  # ------------------------------------------------------------------------- #   
+  # # ------------------------------------------------------------------------- #   
 
-  # - name: Port_2
-  #   device: /dev/ttyUSB1
-  #   baudrate: 2000000
-  #   series: XM
-  #   servos:
+  - name: Port_2
+    device: /dev/ttyUSB1
+    baudrate: 2000000
+    series: XM
+    servos:
 
-  #       - id: 1
-  #         joint_name: joint_3
-  #         init: 1000
-  #         min: 1000
-  #         max: 3000
-  #         joint_speed: 1.0
-  #         torque_limit: 0.5
-  #         p_gain: 1.0
-  #         i_gain: 0.0
-  #         d_gain: 0.0
+        - id: 1
+          joint_name: joint_3
+          init: 1000
+          min: 1000
+          max: 3000
+          joint_speed: 1.0
+          torque_limit: 0.5
+          p_gain: 1.0
+          i_gain: 0.0
+          d_gain: 0.0
 
-  #       - id: 2
-  #         joint_name: joint_4
-  #         init: 2048
-  #         min: 0
-  #         max: 4095
-  #         joint_speed: 5.0
-  #         torque_limit: 1.0
-  #         p_gain: -1.0
-  #         i_gain: -1.0
-  #         d_gain: -1.0
+        - id: 2
+          joint_name: joint_4
+          init: 2048
+          min: 0
+          max: 4095
+          joint_speed: 5.0
+          torque_limit: 1.0
+          p_gain: -1.0
+          i_gain: -1.0
+          d_gain: -1.0
 
 # # --------------------------------------------------------------------------- # #   
