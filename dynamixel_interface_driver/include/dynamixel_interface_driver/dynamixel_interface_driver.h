@@ -744,6 +744,7 @@ private:
 
     /** The motor series this driver is communicating with */
     char servo_series_;
+    
 };
 
 }

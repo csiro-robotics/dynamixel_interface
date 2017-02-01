@@ -1245,7 +1245,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 		//Read data from dynamixels
 		if(bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 6, raw))
 		{
-			//DECODE RAW DATA
+			//Bulk read success, loop and DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
 			{
 
@@ -1274,15 +1274,18 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 		}
 		else
 		{
-			
+			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
 
+			//loop over all dynamixels
 			for (int i = 0; i < read_ids.size(); i++)
 			{
+				//if individual read fails, ignore
 				if(!readRegisters(read_ids.at(i), DXL_MX_PRESENT_POSITION_L, 6, &data))
 				{
 					continue;
 				}
+
 				//get position (data[0] - data[1])
 				value = MAKEWORD(data[0], data[1]);
 				response.push_back(value);
@@ -1297,16 +1300,23 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+				
+				//put id back into list of read id's 
+				servo_ids->push_back(read_ids.at(i));
 
 				response.clear();
 				data.clear();
 			}
+
+			return true;
 		}
 
 		return false;
+
 	}
 	else if (servo_series_ == 'X')
 	{
+
 		//read data from dynamixels
 		if( syncRead(servo_ids, DXL_X_PRESENT_CURRENT, 10, raw) )
 		{
@@ -1340,8 +1350,46 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 		}
 		else
 		{
-			return false;
+			
+			//bulk_read failure, reset and try individual read
+			servo_ids->clear();
+
+			//loop over all dynamixels
+			for (int i = 0; i < read_ids.size(); i++)
+			{
+				//if individual read fails, ignore
+				if(!readRegisters(read_ids.at(i), DXL_X_PRESENT_CURRENT, 10, &data))
+				{
+					continue;
+				}
+
+				//get raw data response
+				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+
+				//get position (data[0] - data[1])
+				value = MAKEINT(MAKEWORD(data[6], data[7]),MAKEWORD(data[8], data[9]));
+				response.push_back(value);
+
+				//get velocity (data[2] - data[3])
+				value = MAKEINT(MAKEWORD(data[2], data[3]),MAKEWORD(data[4], data[5]));
+				response.push_back(value);
+
+				//get load (data[4] - data[5])
+				value = MAKEWORD(data[0], data[1]);
+				response.push_back(value);
+
+				//place responses into return data
+				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+
+				servo_ids->push_back(read_ids.at(i));
+
+				response.clear();
+				data.clear();
+			
+			}
+			return true;
 		}
+		return false;
 	}
 	else if (servo_series_ == 'P')
 	{
@@ -1378,8 +1426,45 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 		}
 		else
 		{
-			return false;
+			//bulk_read failure, reset and try individual read
+			servo_ids->clear();
+
+			//loop over all dynamixels
+			for (int i = 0; i < read_ids.size(); i++)
+			{
+				//if individual read fails, ignore
+				if(!readRegisters(read_ids.at(i), DXL_PRO_PRESENT_POSITION, 10, &data))
+				{
+					continue;
+				}
+
+				//get raw data response
+				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+
+				//get position (data[0] - data[1])
+				value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
+				response.push_back(value);
+
+				//get velocity (data[2] - data[3])
+				value = MAKEINT(MAKEWORD(data[4], data[5]),MAKEWORD(data[6], data[7]));
+				response.push_back(value);
+
+				//get load (data[4] - data[5])
+				value = MAKEWORD(data[8], data[9]);
+				response.push_back(value);
+
+				//place responses into return data
+				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+
+				servo_ids->push_back(read_ids.at(i));
+
+				response.clear();
+				data.clear();
+			
+			}
+			return true;
 		}
+		return false;
 	}
 	else
 	{
@@ -1387,6 +1472,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	}
 	return false;
 }
+
 
 /**
  * Bulk Reads the following servo state variables in one instruction
@@ -1704,6 +1790,11 @@ bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
 	bool success;
 	std::vector<uint8_t> *response;
 
+
+	//get original id list
+	std::vector<int> read_ids = *servo_ids;
+
+
 	//PRO AND X SERIES ONLY
 	if ((servo_series_ != 'X') && (servo_series_ != 'P'))
 	{
@@ -1727,6 +1818,10 @@ bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
    		return false;
    	}
 
+   	//clear original id_list
+   	servo_ids->clear();
+
+
  	//get all responses back from read
     for (int i = 0; i < servo_ids->size(); i++)
     {
@@ -1748,6 +1843,9 @@ bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
 
     		//place vector into map of responses
 	        responses->insert(std::pair<int, std::vector<uint8_t> >(servo_ids->at(i), *response));
+
+   	        //place id back into vector to validate response
+            servo_ids->push_back(read_ids.at(i));
 
     	}
     	else
