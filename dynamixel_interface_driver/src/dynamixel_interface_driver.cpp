@@ -1248,6 +1248,10 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
 			{
+
+				//get raw data response
+				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+
 				//get position (data[0] - data[1])
 				value = MAKEWORD(data[0], data[1]);
 				response.push_back(value);
@@ -1270,7 +1274,9 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 		}
 		else
 		{
+			
 			servo_ids->clear();
+
 			for (int i = 0; i < read_ids.size(); i++)
 			{
 				if(!readRegisters(read_ids.at(i), DXL_MX_PRESENT_POSITION_L, 6, &data))
@@ -1290,7 +1296,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				response.push_back(value);
 
 				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
 				response.clear();
 				data.clear();
