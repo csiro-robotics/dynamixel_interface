@@ -216,6 +216,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
             portInfo port;
 
+            bool use_group_comms;
 
             /************************* PORT ARGUMENTS *********************/
 
@@ -273,13 +274,23 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                 port.series = static_cast<std::string>(ports[i]["series"]);
             }
 
+            //get group comms enabled
+            if (!ports[i]["group_comms_enabled"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
+            {
+                ROS_ERROR("Invalid/Missing group_comms_enabled option for port %d", i);
+                ROS_BREAK();
+            }
+            else
+            {
+                use_group_comms = static_cast<bool>(ports[i]["group_comms_enabled"]);
+            }
 
             /************************* Driver initialisation *********************/
 
             //Attempt to start driver
             try
             {
-                port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate, port.series);    
+                port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate, port.series, use_group_comms);    
             }
             catch (int n)
             {
@@ -503,7 +514,6 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                         
                         //maintain torque state in motor
                         port.driver->getTorqueEnabled(info.id, &t_e);
-                        port.driver->setTorqueEnabled(info.id, t_e);
                      
                         //check support for operating mode
                         if ((control_type_ == TORQUE_CONTROL) && (info.model_number == 29))
@@ -527,6 +537,9 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                             //ROS_WARN("Failed to set operating mode for %s motor (id %d)", info.joint_name.c_str(), 
                             //    info.id);
                         }
+
+                        //preserve torque enable state
+                        port.driver->setTorqueEnabled(info.id, t_e);
 
                         //set torque limit for the motor
                         //ROS_INFO("%f %f %d", info.torque_limit, info.torque_ratio, 

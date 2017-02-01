@@ -118,7 +118,7 @@ namespace dynamixel_interface_driver
  * @param series  The servo series in use (MX, XM or Pro)  
  */
 DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyUSB0",
-                         int baud=1000000, std::string series="MX")
+                         int baud=1000000, std::string series="MX", bool use_group_comms=true)
 {
 
 
@@ -128,6 +128,9 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
     // Set the port path
     // Get methods and members of PortHandlerLinux
     portHandler_ = dynamixel::PortHandler::getPortHandler(device.c_str());
+
+    // set indicator for using group comms
+    use_group_comms_ = use_group_comms;
 
     if (!strncmp(series.c_str(), "MX", 2))
     {
@@ -1221,9 +1224,15 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uin
  * - Present Velocity
  * - Present Current (or load if MX Series)
  *
- * @param servo_ids Pointer to a list of ID's to respond. Dynamixels will respond in order of list index
- * @param responses Pointer map of dynamixel ID's to dynamixel response vectors, response vectors are a list of 
- * parameter values in the order given above.
+ * If the group read fails the function will fall back on reading each motor individually. Optionally, the group 
+ * comms can be disabled on initialisation of the driver (by setting use_group_comms to false) in which case the 
+ * function will always read from each dynamixel individually.
+ *
+ * @param servo_ids Pointer to a list of ID's to respond. Dynamixels will respond in order of list index.
+ * Dynamixels which fail to respond are removed from this list.
+ * @param responses Pointer map of dynamixel ID's in servo_ids to dynamixel response vectors, response vectors are 
+ * a list of parameter values in the order given above.
+ *
  * @return True on comm success, false otherwise
  */
 bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, std::vector<int32_t> > *responses)
@@ -1243,7 +1252,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	if (servo_series_ == 'M')
 	{		
 		//Read data from dynamixels
-		if(bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 6, raw))
+		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 6, raw))
 		{
 			//Bulk read success, loop and DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1318,7 +1327,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	{
 
 		//read data from dynamixels
-		if( syncRead(servo_ids, DXL_X_PRESENT_CURRENT, 10, raw) )
+		if(use_group_comms_ && syncRead(servo_ids, DXL_X_PRESENT_CURRENT, 10, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1394,7 +1403,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	else if (servo_series_ == 'P')
 	{
 		//read data from dynamixels
-		if( syncRead(servo_ids, DXL_PRO_PRESENT_POSITION, 10, raw) )
+		if(use_group_comms_ && syncRead(servo_ids, DXL_PRO_PRESENT_POSITION, 10, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1505,7 +1514,7 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 	if (servo_series_ == 'M')
 	{		
 		//Read data from dynamixels
-		if( bulkRead(servo_ids, DXL_MX_GOAL_POSITION_L, 43, raw) )
+		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_GOAL_POSITION_L, 43, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1564,7 +1573,7 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 	else if (servo_series_ == 'X')
 	{
 		//read data from dynamixels
-		if( syncRead(servo_ids, DXL_X_GOAL_CURRENT, 45, raw) )
+		if(use_group_comms_ && syncRead(servo_ids, DXL_X_GOAL_CURRENT, 45, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1622,7 +1631,7 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 	else if (servo_series_ == 'P')
 	{
 		//read data from dynamixels
-		if( syncRead(servo_ids, DXL_PRO_GOAL_POSITION, 30, raw) )
+		if(use_group_comms_ && syncRead(servo_ids, DXL_PRO_GOAL_POSITION, 30, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1773,10 +1782,12 @@ bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
  * of dynamixels to respond in order with a read of a specified address and length (the same value for all 
  * dynamixels read) This protocol can be used to read many parameters from many dynamixels on a bus in 
  * just one instruction.
- * @param servo_ids Pointer to a list of ID's to respond. Dynamixels will respond in order of list index
+ * @param servo_ids Pointer to a list of ID's to respond. Dynamixels will respond in order of list index. Dynamixels
+ * which fail to respond are removed from this list.
  * @param address The address value in the control table the dynamixels will start reading from
  * @param length The number of bytes to read consecutively from the control table
- * @param responses Pointer map of dynamixel ID's to dynamixel response vectors, response vectors are a raw array of
+ * @param responses Pointer map of dynamixel ID's in servo_ids to dynamixel response vectors, response vectors are a 
+ * raw array of
  * the bytes read from the control table of each dynamixel
  */
 bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
@@ -3271,7 +3282,9 @@ bool DynamixelInterfaceDriver::setMultiTorque(std::vector<std::vector<int> > val
  * Performs the sync write for each protocol. A sync write is a broadcast instruction on a bus that commands a list
  * of dynamixels to write a value into a specified address (the value written can be different for each dynamixel
  * but the address is universal). This can be used to update a parameter (say goal position) for many dynamixels, 
- * each with a unique value, all in one instruction.
+ * each with a unique value, all in one instruction. Optionally, the group comms can be disabled on initialisation of 
+ * the driver (by setting use_group_comms to false) in which case the function loops and writes to each dynamixel 
+ * individually.
  * @param value_pairs A vector of tuples, each tuple containing a dynamixel ID and a write value.
  * @param address The address value in the control table the dynamixels will write to
  * @param length The number of bytes to write
@@ -3284,38 +3297,51 @@ bool DynamixelInterfaceDriver::syncWrite(std::vector<std::vector<int> > value_pa
 	bool success;
 	dynamixel::PacketHandler *pHandle;
 
-	//This prevents a scoping issue
-	if (protocol == 1.0)
+	//only use the group comms method if specified
+	if (use_group_comms_)
 	{
-		pHandle = packetHandlerP1_;
-	}
-	else if (protocol == 2.0)
-	{
-		pHandle = packetHandlerP2_;
+		//This prevents a scoping issue
+		if (protocol == 1.0)
+		{
+			pHandle = packetHandlerP1_;
+		}
+		else if (protocol == 2.0)
+		{
+			pHandle = packetHandlerP2_;
+		}
+		else
+		{
+			return false;
+		}
+
+	    // Initialize GroupSyncWrite instance
+		dynamixel::GroupSyncWrite groupSyncWrite(portHandler_, pHandle, address, length);
+
+		//Add parameters
+		for (int i = 0; i < value_pairs.size(); i++)
+		{	
+			groupSyncWrite.addParam(value_pairs[i][0], (uint8_t*) &value_pairs[i][1]);
+		}
+
+		//Transmit packet and check success
+		dxl_comm_result = groupSyncWrite.txPacket();
+		if (dxl_comm_result != COMM_SUCCESS)
+		{
+			return false;
+		}
+
+		return true;
 	}
 	else
 	{
-		return false;
+
+		//loop and write to dynamixels
+		for (int i = 0; i < value_pairs.size(); i++)
+		{	
+			writeRegisters(value_pairs[i][0], address, length, (uint8_t*) &value_pairs[i][1]);
+		}
+
 	}
-
-
-    // Initialize GroupSyncWrite instance
-	dynamixel::GroupSyncWrite groupSyncWrite(portHandler_, pHandle, address, length);
-
-	//Add parameters
-	for (int i = 0; i < value_pairs.size(); i++)
-	{	
-		groupSyncWrite.addParam(value_pairs[i][0], (uint8_t*) &value_pairs[i][1]);
-	}
-
-	//Transmit packet and check success
-	dxl_comm_result = groupSyncWrite.txPacket();
-	if (dxl_comm_result != COMM_SUCCESS)
-	{
-		return false;
-	}
-
-	return true;
 }
 
 

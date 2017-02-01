@@ -109,7 +109,7 @@ public:
      * @param baud    The baud rate to use
      * @param series  The servo series in use (MX, XM or Pro)  
      */
-    DynamixelInterfaceDriver(std::string device, int baud, std::string series);
+    DynamixelInterfaceDriver(std::string device, int baud, std::string series, bool use_group_comms);
 
     /**
      * Destructor. Closes and releases serial port.
@@ -744,7 +744,10 @@ private:
 
     /** The motor series this driver is communicating with */
     char servo_series_;
-    
+
+    /** Indicates whether or not to use the group communication methods */
+    bool use_group_comms_;
+
 };
 
 }
