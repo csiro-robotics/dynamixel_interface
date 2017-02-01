@@ -621,10 +621,10 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     joint_state_publisher_  = nh_->advertise<sensor_msgs::JointState>("/joint_states", 1);
 
     //advertise the debug topic
-    if (echo_joint_commands_)
-    {
+    // if (echo_joint_commands_)
+    // {
         debug_publisher_ = nh_->advertise<sensor_msgs::JointState>("/writeDebug", 1);
-    }
+    // }
 
     //Start listening to command messages
     joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_state", 
@@ -710,6 +710,7 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
     if (shutting_down_)
         return;
 
+    int num_servos = 0;
     std::vector<std::thread> threads;
     sensor_msgs::JointState read_msg;
     sensor_msgs::JointState reads[dynamixel_ports_.size()];
@@ -757,6 +758,7 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
     //spawn an IO thread for each additional port
     for (int i = 1; i < dynamixel_ports_.size(); i++)
     {
+        num_servos = num_servos + dynamixel_ports_[i].joints.size();
         reads[i] = sensor_msgs::JointState();
         std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this, i, std::ref(reads[i]));
         threads.push_back(move(readThread));
@@ -764,6 +766,8 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
 
     //get messages for the first port
     reads[0] = sensor_msgs::JointState();
+
+    num_servos = num_servos + dynamixel_ports_[0].joints.size();
 
     //keep the write message thread safe 
     std::unique_lock<std::mutex> lock(write_mutex_);
@@ -816,6 +820,11 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
 
     //publish joint states
     joint_state_publisher_.publish(read_msg);
+
+    if (read_msg.name.size() < num_servos)
+    {
+        debug_publisher_.publish(read_msg);
+    }
 
 }
 

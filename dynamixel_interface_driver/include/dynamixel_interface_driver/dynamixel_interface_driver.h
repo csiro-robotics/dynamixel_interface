@@ -327,7 +327,7 @@ public:
      * @param length The number of bytes to read consecutively from the control table
      * @param response Array to store the raw dynamixel response.
      */
-    bool readRegisters(int servo_id, uint32_t address, uint32_t length, uint8_t *response);
+    bool readRegisters(int servo_id, uint32_t address, uint32_t length, std::vector<uint8_t> *response);
 
 
     // *********************** BULK_READ METHODS *************************** //

@@ -1163,39 +1163,52 @@ bool DynamixelInterfaceDriver::getTemperature(int servo_id, uint8_t* temperature
  * @param length The number of bytes to read consecutively from the control table
  * @param response Array to store the raw dynamixel response.
  */
-bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uint32_t length, uint8_t *response)
+bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uint32_t length, std::vector<uint8_t> *response)
 {
 
 	uint8_t error;
 	int dxl_comm_result;
 
+	uint8_t* data = (uint8_t*) malloc(length * sizeof(uint8_t));
+
 	//Read address and size always depends on servo series
 	if (servo_series_ == 'M')
 	{
-		dxl_comm_result = packetHandlerP1_->readTxRx(portHandler_, servo_id, address, length, response, &error);
+		dxl_comm_result = packetHandlerP1_->readTxRx(portHandler_, servo_id, address, length, data, &error);
 	}
 	else if (servo_series_ == 'X')
 	{
-		dxl_comm_result = packetHandlerP2_->readTxRx(portHandler_, servo_id, address, length, response, &error);
+		dxl_comm_result = packetHandlerP2_->readTxRx(portHandler_, servo_id, address, length, data, &error);
 	}
 	else if (servo_series_ == 'P')
 	{
-		dxl_comm_result = packetHandlerP2_->readTxRx(portHandler_, servo_id, address, length, response, &error);
+		dxl_comm_result = packetHandlerP2_->readTxRx(portHandler_, servo_id, address, length, data, &error);
 	}
 	else
 	{
+		free(data);
 		return false;
 	}
 
 	// check return value
 	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
 	{
+
+		for(int i = 0; i < length; i++)
+		{
+			response->push_back(data[i]);
+		}
+		free(data);
 		return true;
 	}
 	else
 	{
+		free(data);
 		return false;
 	}
+
+	free(data);
+	return false;
 
 }
 
@@ -1219,7 +1232,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	
 	std::vector<int32_t> response;
 	std::vector<uint8_t> data;
-
+	bool bulk_read_success = false;
 	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
 
 	uint32_t value = 0;
@@ -1227,40 +1240,47 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	if (servo_series_ == 'M')
 	{		
 		//Read data from dynamixels
-		if( bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 6, raw) )
+		bulk_read_success = bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 6, raw);
+
+		
+
+		//DECODE RAW DATA
+		for (int i = 0; i < servo_ids->size(); i++)
 		{
-			//DECODE RAW DATA
-			for (int i = 0; i < servo_ids->size(); i++)
+
+			//get raw data response
+			if (bulk_read_success)
 			{
-
-				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
-
-				//get position (data[0] - data[1])
-				value = MAKEWORD(data[0], data[1]);
-				response.push_back(value);
-
-				//get velocity (data[2] - data[3])
-				value = MAKEWORD(data[2], data[3]);
-				response.push_back(value);
-
-				//get load (data[4] - data[5])
-				value = MAKEWORD(data[4], data[5]);
-				response.push_back(value);
-
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
-
-				response.clear();
-				data.clear();
-
+				data = raw->at(servo_ids->at(i));
 			}
-			return true;
+			else
+			{
+				if(!readRegisters(servo_ids->at(i), DXL_MX_PRESENT_POSITION_L, 6, &data))
+				{
+					return false;
+				}
+			}
+
+			//get position (data[0] - data[1])
+			value = MAKEWORD(data[0], data[1]);
+			response.push_back(value);
+
+			//get velocity (data[2] - data[3])
+			value = MAKEWORD(data[2], data[3]);
+			response.push_back(value);
+
+			//get load (data[4] - data[5])
+			value = MAKEWORD(data[4], data[5]);
+			response.push_back(value);
+
+			//place responses into return data
+			responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+
+			response.clear();
+			data.clear();
+
 		}
-		else
-		{
-			return false;
-		}
+		return true;
 
 	}
 	else if (servo_series_ == 'X')
@@ -1600,10 +1620,10 @@ bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
     //perform sync read
    	dxl_comm_result = GroupBulkRead.txRxPacket();
 
-   	// if (dxl_comm_result != COMM_SUCCESS)
-   	// {
-   	// 	return false;
-   	// }
+   	if (dxl_comm_result != COMM_SUCCESS)
+   	{
+   		return false;
+   	}
 
    	//clear original id_list
    	servo_ids->clear();
