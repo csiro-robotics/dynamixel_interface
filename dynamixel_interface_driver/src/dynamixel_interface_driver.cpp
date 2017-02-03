@@ -2042,6 +2042,8 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_
 	uint16_t model_num;
 	bool success = true;
 	
+
+	ROS_INFO("operating_mode: %d, %c", operating_mode, servo_series_);
 	//Read address and size always depends on servo series
 	if (servo_series_ == 'M')
 	{
@@ -2082,6 +2084,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_
             success = getModelNumber(servo_id, &model_num);
             if ( (model_num == 310) || (model_num == 320) ) //No torque control on MX-28
             {
+            	ROS_INFO("torque_control_enabled");
      			dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_CONTROL_ENABLE, 
      					1, &error);       	
             }

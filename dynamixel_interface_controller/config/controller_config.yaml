@@ -40,6 +40,7 @@ ports:
     device: /dev/ttyUSB0          # serial device this port will communicate on
     baudrate: 1000000             # baudrate in use (see dynamixel_driver.h for valid values)
     series: MX                    # motor series in use, must be 'MX', 'XM', or 'PRO'
+    group_comms_enabled: true
     servos:
         
         # SERVO LIST FOR THIS PORT

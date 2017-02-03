@@ -514,6 +514,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                         
                         //maintain torque state in motor
                         port.driver->getTorqueEnabled(info.id, &t_e);
+                        port.driver->setTorqueEnabled(info.id, 0);
                      
                         //check support for operating mode
                         if ((control_type_ == TORQUE_CONTROL) && (info.model_number == 29))
@@ -534,12 +535,9 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                         //set operating mode for the motor
                         if ( !port.driver->setOperatingMode(info.id, control_type_) )
                         {
-                            //ROS_WARN("Failed to set operating mode for %s motor (id %d)", info.joint_name.c_str(), 
-                            //    info.id);
+                            ROS_WARN("Failed to set operating mode for %s motor (id %d)", info.joint_name.c_str(), 
+                                info.id);
                         }
-
-                        //preserve torque enable state
-                        port.driver->setTorqueEnabled(info.id, t_e);
 
                         //set torque limit for the motor
                         //ROS_INFO("%f %f %d", info.torque_limit, info.torque_ratio, 
@@ -571,6 +569,10 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                                 }                
                             }
                         }
+
+                        //preserve torque enable state
+                        port.driver->setTorqueEnabled(info.id, t_e);
+
 
                         //set PID tuning
                         if (!port.driver->setPIDGains(info.id, control_type_, info.p_gain, info.i_gain, info.d_gain))
@@ -634,10 +636,10 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     joint_state_publisher_  = nh_->advertise<sensor_msgs::JointState>("/joint_states", 1);
 
     //advertise the debug topic
-    // if (echo_joint_commands_)
-    // {
+    if (echo_joint_commands_)
+    {
         debug_publisher_ = nh_->advertise<sensor_msgs::JointState>("/writeDebug", 1);
-    // }
+    }
 
     //Start listening to command messages
     joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_state", 
@@ -757,6 +759,10 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
                 {
                     int regVal = (int) ((double) (info.joint_speed) * (60/(2.0 * M_PI)) * info.gear_reduction);
                     dynamixel_ports_[i].driver->setProfileVelocity(info.id, regVal);
+                } 
+                else if (control_type_ == TORQUE_CONTROL)
+                {
+                    dynamixel_ports_[i].driver->setOperatingMode(info.id, control_type_);
                 }
                 
                 ROS_INFO("Torque enabled on %s joint", it->first.c_str());
@@ -833,11 +839,6 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
 
     //publish joint states
     joint_state_publisher_.publish(read_msg);
-
-    if (read_msg.name.size() < num_servos)
-    {
-        debug_publisher_.publish(read_msg);
-    }
 
 }
 
