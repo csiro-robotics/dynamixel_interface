@@ -347,55 +347,18 @@ public:
     bool getBulkStateInfo(std::vector<int> *servo_ids,
                            std::map<int, std::vector<int32_t> >  *responses);
 
-
     /**
      * Bulk Reads the following servo state variables in one instruction
      *
-     * Protocol 1.0 (MX Series)
-     *  - goal Pos
-     *  - moving speed (goal velocity)
-     *  - present position
-     *  - present velocity
-     *  - present load
      *  - present voltage
      *  - present temperature
-     * Total 14 Bytes conescutive
-     *
-     *
-     * Protocol 2.0 (XM Series)
-     *  - goal position
-     *  - realtime tick
-     *  - moving
-     *  - moving status
-     *  - present pwm
-     *  - present current
-     *  - present position
-     *  - velocity trajectory
-     *  - position trajectory
-     *  - present voltage
-     *  - present temperature
-     * Total 31 Bytes Consecutive
-     *
-     * 
-     * Protocol 2.0 (Pro Series)
-     *  - Goal Position
-     *  - Goal Velocity
-     *  - Goal Torque
-     *  - Goal Acceleration
-     *  - Moving
-     *  - Present Position
-     *  - Present Velocity
-     *  - Present Current
-     *  - present voltage
-     *  - present temperature
-     * Total 30 Bytes Consecutive  
      *
      * @param servo_ids Pointer to a list of ID's to respond. Dynamixels will respond in order of list index
      * @param responses Pointer map of dynamixel ID's to dynamixel response vectors, response vectors are a list of 
      * parameter values in the order given above.
      * @return True on comm success, false otherwise
      */
-    bool getBulkStatusInfo(std::vector<int> *servo_ids,
+    bool getBulkDiagnosticInfo(std::vector<int> *servo_ids,
                            std::map<int, std::vector<int32_t> >  *responses);
 
    

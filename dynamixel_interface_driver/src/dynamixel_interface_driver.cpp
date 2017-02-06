@@ -1329,9 +1329,10 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 		//read data from dynamixels
 		if(use_group_comms_ && syncRead(servo_ids, DXL_X_PRESENT_CURRENT, 10, raw) )
 		{
+
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
-			{
+			{	
 
 				//get raw data response
 				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
@@ -1483,15 +1484,12 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 }
 
 
+
+
+
 /**
  * Bulk Reads the following servo state variables in one instruction
  *
- *  - goal position
- *  - goal velocity
- *  - goal torque (current)
- *  - present position
- *  - present velocity
- *  - present load (current)
  *  - present voltage
  *  - present temperature
  *
@@ -1500,21 +1498,24 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
  * parameter values in the order given above.
  * @return True on comm success, false otherwise
  */
-bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
+bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids,
                            std::map<int, std::vector<int32_t> >  *responses)
 {
 	
 	std::vector<int32_t> response;
 	std::vector<uint8_t> data;
-
+	bool bulk_read_success = false;
 	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
+
+	//get original id list
+	std::vector<int> read_ids = *servo_ids;
 
 	uint32_t value = 0;
 
 	if (servo_series_ == 'M')
 	{		
 		//Read data from dynamixels
-		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_GOAL_POSITION_L, 43, raw) )
+		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_VOLTAGE, 2, raw))
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1523,36 +1524,12 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 				//get raw data response
 				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
 
-				//get goal position (data[0] - data[1])
-				value = MAKEWORD(data[0], data[1]);
-				response.push_back(value);
-
-				//get goal velocity (data[2] - data[3])
-				value = MAKEWORD(data[2], data[3]);
-				response.push_back(value);
-
-				//get goal torque (data[41] - data[42])
-				value = MAKEWORD(data[41], data[42]);
-				response.push_back(value);
-
-				//get present position (data[6] - data[7])
-				value = MAKEWORD(data[6], data[7]);
-				response.push_back(value);
-
-				//get present velocity (data[8] - data[9])
-				value = MAKEWORD(data[8], data[9]);
-				response.push_back(value);
-
-				//get present torque (data[10] - data[11])
-				value = MAKEWORD(data[10], data[11]);
-				response.push_back(value);
-
 				//get present voltage (data[12])
-				value = data[12];
+				value = data[0];
 				response.push_back(value);
 
 				//get present temperature (data[13])
-				value = data[13];
+				value = data[1];
 				response.push_back(value);
 
 				//place responses into return data
@@ -1563,17 +1540,53 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 
 			}
 			return true;
+
 		}
 		else
 		{
-			return false;
+			//bulk_read failure, reset and try individual read
+			servo_ids->clear();
+
+
+			//loop over all dynamixels
+			for (int i = 0; i < read_ids.size(); i++)
+			{
+
+				//if individual read fails, ignore
+				if(!readRegisters(read_ids.at(i), DXL_MX_PRESENT_VOLTAGE, 2, &data))
+				{
+					continue;
+				}
+
+				//get raw data response
+				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+
+				//get present voltage (data[12])
+				value = data[0];
+				response.push_back(value);
+
+				//get present temperature (data[13])
+				value = data[1];
+				response.push_back(value);
+
+				//place responses into return data
+				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+
+				response.clear();
+				data.clear();
+			}
+
+			return true;
 		}
+
+		return false;
 
 	}
 	else if (servo_series_ == 'X')
 	{
+
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_X_GOAL_CURRENT, 45, raw) )
+		if(use_group_comms_ && syncRead(servo_ids, DXL_X_PRESENT_INPUT_VOLTAGE, 3, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1582,36 +1595,12 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 				//get raw data response
 				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
 
-				//get goal position
-				value = MAKEINT(MAKEWORD(data[14], data[15]),MAKEWORD(data[16], data[17]));
-				response.push_back(value);
-
-				//get goal velocity
-				value = MAKEINT(MAKEWORD(data[2], data[3]),MAKEWORD(data[4], data[5]));
-				response.push_back(value);
-
-				//get goal torque
+				//get present Voltage
 				value = MAKEWORD(data[0], data[1]);
 				response.push_back(value);
 
-				//get present position
-				value = MAKEINT(MAKEWORD(data[30], data[31]),MAKEWORD(data[32], data[33]));
-				response.push_back(value);
-
-				//get present velocity
-				value = MAKEINT(MAKEWORD(data[26], data[27]),MAKEWORD(data[28], data[29]));
-				response.push_back(value);
-
-				//get present torque
-				value = MAKEWORD(data[24], data[25]);
-				response.push_back(value);
-
-				//get voltage
-				value = MAKEWORD(data[42], data[43]);
-				response.push_back(value);
-
 				//get temperature
-				value = data[44];
+				value = data[2];
 				response.push_back(value);
 
 				//place responses into return data
@@ -1625,13 +1614,45 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 		}
 		else
 		{
-			return false;
+			
+			//bulk_read failure, reset and try individual read
+			servo_ids->clear();
+
+			//loop over all dynamixels
+			for (int i = 0; i < read_ids.size(); i++)
+			{
+				//if individual read fails, ignore
+				if(!readRegisters(read_ids.at(i), DXL_X_PRESENT_INPUT_VOLTAGE, 3, &data))
+				{
+					continue;
+				}
+
+				//get raw data response
+				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+
+				//get present Voltage
+				value = MAKEWORD(data[0], data[1]);
+				response.push_back(value);
+
+				//get temperature
+				value = data[2];
+				response.push_back(value);
+
+				//place responses into return data
+				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+
+				response.clear();
+				data.clear();
+			
+			}
+			return true;
 		}
+		return false;
 	}
 	else if (servo_series_ == 'P')
 	{
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_PRO_GOAL_POSITION, 30, raw) )
+		if(use_group_comms_ && syncRead(servo_ids, DXL_PRO_PRESENT_VOLTAGE, 3, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1639,36 +1660,12 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 				//get raw data response
 				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
 
-				//get goal position
-				value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
-				response.push_back(value);
-
-				//get goal velocity
-				value = MAKEINT(MAKEWORD(data[4], data[5]),MAKEWORD(data[6], data[7]));
-				response.push_back(value);
-
-				//get goal torque
-				value = MAKEWORD(data[8], data[9]);
-				response.push_back(value);
-
-				//get present position
-				value = MAKEINT(MAKEWORD(data[15], data[16]),MAKEWORD(data[17], data[18]));
-				response.push_back(value);
-
-				//get present velocity
-				value = MAKEINT(MAKEWORD(data[19], data[20]),MAKEWORD(data[21], data[22]));
-				response.push_back(value);
-
-				//get present torque
-				value = MAKEWORD(data[23], data[24]);
-				response.push_back(value);
-
 				//get voltage
-				value = MAKEWORD(data[25], data[26]);
+				value = MAKEWORD(data[0], data[1]);
 				response.push_back(value);
 
 				//get temperature
-				value = data[27];
+				value = data[2];
 				response.push_back(value);
 
 				//place responses into return data
@@ -1681,8 +1678,37 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 		}
 		else
 		{
-			return false;
+			//bulk_read failure, reset and try individual read
+			servo_ids->clear();
+
+			//loop over all dynamixels
+			for (int i = 0; i < read_ids.size(); i++)
+			{
+				//if individual read fails, ignore
+				if(!readRegisters(read_ids.at(i), DXL_PRO_GOAL_POSITION, 30, &data))
+				{
+					continue;
+				}
+				//get raw data response
+				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+
+				//get voltage
+				value = MAKEWORD(data[0], data[1]);
+				response.push_back(value);
+
+				//get temperature
+				value = data[2];
+				response.push_back(value);
+
+				//place responses into return data
+				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+
+				response.clear();
+				data.clear();
+			}
+			return true;
 		}
+		return false;
 	}
 	else
 	{
@@ -1690,6 +1716,7 @@ bool DynamixelInterfaceDriver::getBulkStatusInfo(std::vector<int> *servo_ids,
 	}
 	return false;
 }
+
 
 // ********************** Protected Read Methods *********************** //
 
@@ -1834,34 +1861,30 @@ bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
 
 
  	//get all responses back from read
-    for (int i = 0; i < servo_ids->size(); i++)
+    for (int i = 0; i < read_ids.size(); i++)
     {
 
     	// new vector for each dynamixel
     	response = new std::vector<uint8_t>;
 
-    	if(GroupSyncRead.isAvailable(servo_ids->at(i), address, length))
+    	if(GroupSyncRead.isAvailable(read_ids.at(i), address, length))
     	{
 
 	        // Get values from read and place into vector
 	        for (int j = 0; j < length; j++)
 	        {
 
-	        	byte = GroupSyncRead.getData(servo_ids->at(i), address + j, 1);
+	        	byte = GroupSyncRead.getData(read_ids.at(i), address + j, 1);
 	            response->push_back(byte);
 
 	        }
 
     		//place vector into map of responses
-	        responses->insert(std::pair<int, std::vector<uint8_t> >(servo_ids->at(i), *response));
+	        responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));
 
    	        //place id back into vector to validate response
             servo_ids->push_back(read_ids.at(i));
 
-    	}
-    	else
-    	{
-    		return false;
     	}
 
     }  	

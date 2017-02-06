@@ -90,6 +90,8 @@
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 
+#include "dynamixel_interface_controller/ServoState.h"
+
 #include <dynamixel_interface_driver/dynamixel_interface_driver.h>
 
 
@@ -260,6 +262,12 @@ public:
 
 private:
 
+
+    /** 
+     * Callback for setting diagnostic publishing flags
+     */
+    void diagnosticsRateCallback(const ros::TimerEvent& event);
+
     /** 
      * Callback for recieving a command from the /desired_joint_state topic.
      * The function atomically updates the class member variable containing the latest message and sets
@@ -304,6 +312,9 @@ private:
     /** Rate at which joint state information is published */
     double publish_rate_;     
 
+    /** Rate at which servo diagnostic information is published */
+    double diagnostics_rate_;
+
     /** Indicates to callbacks that the controller is shutting down */
     volatile bool shutting_down_;
 
@@ -312,6 +323,9 @@ private:
 
     /** Can echo commands sent to the motors (useful for monitoring write values/rates) */
     bool echo_joint_commands_;
+
+    /** Indicates if we should get diagnostic info (voltage and temperature) */
+    bool publish_diagnostics_;
 
     /** Stores the last message received from the write command topic */
     sensor_msgs::JointState write_msg_;
@@ -335,11 +349,17 @@ private:
     /** Publishes joint states from reads */
     ros::Publisher joint_state_publisher_;
 
+    /** Publishes joint states from reads */
+    ros::Publisher diagnostics_publisher_;
+
     /** Gets joint states for writes */
     ros::Subscriber joint_state_subscriber_;
 
     /** Timer that controls the rate of the IO callback */
     ros::Timer broadcast_timer_;
+
+    /** Timer that controls the rate of the IO callback */
+    ros::Timer diagnostics_timer_;
 
     /** Debug message publisher */
     ros::Publisher debug_publisher_;

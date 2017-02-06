@@ -14,7 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
   dynamixel_sdk
   roscpp
   roslib
+  message_generation
   sensor_msgs
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -35,6 +37,16 @@ endif(NOT ${yaml-cpp_VERSION} VERSION_LESS "0.5")
 ## Declare ROS messages, services and actions ##
 ################################################
 
+add_message_files(
+  FILES
+  ServoState.msg
+)
+
+generate_messages(
+   DEPENDENCIES
+   std_msgs
+   sensor_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -53,10 +65,11 @@ endif(NOT ${yaml-cpp_VERSION} VERSION_LESS "0.5")
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
+
 catkin_package(
    INCLUDE_DIRS include
 #  LIBRARIES dynamixel_interface_controller
-#  CATKIN_DEPENDS dynamixel_interface_driver dynamixel_sdk roscpp roslib sensor_msgs yaml-cpp
+   CATKIN_DEPENDS roscpp sensor_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -78,13 +91,15 @@ include_directories(
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
 add_executable(dynamixel_interface_controller_node src/dynamixel_interface_controller.cpp)
+
+add_dependencies(dynamixel_interface_controller_node ${dynamixel_interface_controller_EXPORTED_TARGETS} dynamixel_interface_controller_generate_messages_cpp)
+
 target_link_libraries(
   dynamixel_interface_controller_node
   yaml-cpp
 	${catkin_LIBRARIES}
   ${yaml-cpp_LIBRARIES}
 )
-
 
 #############
 ## Install ##

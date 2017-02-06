@@ -110,7 +110,6 @@ void operator >> (const YAML::Node& node, T& i)
 #include <dynamixel_interface_controller/dynamixel_interface_controller.h>
 #include <dynamixel_interface_driver/dynamixel_interface_driver.h>
 
-
 using namespace dynamixel_interface_controller;
 using namespace std;
 
@@ -165,6 +164,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     nh_->param<double>("publish_rate", publish_rate_, 50.0);
     nh_->param<bool>("disable_torque_on_shutdown", stop_motors_on_shutdown_, false);
     nh_->param<bool>("echo_joint_commands", echo_joint_commands_, false);
+    nh_->param<double>("diagnostics_rate", diagnostics_rate_, 0.0);
 
     nh_->param<std::string>("control_mode", mode, "Position");
     nh_->param<double>("global_joint_speed", global_joint_speed, 5.0);
@@ -641,6 +641,11 @@ DynamixelInterfaceController::DynamixelInterfaceController()
         debug_publisher_ = nh_->advertise<sensor_msgs::JointState>("/writeDebug", 1);
     }
 
+    if (diagnostics_rate_ > 0)
+    {
+        diagnostics_publisher_ = nh_->advertise<dynamixel_interface_controller::ServoState>("/servo_diagnostics", 1);
+    }
+
     //Start listening to command messages
     joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_state", 
         1, &DynamixelInterfaceController::jointStateCallback, this);
@@ -689,6 +694,12 @@ void DynamixelInterfaceController::startBroadcastingJointStates()
     
     broadcast_timer_ = nh_->createTimer(ros::Duration(1.0 / publish_rate_), 
             &DynamixelInterfaceController::publishJointStatesThreaded, this);
+
+    if (diagnostics_rate_ > 0)
+    {
+        diagnostics_timer_ = nh_->createTimer(ros::Duration(1.0 / diagnostics_rate_), 
+                &DynamixelInterfaceController::diagnosticsRateCallback, this);       
+    }
 }
 
 
@@ -711,6 +722,18 @@ void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointSt
     {
         debug_publisher_.publish(joint_commands);
     }
+
+}
+
+
+/**
+ * TimeEvent callback for handling top level control of IO (for multiple ports).
+ * Function spawns and waits on a thread for each 
+ */
+void DynamixelInterfaceController::diagnosticsRateCallback(const ros::TimerEvent& event)
+{
+
+    publish_diagnostics_ = true;
 
 }
 
@@ -839,6 +862,9 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
 
     //publish joint states
     joint_state_publisher_.publish(read_msg);
+
+
+    publish_diagnostics_ = false;
 
 }
 
@@ -1116,6 +1142,7 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
     std::vector<int> *servo_ids = new std::vector<int>;
     std::map<int, std::vector<int32_t> >  *responses = new std::map<int, std::vector<int32_t> >;
 
+
     //Iterate over all connected servos and add to list
     for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
     {
@@ -1215,6 +1242,51 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
             //put effort in message
             read_msg.effort.push_back(torque);
         }
+
+        responses->clear();
+
+        if (publish_diagnostics_)
+        {
+            if( port.driver->getBulkDiagnosticInfo(servo_ids, responses) )
+            {
+
+                dynamixel_interface_controller::ServoState diag_msg;
+
+                //Iterate over all connected servos and add to list
+                for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
+                {
+                    //joint name
+                    string joint_name = iter->first;
+                    
+                    //info struct
+                    dynamixelInfo info = iter->second;
+
+                    //ignore joints that failed to read
+                    if(std::find(servo_ids->begin(), servo_ids->end(), info.id) == servo_ids->end())
+                    {
+                        continue;
+                    } 
+
+                    //response from dynamixel
+                    std::vector<int32_t> response = responses->at(info.id);
+
+                    //put effort in message
+                    diag_msg.joint_names.push_back(joint_name.c_str());
+
+                    //get voltage
+                    diag_msg.voltages.push_back( (double)(response[0]) / 10);
+
+                    //get temperatures
+                    diag_msg.temperatures.push_back( (double)(response[1]));
+
+                }
+
+                //publish diagnostic info
+                diagnostics_publisher_.publish(diag_msg);
+
+            }
+        }
+
     }
     else
     {
@@ -1224,6 +1296,7 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
     read_msg.header.stamp = ros::Time::now();
 
 }
+
 
 
 /** Main loop. intialises controller and starts timer and ROS callback handling */
