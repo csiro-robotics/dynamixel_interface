@@ -1279,6 +1279,8 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
                     //get temperatures
                     diag_msg.temperatures.push_back( (double)(response[1]));
 
+                    diag_msg.error_states.push_back(response[2]);
+
                 }
 
                 //publish diagnostic info

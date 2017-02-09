@@ -17,7 +17,7 @@ disable_torque_on_shutdown: true  # with this enabled the motors will switch off
 
 echo_joint_commands: false        # debug flag to echo write commands sent to the controller, useful for measuring write rates
 
-diagnostics_rate: 0.1             # rate to publish diagnostic information
+diagnostics_rate: 1               # rate to publish diagnostic information
 
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for 
 # the servo below

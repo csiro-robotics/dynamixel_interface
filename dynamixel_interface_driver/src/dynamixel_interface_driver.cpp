@@ -1166,7 +1166,8 @@ bool DynamixelInterfaceDriver::getTemperature(int servo_id, uint8_t* temperature
  * @param length The number of bytes to read consecutively from the control table
  * @param response Array to store the raw dynamixel response.
  */
-bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uint32_t length, std::vector<uint8_t> *response)
+bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uint32_t length, 
+		std::vector<uint8_t> *response)
 {
 
 	uint8_t error;
@@ -1235,7 +1236,8 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uin
  *
  * @return True on comm success, false otherwise
  */
-bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, std::vector<int32_t> > *responses)
+bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, 
+		std::vector<int32_t> > *responses)
 {
 	
 	
@@ -1504,6 +1506,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 	
 	std::vector<int32_t> response;
 	std::vector<uint8_t> data;
+	uint8_t error;
 	bool bulk_read_success = false;
 	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
 
@@ -1514,6 +1517,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 
 	if (servo_series_ == 'M')
 	{		
+
 		//Read data from dynamixels
 		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_VOLTAGE, 2, raw))
 		{
@@ -1531,6 +1535,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				//get present temperature (data[13])
 				value = data[1];
 				response.push_back(value);
+
+				//get error status
+				packetHandlerP1_->ping(portHandler_, servo_ids->at(i), &error);
+				response.push_back(error);
 
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
@@ -1569,6 +1577,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				value = data[1];
 				response.push_back(value);
 
+				//get error status
+				packetHandlerP1_->ping(portHandler_, servo_ids->at(i), &error);
+				response.push_back(error);
+
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
 
@@ -1602,6 +1614,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				//get temperature
 				value = data[2];
 				response.push_back(value);
+
+				//get error status
+				packetHandlerP2_->ping(portHandler_, servo_ids->at(i), &error);
+				response.push_back(error);
 
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
@@ -1638,6 +1654,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				value = data[2];
 				response.push_back(value);
 
+				//get error status
+				packetHandlerP2_->ping(portHandler_, servo_ids->at(i), &error);
+				response.push_back(error);
+
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
 
@@ -1667,6 +1687,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				//get temperature
 				value = data[2];
 				response.push_back(value);
+
+				//get error status
+				packetHandlerP2_->ping(portHandler_, servo_ids->at(i), &error);
+				response.push_back(error);
 
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
@@ -1699,6 +1723,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				//get temperature
 				value = data[2];
 				response.push_back(value);
+				
+				//get error status
+				packetHandlerP2_->ping(portHandler_, servo_ids->at(i), &error);
+				response.push_back(error);
 
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
