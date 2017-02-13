@@ -332,8 +332,17 @@ private:
     /** Indicates if the motors should be turned off when the controller stops */
     bool stop_motors_on_shutdown_;
 
+    /** Indicates whether or not we can switch modes in position control */
+    bool dynamic_mode_switching_;
+
     /** Indicates if we convert raw motor load readings to/from torque for send/receive */
     bool use_torque_as_effort_;
+
+    /** Indicates if we want to read the current register in place of the load register for
+     * the mx series, this improves torque read accuracy at the cost of a significant decrease
+     * in IO performance
+     */
+    bool mx_effort_use_current_;
 
     /** Can echo commands sent to the motors (useful for monitoring write values/rates) */
     bool echo_joint_commands_;

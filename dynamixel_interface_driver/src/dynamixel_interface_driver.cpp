@@ -1233,17 +1233,17 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uin
  * Dynamixels which fail to respond are removed from this list.
  * @param responses Pointer map of dynamixel ID's in servo_ids to dynamixel response vectors, response vectors are 
  * a list of parameter values in the order given above.
+ * @param mx_read_current flag to indicate which register to use for detecting load on mx (present load or present current)
  *
  * @return True on comm success, false otherwise
  */
 bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, 
-		std::vector<int32_t> > *responses)
+		std::vector<int32_t> > *responses, bool mx_read_current)
 {
-	
 	
 	std::vector<int32_t> response;
 	std::vector<uint8_t> data;
-	bool bulk_read_success = false;
+	bool comm_success = false;
 	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
 
 	//get original id list
@@ -1254,7 +1254,21 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	if (servo_series_ == 'M')
 	{		
 		//Read data from dynamixels
-		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 34, raw))
+
+		if(use_group_comms_)
+		{
+			if(mx_read_current)
+			{
+				comm_success = bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 34, raw);	
+			}
+			else
+			{
+				comm_success = bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 6, raw);
+			}
+			
+		}
+
+		if(comm_success)
 		{
 			//Bulk read success, loop and DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1271,8 +1285,16 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				value = MAKEWORD(data[2], data[3]);
 				response.push_back(value);
 
-				//get load (data[4] - data[5])
-				value = MAKEWORD(data[32], data[33]);
+				if(mx_read_current)
+				{
+					//get current (data[32] - data[33])
+					value = MAKEWORD(data[32], data[33]);
+				}
+				else
+				{
+					//get load (data[4] - data[5])
+					value = MAKEWORD(data[4], data[5]);
+				}
 				response.push_back(value);
 
 				//place responses into return data
@@ -1280,6 +1302,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 
 				response.clear();
 				data.clear();
+
 			}
 			return true;
 		}
@@ -1291,8 +1314,13 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			//loop over all dynamixels
 			for (int i = 0; i < read_ids.size(); i++)
 			{
+
 				//if individual read fails, ignore
-				if(!readRegisters(read_ids.at(i), DXL_MX_PRESENT_POSITION_L, 6, &data))
+				if(mx_read_current && !readRegisters(read_ids.at(i), DXL_MX_PRESENT_POSITION_L, 34, &data))
+				{
+					continue;
+				}
+				else if(!mx_read_current && !readRegisters(read_ids.at(i), DXL_MX_PRESENT_POSITION_L, 6, &data))
 				{
 					continue;
 				}
@@ -1305,8 +1333,17 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				value = MAKEWORD(data[2], data[3]);
 				response.push_back(value);
 
-				//get load (data[4] - data[5])
-				value = MAKEWORD(data[32], data[33]);
+
+				if(mx_read_current)
+				{
+					//get current (data[32] - data[33])
+					value = MAKEWORD(data[32], data[33]);
+				}
+				else
+				{
+					//get load (data[4] - data[5])
+					value = MAKEWORD(data[4], data[5]);
+				}
 				response.push_back(value);
 
 				//place responses into return data

@@ -333,19 +333,27 @@ public:
     // *********************** BULK_READ METHODS *************************** //
 
 
-    /* Bulk Reads the following values in one instruction
+    /**
+     * Bulk Reads the following values in one instruction
      *
      * - Present Position
      * - Present Velocity
      * - Present Current (or load if MX Series)
      *
-     * @param servo_ids Pointer to a list of ID's to respond. Dynamixels will respond in order of list index
-     * @param responses Pointer map of dynamixel ID's to dynamixel response vectors, response vectors are a list of 
-     * parameter values in the order given above.
+     * If the group read fails the function will fall back on reading each motor individually. Optionally, the group 
+     * comms can be disabled on initialisation of the driver (by setting use_group_comms to false) in which case the 
+     * function will always read from each dynamixel individually.
+     *
+     * @param servo_ids Pointer to a list of ID's to respond. Dynamixels will respond in order of list index.
+     * Dynamixels which fail to respond are removed from this list.
+     * @param responses Pointer map of dynamixel ID's in servo_ids to dynamixel response vectors, response vectors are 
+     * a list of parameter values in the order given above.
+     * @param mx_read_current flag to indicate which register to use for detecting load on mx (present load or present current)
+     *
      * @return True on comm success, false otherwise
      */
-    bool getBulkStateInfo(std::vector<int> *servo_ids,
-                           std::map<int, std::vector<int32_t> >  *responses);
+    bool getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, 
+                            std::vector<int32_t> > *responses, bool mx_read_current);
 
     /**
      * Bulk Reads the following servo state variables in one instruction
