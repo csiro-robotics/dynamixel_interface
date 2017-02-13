@@ -40,6 +40,7 @@ endif(NOT ${yaml-cpp_VERSION} VERSION_LESS "0.5")
 add_message_files(
   FILES
   ServoState.msg
+  ServoMode.msg
 )
 
 generate_messages(

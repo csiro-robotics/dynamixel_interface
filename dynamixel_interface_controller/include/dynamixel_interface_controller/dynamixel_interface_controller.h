@@ -91,12 +91,54 @@
 #include <sensor_msgs/JointState.h>
 
 #include "dynamixel_interface_controller/ServoState.h"
+#include "dynamixel_interface_controller/ServoMode.h"
 
 #include <dynamixel_interface_driver/dynamixel_interface_driver.h>
 
 
 namespace dynamixel_interface_controller
 {
+
+
+/**
+ * Struct that describes the dynamixel motor's static and physical
+ * properties 
+ */
+struct dynamixelSpec
+{
+
+    /** The Model Name */
+    std::string name;
+
+    /** Model number (e.g 29 = MX-28) */
+    uint16_t model_number;
+
+    /** Motor encoder counter per revolution */
+    int cpr;
+
+    /** Gear reduction ratio */
+    double gear_reduction;
+
+    /** Torque ratio */
+    double torque_ratio;
+
+    /** Current ratio */
+    double current_ratio;
+    
+};
+
+/**
+ * The different control modes available on the dynamixel servos. 
+ * The values chosen for each type reflect those used on the motors 
+ * themselves.
+ */
+enum controlMode
+{
+    POSITION_CONTROL = 3,
+    VELOCITY_CONTROL = 1,
+    TORQUE_CONTROL = 0,
+    UNKOWN  = -1
+};
 
 
 /**
@@ -162,8 +204,14 @@ struct dynamixelInfo
     /** Motor torque reading to register value ratio */ 
     double torque_ratio; 
 
+    /** Motor current reading to register value ratio */
+    double current_ratio;
+
     /** Motor enable flag */
     bool torque_enabled; 
+
+    /** current control mode (position, velocity, torque) */
+    controlMode current_mode;
 
 
 };
@@ -191,44 +239,6 @@ struct portInfo
     /** map of joint names to information */
     std::map<std::string, dynamixelInfo> joints;
 };
-
-/**
- * Struct that describes the dynamixel motor's static and physical
- * properties 
- */
-struct dynamixelSpec
-{
-
-    /** The Model Name */
-    std::string name;
-
-    /** Model number (e.g 29 = MX-28) */
-    uint16_t model_number;
-
-    /** Motor encoder counter per revolution */
-    int cpr;
-
-    /** Gear reduction ratio */
-    double gear_reduction;
-
-    /** Torque ratio */
-    double torque_ratio;
-    
-};
-
-/**
- * The different control modes available on the dynamixel servos. 
- * The values chosen for each type reflect those used on the motors 
- * themselves.
- */
-enum controlMode
-{
-    POSITION_CONTROL = 3,
-    VELOCITY_CONTROL = 1,
-    TORQUE_CONTROL = 0,
-    UNKOWN  = -1
-};
-
 
 
 /**
@@ -281,14 +291,15 @@ private:
      * Function spawns and waits on a thread for each additional port defined. In cases where no additional ports are
      * 
      */
-    void publishJointStatesThreaded(const ros::TimerEvent& event);
+    void publishJointStates(const ros::TimerEvent& event);
 
     /**
      * Top level control function for each port's IO thread.
      * @param port_num index used to retrieve port information from port list
      * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
+     * @param perform_write boolean indicating whether or not to write latest joint_state to servos
      */
-    void multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg);
+    void multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg, bool perform_write);
 
     /**
      * Function called in each thread to perform a write on a port
@@ -320,6 +331,9 @@ private:
 
     /** Indicates if the motors should be turned off when the controller stops */
     bool stop_motors_on_shutdown_;
+
+    /** Indicates if we convert raw motor load readings to/from torque for send/receive */
+    bool use_torque_as_effort_;
 
     /** Can echo commands sent to the motors (useful for monitoring write values/rates) */
     bool echo_joint_commands_;

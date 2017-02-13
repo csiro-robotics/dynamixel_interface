@@ -467,6 +467,15 @@ public:
      */  
     bool setTorqueEnabled(int servo_id, bool on);
 
+
+    /**
+     * Sets the torque control enable register of the dynamixel mx series. can be used to dynamically
+     * switch between position and torque control modes.
+     * @param on The torque control state of the servo (true = on, false = off).
+     * @return True on comm success, false otherwise.
+     */  
+    bool setTorqueControlEnabled(int servo_id, bool on);
+
     /**
      * Sets the PID gains for the dynamixel. note that the PID gains are available based on series and control
      * type:

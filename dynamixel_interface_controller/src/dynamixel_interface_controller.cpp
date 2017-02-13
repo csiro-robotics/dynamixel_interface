@@ -148,6 +148,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
         doc[i]["cpr"]  >> spec.cpr;
         doc[i]["gear_reduction"]  >> spec.gear_reduction;
         doc[i]["torque_ratio"] >> spec.torque_ratio;
+        doc[i]["current_ratio"] >> spec.current_ratio;
 
         model_number2specs_[spec.model_number] = spec;
     }
@@ -164,6 +165,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     nh_->param<double>("publish_rate", publish_rate_, 50.0);
     nh_->param<bool>("disable_torque_on_shutdown", stop_motors_on_shutdown_, false);
     nh_->param<bool>("echo_joint_commands", echo_joint_commands_, false);
+    nh_->param<bool>("use_torque_as_effort", use_torque_as_effort_, false);
     nh_->param<double>("diagnostics_rate", diagnostics_rate_, 0.0);
 
     nh_->param<std::string>("control_mode", mode, "Position");
@@ -506,6 +508,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                         info.gear_reduction = model_number2specs_[info.model_number].gear_reduction;
                         info.model_name = model_number2specs_[info.model_number].name;
                         info.torque_ratio = model_number2specs_[info.model_number].torque_ratio;
+                        info.current_ratio = model_number2specs_[info.model_number].current_ratio;
                         info.torque_enabled = false;
 
                         //Display joint info
@@ -579,6 +582,9 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                         {
                             ROS_WARN("Failed to set PID tuning for %s motor (id %d)", info.joint_name.c_str(), info.id);
                         }
+
+
+                        info.current_mode == control_type_;
 
                         //add joint to port
                         port.joints[info.joint_name] = info;
@@ -693,7 +699,7 @@ void DynamixelInterfaceController::startBroadcastingJointStates()
 {
     
     broadcast_timer_ = nh_->createTimer(ros::Duration(1.0 / publish_rate_), 
-            &DynamixelInterfaceController::publishJointStatesThreaded, this);
+            &DynamixelInterfaceController::publishJointStates, this);
 
     if (diagnostics_rate_ > 0)
     {
@@ -742,7 +748,7 @@ void DynamixelInterfaceController::diagnosticsRateCallback(const ros::TimerEvent
  * TimeEvent callback for handling top level control of IO (for multiple ports).
  * Function spawns and waits on a thread for each 
  */
-void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEvent& event)
+void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& event)
 {
     //don't access the driver after its been cleaned up
     if (shutting_down_)
@@ -802,7 +808,7 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
     {
         num_servos = num_servos + dynamixel_ports_[i].joints.size();
         reads[i] = sensor_msgs::JointState();
-        std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this, i, std::ref(reads[i]));
+        std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this, i, std::ref(reads[i]), write_ready_);
         threads.push_back(move(readThread));
     }
 
@@ -814,13 +820,15 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
     //keep the write message thread safe 
     std::unique_lock<std::mutex> lock(write_mutex_);
     sensor_msgs::JointState temp_msg = write_msg_;
-    write_ready_ = false;
     lock.unlock();
 
     //perform the IO on the first port
 
     //perform write
-    multiThreadedWrite(0, temp_msg);
+    if (write_ready_)
+    {
+        multiThreadedWrite(0, temp_msg);
+    }
 
     //perform read
     multiThreadedRead(0, reads[0]);
@@ -868,13 +876,13 @@ void DynamixelInterfaceController::publishJointStatesThreaded(const ros::TimerEv
 
 }
 
-
 /**
  * Top level control function for each port's IO thread.
  * @param port_num index used to retrieve port information from port list
  * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
+ * @param perform_write boolean indicating whether or not to write latest joint_state to servos
  */
-void DynamixelInterfaceController::multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg)
+void DynamixelInterfaceController::multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg, bool perform_write)
 {
 
     //keep the write message thread safe
@@ -920,7 +928,7 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
     {
         has_vel = true;
     }
-    if ((joint_commands.effort.size() == joint_commands.name.size()) && (control_type_ == TORQUE_CONTROL))
+    if ((joint_commands.effort.size() == joint_commands.name.size()) && (control_type_ != VELOCITY_CONTROL))
     {
         has_torque = true; 
     }
@@ -1039,25 +1047,59 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
 
             int torque = 0;
 
-            if (info.torque_ratio != 0)
+            if (use_torque_as_effort_)
             {
-                torque = (int) (input_torque * info.torque_ratio);
-                torque = abs(torque);
-
-                if ((input_torque < 0) != (info.min > info.max))
+                if (info.current_ratio != 0)
                 {
-                    if (port.series == "MX")
+                    torque = (int) (input_torque * info.current_ratio);
+                    torque = abs(torque);
+
+                    if ((input_torque < 0) != (info.min > info.max))
                     {
-                        torque = 1024 + torque;
+                        if (port.series == "MX")
+                        {
+                            torque = 1024 + torque;
+                        }
+                        else
+                        {
+                            torque = -torque;
+                        }
                     }
-                    else
+                }
+            }
+            else
+            {
+                if (info.torque_ratio != 0)
+                {
+                    torque = (int) (input_torque * info.torque_ratio);
+                    torque = abs(torque);
+
+                    if ((input_torque < 0) != (info.min > info.max))
                     {
-                        torque = -torque;
+                        if (port.series == "MX")
+                        {
+                            torque = 1024 + torque;
+                        }
+                        else
+                        {
+                            torque = -torque;
+                        }
                     }
                 }
             }
 
             torques.push_back(torque);
+
+            //update control mode for motor if relevant
+            if ((control_type_ == POSITION_CONTROL) && (torque != 0))
+            {
+                port.driver->setTorqueControlEnabled(info.id, true);
+            }
+            else if ((control_type_ == POSITION_CONTROL) && (torque == 0))
+            {
+                port.driver->setTorqueControlEnabled(info.id, false);
+            }
+
         }
 
         
@@ -1111,7 +1153,9 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
         }
         port.driver->setMultiVelocity(data);
     }
-    else if ( (control_type_ == TORQUE_CONTROL) && (has_torque) )
+    if ( ((control_type_ == TORQUE_CONTROL) || 
+         ((control_type_ == POSITION_CONTROL) && (port.series == "MX"))) && 
+         (has_torque))
     {
 
         //set the torque values for each motor
@@ -1219,19 +1263,28 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
             int raw_torque = response[2];
             double torque = 0;
 
-            if (port.series == "MX")
+            
+            if (use_torque_as_effort_)
             {
-                torque = ((double) (response[2] & 0x3FF)) / info.torque_ratio;
-
-                //check sign 
-                if (response[2] < 1023)
+                if (port.series == "MX")
                 {
-                    torque = 0.0 - torque;
+                    torque = (double) (raw_torque - 2048) / info.current_ratio;
                 }
+                else
+                {
+                    torque = ((double) (response[2]) / info.current_ratio);
+                }  
             }
             else
             {
-                torque = ((double) (response[2]) / info.torque_ratio);
+                if (port.series == "MX")
+                {
+                    torque = (double) (raw_torque - 2048) / info.torque_ratio;
+                }
+                else
+                {
+                    torque = ((double) (response[2]) / info.torque_ratio);
+                }             
             }
 
             if (info.min > info.max)

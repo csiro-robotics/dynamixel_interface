@@ -1254,7 +1254,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	if (servo_series_ == 'M')
 	{		
 		//Read data from dynamixels
-		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 6, raw))
+		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 34, raw))
 		{
 			//Bulk read success, loop and DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1272,7 +1272,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				response.push_back(value);
 
 				//get load (data[4] - data[5])
-				value = MAKEWORD(data[4], data[5]);
+				value = MAKEWORD(data[32], data[33]);
 				response.push_back(value);
 
 				//place responses into return data
@@ -1306,7 +1306,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				response.push_back(value);
 
 				//get load (data[4] - data[5])
-				value = MAKEWORD(data[4], data[5]);
+				value = MAKEWORD(data[32], data[33]);
 				response.push_back(value);
 
 				//place responses into return data
@@ -2452,6 +2452,47 @@ bool DynamixelInterfaceDriver::setTorqueEnabled(int servo_id, bool on)
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_PRO_TORQUE_ENABLE, 
 				(uint8_t) on, &error);
+	}
+	else
+	{
+		return false;
+	}
+
+	// check return value
+	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+}
+
+/**
+ * Sets the torque control enable register of the dynamixel mx series. can be used to dynamically
+ * switch between position and torque control modes.
+ * @param on The torque control state of the servo (true = on, false = off).
+ * @return True on comm success, false otherwise.
+ */  
+bool DynamixelInterfaceDriver::setTorqueControlEnabled(int servo_id, bool on)
+{
+
+	uint8_t error;
+	uint16_t model_num;
+	int dxl_comm_result;
+
+	//Read address and size always depends on servo series
+	if (servo_series_ == 'M')
+	{
+     	//Torque control mode, there is actually a register for this
+        getModelNumber(servo_id, &model_num);
+        if ( (model_num == 310) || (model_num == 320) ) //No torque control on MX-28
+        {
+ 			dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_CONTROL_ENABLE, 
+ 					(uint8_t) (on), &error);       	
+        }
 	}
 	else
 	{
