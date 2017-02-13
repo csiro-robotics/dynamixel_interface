@@ -1,4 +1,16 @@
 
+
+NOTE: This repository now has documentation on confluence: 
+
+
+https://confluence.csiro.au/display/~mol112/The+dynamixel_interface+stack+for+ROS
+
+Please use the confluence page for installation and tutorials
+
+
+
+original readme follows:
+
 These packages aim to provide a scalable and easily configurable interface for controlling many dynamixel's across multiple serial devices. Currently the following series of motors are supported:
 
 - MX
