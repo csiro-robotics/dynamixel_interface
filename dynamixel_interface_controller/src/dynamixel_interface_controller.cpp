@@ -940,7 +940,7 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
     }
 
     //vectors to store the calculated values
-    vector<int> ids, velocities, positions, torques;
+    vector<int> ids, velocities, positions, torques, modes;
 
     //loop and calculate the values for each specified joint
     for (int i = 0; i < joint_commands.name.size(); i++)
@@ -1101,11 +1101,11 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
                 //update control mode for motor if relevant
                 if ((control_type_ == POSITION_CONTROL) && (torque != 0))
                 {
-                    port.driver->setTorqueControlEnabled(info.id, true);
+                    modes.push_back(1);
                 }
                 else if ((control_type_ == POSITION_CONTROL) && (torque == 0))
                 {
-                    port.driver->setTorqueControlEnabled(info.id, false);
+                    modes.push_back(0);
                 }
             }
 
@@ -1119,6 +1119,19 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
 
     if ( control_type_ == POSITION_CONTROL )
     {
+
+        if (has_torque && dynamic_mode_switching_)
+        {
+            vector< vector<int> > data;
+            for (int i = 0; i < ids.size(); i++)
+            {
+                vector<int> temp;
+                temp.push_back(ids[i]);
+                temp.push_back(modes[i]);
+                data.push_back(temp);
+            }
+            port.driver->setMultiTorqueControl(data);
+        }
 
         //set the profile velocities if they have been defined
         if (has_vel)
@@ -1164,9 +1177,8 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
         port.driver->setMultiVelocity(data);
     }
 
-    if ( ((control_type_ == TORQUE_CONTROL) || 
-         (dynamic_mode_switching_ && (control_type_ == POSITION_CONTROL) && (port.series == "MX"))) && 
-         (has_torque))
+    if ( (has_torque) && ((control_type_ == TORQUE_CONTROL) || 
+         (dynamic_mode_switching_ && (control_type_ == POSITION_CONTROL) && (port.series == "MX"))))
     {
 
         //set the torque values for each motor

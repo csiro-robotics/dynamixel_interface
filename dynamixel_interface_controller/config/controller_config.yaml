@@ -13,16 +13,16 @@ publish_rate: 1000                  # desired rate for joint state updates. actu
 
 control_mode: Position              # control mode, either 'Position', 'Velocity', or 'Torque'
 
-dynamic_mode_switching: false       # enables dynamixe switching between torque and position control when in position control mode
+dynamic_mode_switching: true       # enables dynamixe switching between torque and position control when in position control mode
                                     # (CAUTION: EXPERIMENTAL)
 
 disable_torque_on_shutdown: true    # with this enabled the motors will switch off when the controller closes
 
 echo_joint_commands: true           # debug flag to echo write commands sent to the controller, useful for measuring write rates
 
-use_torque_as_effort: false         # when sending and receiving joint states, report effort as torque or raw % of max
+use_torque_as_effort: true         # when sending and receiving joint states, report effort as torque or raw % of max
 
-mx_effort_use_current: false        # Use the current register instead of the load register on the mx series (IO performance hit)
+mx_effort_use_current: true        # Use the current register instead of the load register on the mx series (IO performance hit)
 
 diagnostics_rate: 1                 # rate to publish diagnostic information
 
