@@ -1245,6 +1245,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	std::vector<uint8_t> data;
 	bool comm_success = false;
 	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
+	std::map<int, std::vector<uint8_t> > *raw2 = new std::map<int, std::vector<uint8_t> >;
 
 	//get original id list
 	std::vector<int> read_ids = *servo_ids;
@@ -1259,7 +1260,10 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 		{
 			if(mx_read_current)
 			{
-				comm_success = bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 34, raw);	
+				comm_success = bulkRead(servo_ids, DXL_MX_PRESENT_POSITION_L, 4, raw);	
+				if (comm_success) {
+					comm_success = bulkRead(servo_ids, DXL_MX_PRESENT_CURRENT_L, 2, raw2);
+				}
 			}
 			else
 			{
@@ -1287,8 +1291,10 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 
 				if(mx_read_current)
 				{
-					//get current (data[32] - data[33])
-					value = MAKEWORD(data[32], data[33]);
+					//get current
+					std::vector<uint8_t> data2 = raw2->at(servo_ids->at(i));
+					value = MAKEWORD(data2[0], data2[1]);
+					data2.clear();
 				}
 				else
 				{
@@ -1316,44 +1322,61 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			{
 
 				//if individual read fails, ignore
-				if(mx_read_current && !readRegisters(read_ids.at(i), DXL_MX_PRESENT_POSITION_L, 34, &data))
-				{
-					continue;
-				}
-				else if(!mx_read_current && !readRegisters(read_ids.at(i), DXL_MX_PRESENT_POSITION_L, 6, &data))
-				{
-					continue;
-				}
-
-				//get position (data[0] - data[1])
-				value = MAKEWORD(data[0], data[1]);
-				response.push_back(value);
-
-				//get velocity (data[2] - data[3])
-				value = MAKEWORD(data[2], data[3]);
-				response.push_back(value);
-
-
 				if(mx_read_current)
 				{
-					//get current (data[32] - data[33])
-					value = MAKEWORD(data[32], data[33]);
+					if(!readRegisters(read_ids.at(i), DXL_MX_PRESENT_POSITION_L, 4, &data))
+					{
+						continue;
+					}
+					else if(!readRegisters(read_ids.at(i), DXL_MX_PRESENT_CURRENT_L, 2, &data))
+					{
+						continue;
+					}	
+				}
+				else if(!mx_read_current) 
+				{
+					if( !readRegisters(read_ids.at(i), DXL_MX_PRESENT_POSITION_L, 6, &data))
+					{
+						continue;
+					}
 				}
 				else
 				{
-					//get load (data[4] - data[5])
-					value = MAKEWORD(data[4], data[5]);
+					continue;
 				}
-				response.push_back(value);
-
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 				
-				//put id back into list of read id's 
-				servo_ids->push_back(read_ids.at(i));
+				if (data.size() > 0)
+				{	
+					//get position (data[0] - data[1])
+					value = MAKEWORD(data[0], data[1]);
+					response.push_back(value);
 
-				response.clear();
-				data.clear();
+					//get velocity (data[2] - data[3])
+					value = MAKEWORD(data[2], data[3]);
+					response.push_back(value);
+
+
+					if(mx_read_current)
+					{
+						//get current (data[32] - data[33])
+						value = MAKEWORD(data[32], data[33]);
+					}
+					else
+					{
+						//get load (data[4] - data[5])
+						value = MAKEWORD(data[4], data[5]);
+					}
+					response.push_back(value);
+	
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+					
+					//put id back into list of read id's 
+					servo_ids->push_back(read_ids.at(i));
+
+					response.clear();
+					data.clear();
+				}
 			}
 
 			return true;
