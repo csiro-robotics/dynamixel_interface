@@ -490,10 +490,35 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                     }
                 }
 
+                //sleep to make sure the bus is clear of comms
+                ros::Duration(0.2).sleep();
 
                 //Ping the servo to make sure that we can actually connect to it 
-                //and that it is alive and well on our bus 
-                if (port.driver->ping(info.id))
+                //and that it is alive and well on our bus, if not, sleep and try again
+                //if all retry's fail, throw an error
+                bool ping_success = true;
+                int ping_count = 0;
+                while (!port.driver->ping(info.id))
+                {
+                    //increment ping count
+                    ping_count++;
+
+                    ROS_WARN("Failed to ping id: %d, attempt %d, retrying...", info.id, ping_count);
+                    //max number of retry's
+                    if (ping_count > 5)
+                    {   
+                        //unable to ping
+                        ping_success = false;
+                        break;
+                    }
+
+                    //sleep and try again
+                    ros::Duration(0.5).sleep();
+
+                }
+
+                //only add if ping was successful
+                if (ping_success)
                 {
                     bool success = true;
                     info.model_number = 0;
