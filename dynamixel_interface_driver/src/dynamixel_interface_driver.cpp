@@ -216,7 +216,7 @@ bool DynamixelInterfaceDriver::ping(int servo_id)
 	} 
 
 	//CHECK IF PING SUCCEEDED
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		//ROS_INFO("Dynamixel with id %d found", servo_id);
 		return true;
@@ -259,7 +259,7 @@ bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t* model_numb
 		return false;
 	} 
 
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -291,7 +291,7 @@ bool DynamixelInterfaceDriver::getModelInfo(int servo_id, uint32_t* model_info)
 		//address = 2, size = 4
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_MODEL_INFO, model_info, &error);
 
-		if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+		if (dxl_comm_result == COMM_SUCCESS)
 		{
 			return true;
 		}
@@ -337,7 +337,7 @@ bool DynamixelInterfaceDriver::getFirmwareVersion(int servo_id, uint8_t* firmwar
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -379,7 +379,7 @@ bool DynamixelInterfaceDriver::getBaudRate(int servo_id, uint8_t* baud_rate)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -421,7 +421,7 @@ bool DynamixelInterfaceDriver::getReturnDelayTime(int servo_id, uint8_t* return_
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -463,7 +463,7 @@ bool DynamixelInterfaceDriver::getOperatingMode(int servo_id, uint8_t* operating
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -530,7 +530,7 @@ bool DynamixelInterfaceDriver::getMaxAngleLimit(int servo_id, uint32_t* angle)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -575,7 +575,7 @@ bool DynamixelInterfaceDriver::getMinAngleLimit(int servo_id, uint32_t* angle)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -642,7 +642,7 @@ bool DynamixelInterfaceDriver::getMinVoltageLimit(int servo_id, float* min_volta
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		*min_voltage_limit = (float) (data) / 10;
 		return true;
@@ -689,7 +689,7 @@ bool DynamixelInterfaceDriver::getMaxVoltageLimit(int servo_id, float* max_volta
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		*max_voltage_limit = (float) (data) / 10;
 		return true;
@@ -735,7 +735,7 @@ bool DynamixelInterfaceDriver::getTemperatureLimit(int servo_id, uint8_t* max_te
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -781,7 +781,7 @@ bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, uint16_t* max_torque)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -824,7 +824,7 @@ bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, bool *torque_enabl
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		*torque_enabled = (data > 0);
 		return true;
@@ -871,7 +871,7 @@ bool DynamixelInterfaceDriver::getTargetPosition(int servo_id, int32_t* target_p
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -917,7 +917,7 @@ bool DynamixelInterfaceDriver::getTargetVelocity(int servo_id, int32_t* target_v
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -964,7 +964,7 @@ bool DynamixelInterfaceDriver::getPosition(int servo_id, int32_t* position)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -1010,7 +1010,7 @@ bool DynamixelInterfaceDriver::getVelocity(int servo_id, int32_t* velocity)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -1055,7 +1055,7 @@ bool DynamixelInterfaceDriver::getCurrent(int servo_id, uint16_t* current)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -1101,7 +1101,7 @@ bool DynamixelInterfaceDriver::getVoltage(int servo_id, float* voltage)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		*voltage = (float) (data) / 10;
 		return true;
@@ -1147,7 +1147,7 @@ bool DynamixelInterfaceDriver::getTemperature(int servo_id, uint8_t* temperature
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -1195,7 +1195,7 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uin
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 
 		for(int i = 0; i < length; i++)
@@ -2024,7 +2024,7 @@ bool DynamixelInterfaceDriver::setId(int servo_id, uint8_t new_id)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2077,7 +2077,7 @@ bool DynamixelInterfaceDriver::setBaudRate(int servo_id, uint8_t baud_rate)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2122,7 +2122,7 @@ bool DynamixelInterfaceDriver::setReturnDelayTime(int servo_id, uint8_t return_d
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2221,7 +2221,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127) && (success))
+	if (dxl_comm_result == COMM_SUCCESS && (success))
 	{
 		return true;
 	}
@@ -2264,7 +2264,7 @@ bool DynamixelInterfaceDriver::setReverseDirection(int servo_id, bool reverse)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2329,7 +2329,7 @@ bool DynamixelInterfaceDriver::setMinAngleLimit(int servo_id, int32_t angle)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2375,7 +2375,7 @@ bool DynamixelInterfaceDriver::setMaxAngleLimit(int servo_id, int32_t angle)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2420,7 +2420,7 @@ bool DynamixelInterfaceDriver::setTemperatureLimit(int servo_id, uint8_t max_tem
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2467,7 +2467,7 @@ bool DynamixelInterfaceDriver::setMaxTorque(int servo_id, uint16_t max_torque)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2519,7 +2519,7 @@ bool DynamixelInterfaceDriver::setTorqueEnabled(int servo_id, bool on)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2560,7 +2560,7 @@ bool DynamixelInterfaceDriver::setTorqueControlEnabled(int servo_id, bool on)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2745,7 +2745,7 @@ bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, uint16_
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2789,7 +2789,7 @@ bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, uint16_t ga
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2832,7 +2832,7 @@ bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, uint16_t 
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2876,7 +2876,7 @@ bool DynamixelInterfaceDriver::setVelocityProportionalGain(int servo_id, uint16_
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2920,7 +2920,7 @@ bool DynamixelInterfaceDriver::setVelocityIntegralGain(int servo_id, uint16_t ga
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -2963,7 +2963,7 @@ bool DynamixelInterfaceDriver::setVelocityDerivativeGain(int servo_id, uint16_t 
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -3005,7 +3005,7 @@ bool DynamixelInterfaceDriver::setTorqueProportionalGain(int servo_id, uint16_t 
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -3047,7 +3047,7 @@ bool DynamixelInterfaceDriver::setTorqueIntegralGain(int servo_id, uint16_t  gai
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -3089,7 +3089,7 @@ bool DynamixelInterfaceDriver::setTorqueDerivativeGain(int servo_id, uint16_t ga
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -3133,7 +3133,7 @@ bool DynamixelInterfaceDriver::setPosition(int servo_id, uint32_t position)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -3178,7 +3178,7 @@ bool DynamixelInterfaceDriver::setVelocity(int servo_id, int32_t velocity)
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -3224,7 +3224,7 @@ bool DynamixelInterfaceDriver::setProfileVelocity(int servo_id, int32_t velocity
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
@@ -3271,7 +3271,7 @@ bool DynamixelInterfaceDriver::writeRegisters(int servo_id, uint32_t address, ui
 	}
 
 	// check return value
-	if ((dxl_comm_result == COMM_SUCCESS) && !(error & 127))
+	if (dxl_comm_result == COMM_SUCCESS)
 	{
 		return true;
 	}
