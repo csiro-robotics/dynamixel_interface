@@ -1147,7 +1147,23 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
 
         if (has_torque && dynamic_mode_switching_)
         {
+
+
+            //set the torque values for each motor
             vector< vector<int> > data;
+            for (int i = 0; i < ids.size(); i++)
+            {
+                vector<int> temp;
+                temp.push_back(ids[i]);
+                temp.push_back(torques[i]);
+                data.push_back(temp);
+            }
+            port.driver->setMultiTorque(data);
+
+
+            //set torque control mode enable for each motor
+            data.clear();
+            
             for (int i = 0; i < ids.size(); i++)
             {
                 vector<int> temp;
@@ -1156,6 +1172,7 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
                 data.push_back(temp);
             }
             port.driver->setMultiTorqueControl(data);
+
         }
 
         //set the profile velocities if they have been defined
@@ -1201,9 +1218,7 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
         }
         port.driver->setMultiVelocity(data);
     }
-
-    if ( (has_torque) && ((control_type_ == TORQUE_CONTROL) || 
-         (dynamic_mode_switching_ && (control_type_ == POSITION_CONTROL) && (port.series == "MX"))))
+    else if ( (control_type_ == TORQUE_CONTROL) && has_torque)
     {
 
         //set the torque values for each motor

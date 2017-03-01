@@ -54,7 +54,7 @@ ports:
         
         # SERVO LIST FOR THIS PORT
 
-        - id: 3                     # (ID set in servo eeprom, must be unique on this port)
+        - id: 2                     # (ID set in servo eeprom, must be unique on this port)
           joint_name: joint_1       # (MUST BE UNIQUE ACROSS ALL PORTS)
           # 
           # The three values below are mandatory, they define the orientation and zeroing of the dynamixel:
@@ -72,11 +72,11 @@ ports:
           d_gain: -1.0              # derivative gain value (values > 0 are set, -1.0 indicates to leave on default)
 
 
-        - id: 2
-          joint_name: joint_2
-          init: 2048
-          min: 0
-          max: 4095
+        # - id: 2
+        #   joint_name: joint_2
+        #   init: 2048
+        #   min: 0
+        #   max: 4095
           # 
           # This servo doesn't have any optional values defined, the global defaults will be used
           #
