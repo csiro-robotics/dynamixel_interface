@@ -911,8 +911,6 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
 void DynamixelInterfaceController::multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg, bool perform_write)
 {
 
-    //keep the write message thread safe
-    std::unique_lock<std::mutex> lock(write_mutex_);
     sensor_msgs::JointState thread_write_msg = write_msg_;
     
     //perform write
