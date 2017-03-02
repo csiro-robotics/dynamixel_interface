@@ -919,8 +919,6 @@ void DynamixelInterfaceController::multiThreadedIO(int port_num, sensor_msgs::Jo
         multiThreadedWrite(port_num, thread_write_msg);
     }
 
-    lock.unlock();
-
     //perform read
     multiThreadedRead(port_num, read_msg);
 
