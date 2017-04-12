@@ -1612,9 +1612,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 		}
 		else
 		{
+			
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
-
+			response.clear();
 
 			//loop over all dynamixels
 			for (int i = 0; i < read_ids.size(); i++)
@@ -1626,9 +1627,6 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 					continue;
 				}
 
-				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
-
 				//get present voltage (data[12])
 				value = data[0];
 				response.push_back(value);
@@ -1638,11 +1636,14 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				response.push_back(value);
 
 				//get error status
-				packetHandlerP1_->ping(portHandler_, servo_ids->at(i), &error);
+				packetHandlerP1_->ping(portHandler_, read_ids.at(i), &error);
 				response.push_back(error);
 
 				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+
+				//push back id to list
+				servo_ids->push_back(read_ids.at(i));
 
 				response.clear();
 				data.clear();
@@ -1693,6 +1694,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
+			response.clear();
 
 			//loop over all dynamixels
 			for (int i = 0; i < read_ids.size(); i++)
@@ -1703,9 +1705,6 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 					continue;
 				}
 
-				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
-
 				//get present Voltage
 				value = MAKEWORD(data[0], data[1]);
 				response.push_back(value);
@@ -1715,11 +1714,14 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				response.push_back(value);
 
 				//get error status
-				packetHandlerP2_->ping(portHandler_, servo_ids->at(i), &error);
+				packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
 				response.push_back(error);
 
 				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+
+				//push back id to list
+				servo_ids->push_back(read_ids.at(i));
 
 				response.clear();
 				data.clear();
@@ -1773,8 +1775,6 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				{
 					continue;
 				}
-				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
 
 				//get voltage
 				value = MAKEWORD(data[0], data[1]);
@@ -1785,12 +1785,15 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				response.push_back(value);
 				
 				//get error status
-				packetHandlerP2_->ping(portHandler_, servo_ids->at(i), &error);
+				packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
 				response.push_back(error);
 
 				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
+				//push back id to list
+				servo_ids->push_back(read_ids.at(i));
+				
 				response.clear();
 				data.clear();
 			}
