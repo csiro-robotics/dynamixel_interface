@@ -267,15 +267,15 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                 port.baudrate = static_cast<int>(ports[i]["baudrate"]);
             }
 
-            //get series
-            if (!ports[i]["series"].getType() == XmlRpc::XmlRpcValue::TypeString)
+            //get protocol
+            if (!ports[i]["protocol"].getType() == XmlRpc::XmlRpcValue::TypeString)
             {
-                ROS_ERROR("Invalid/Missing device name for port %d", i);
+                ROS_ERROR("Invalid/Missing protocol type for port %d", i);
                 ROS_BREAK();
             }
             else
             {
-                port.series = static_cast<std::string>(ports[i]["series"]);
+                port.protocol = static_cast<std::string>(ports[i]["protocol"]);
             }
 
             //get group comms enabled
@@ -294,7 +294,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
             //Attempt to start driver
             try
             {
-                port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate, port.series, use_group_comms);    
+                port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate, port.protocol, use_group_comms);    
             }
             catch (int n)
             {
@@ -554,9 +554,9 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                         }
 
                         //check for valid motor series
-                        if ( ((port.series == "MX") && (info.model_number > 320)) 
-                                || ((port.series == "XM") && ((info.model_number < 350) || (info.model_number > 1020)))
-                                || ((port.series == "PRO") && (info.model_number < 35072)) )
+                        if ( ((port.protocol == "1.0") && (info.model_number > 320)) 
+                                || ((port.protocol == "2.0") && (info.model_number > 1020))
+                                || ((port.protocol == "PRO") && (info.model_number < 35072)) )
                         {
                             ROS_ERROR("Wrong series of dynamixel found, skipping");
                             continue;
@@ -1049,7 +1049,7 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
             if ((control_type_ == VELOCITY_CONTROL) && ((rad_s_vel < 0) != (info.min > info.max)))
             {
 
-                if (port.series == "MX")
+                if (port.protocol == "1.0")
                 {
                     vel = vel + 1024;
                 }
@@ -1083,7 +1083,7 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
 
                     if ((input_torque < 0) != (info.min > info.max))
                     {
-                        if (port.series == "MX")
+                        if (port.protocol == "1.0")
                         {
                             torque = 1024 + torque;
                         }
@@ -1103,7 +1103,7 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
 
                     if ((input_torque < 0) != (info.min > info.max))
                     {
-                        if (port.series == "MX")
+                        if (port.protocol == "1.0")
                         {
                             torque = 1024 + torque;
                         }
@@ -1292,7 +1292,7 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
             int raw_vel = response[1];
 
             //handle the sign of the value based on the motor series
-            if (port.series == "MX")
+            if (port.protocol == "1.0")
             {
                 raw_vel = (response[1] & 0x3FF);
 
@@ -1325,7 +1325,7 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
             
             if (use_torque_as_effort_)
             {
-                if (port.series == "MX")
+                if (port.protocol == "1.0")
                 {
                     if (mx_effort_use_current_)
                     {
@@ -1348,7 +1348,7 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
             }
             else
             {
-                if (port.series == "MX")
+                if (port.protocol == "1.0")
                 {
                     if (mx_effort_use_current_)
                     {

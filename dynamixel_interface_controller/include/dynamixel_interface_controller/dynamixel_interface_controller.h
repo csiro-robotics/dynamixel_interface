@@ -231,7 +231,7 @@ struct portInfo
     int baudrate;
 
     /** Which series of motor is on the port */
-    std::string series;
+    std::string protocol;
 
     /** Pointer to the serial driver */
     dynamixel_interface_driver::DynamixelInterfaceDriver *driver;

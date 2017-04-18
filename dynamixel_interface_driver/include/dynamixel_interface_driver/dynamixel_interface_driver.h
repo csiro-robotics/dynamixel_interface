@@ -730,7 +730,7 @@ private:
     dynamixel::PacketHandler *packetHandlerP2_;
 
     /** The motor series this driver is communicating with */
-    char servo_series_;
+    char servo_protocol_;
 
     /** Indicates whether or not to use the group communication methods */
     bool use_group_comms_;
