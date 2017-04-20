@@ -30,12 +30,26 @@
   torque_ratio: 1023
   current_ratio: 123.457
 
+- name: MX28-(2.0)
+  model_number: 30
+  cpr: 4096
+  gear_reduction: 4.367
+  torque_ratio: 2047
+  current_ratio: 1
+
 - name: MX64
   model_number: 310
   cpr: 4096  
   gear_reduction: 8.772
   torque_ratio: 1023
   current_ratio: 123.457
+
+- name: MX64-(2.0)
+  model_number: 311
+  cpr: 4096
+  gear_reduction: 4.367
+  torque_ratio: 2047
+  current_ratio: 1
 
 - name: MX106
   model_number: 320 
@@ -44,8 +58,22 @@
   torque_ratio: 1023
   current_ratio: 123.457
 
-- name: XM430
+- name: MX106-(2.0)
+  model_number: 321 
+  cpr: 4096
+  gear_reduction: 4.367
+  torque_ratio: 2047
+  current_ratio: 1
+
+- name: XM430-W350
   model_number: 1020
+  cpr: 4096
+  gear_reduction: 4.367
+  torque_ratio: 1193
+  current_ratio: 1
+
+- name: XH430-W350
+  model_number: 1000
   cpr: 4096
   gear_reduction: 4.367
   torque_ratio: 1193
