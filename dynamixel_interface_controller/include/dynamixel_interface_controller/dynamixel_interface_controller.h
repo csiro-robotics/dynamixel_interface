@@ -86,7 +86,7 @@
 #include <string>
 #include <map>
 #include <mutex>
-
+#include <XmlRpcValue.h>
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 
@@ -272,6 +272,18 @@ public:
 
 private:
 
+    /** 
+    * Parses the information in the yaml file for each port
+    * @param ports: the xml structure to be parsed
+    */
+    void parsePortInformation(XmlRpc::XmlRpcValue ports);
+
+    /** 
+    * Parses the information in the yaml file for each servo
+    * @param servos: the xml structure to be parsed
+    */
+    void parseServoInformation(struct portInfo &port, XmlRpc::XmlRpcValue servos);
+
 
     /** 
      * Callback for setting diagnostic publishing flags
@@ -350,6 +362,14 @@ private:
     /** Indicates if we should get diagnostic info (voltage and temperature) */
     bool publish_diagnostics_;
 
+    /** global override parameters */
+    double global_joint_speed_;
+    double global_torque_limit_;
+    double global_p_gain_;
+    double global_i_gain_;
+    double global_d_gain_;
+
+
     /** Stores the last message received from the write command topic */
     sensor_msgs::JointState write_msg_;
 
@@ -386,6 +406,7 @@ private:
 
     /** Debug message publisher */
     ros::Publisher debug_publisher_;
+    
 
 };
 

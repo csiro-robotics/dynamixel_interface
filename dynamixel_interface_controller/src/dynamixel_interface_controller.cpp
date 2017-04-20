@@ -105,7 +105,6 @@ void operator >> (const YAML::Node& node, T& i)
 #endif
 
 #include <ros/package.h>
-#include <XmlRpcValue.h>
 
 #include <dynamixel_interface_controller/dynamixel_interface_controller.h>
 #include <dynamixel_interface_driver/dynamixel_interface_driver.h>
@@ -155,11 +154,6 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
     //Stores config variables only used in init function
     std::string mode;
-    double global_joint_speed;
-    double global_torque_limit;
-    double global_p_gain;
-    double global_i_gain;
-    double global_d_gain;
 
     //load all the info from the param server, with defaults
     nh_->param<double>("publish_rate", publish_rate_, 50.0);
@@ -171,11 +165,11 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
     nh_->param<std::string>("control_mode", mode, "Position");
     nh_->param<bool>("dynamic_mode_switching", dynamic_mode_switching_, false);
-    nh_->param<double>("global_joint_speed", global_joint_speed, 5.0);
-    nh_->param<double>("global_torque_limit", global_torque_limit, 1.0);
-    nh_->param<double>("global_p_gain", global_p_gain, -1.0);
-    nh_->param<double>("global_i_gain", global_i_gain, -1.0);
-    nh_->param<double>("global_d_gain", global_d_gain, -1.0);
+    nh_->param<double>("global_joint_speed", global_joint_speed_, 5.0);
+    nh_->param<double>("global_torque_limit", global_torque_limit_, 1.0);
+    nh_->param<double>("global_p_gain", global_p_gain_, -1.0);
+    nh_->param<double>("global_i_gain", global_i_gain_, -1.0);
+    nh_->param<double>("global_d_gain", global_d_gain_, -1.0);
 
     // Set control mode for this run
     if (!strncmp(mode.c_str(), "Position", 8))
@@ -196,458 +190,13 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     first_write_ = true;
 
     //Attempt to parse information for each device (port)
-    int num_ports = 0;
     if (nh_->hasParam("ports"))
     {
 
         //PARSE ARRAY OF PORT INFORMATION
-
         XmlRpc::XmlRpcValue ports;
         nh_->getParam("ports", ports);
-        //If there is no servos array in the param server, return
-        if (!ports.getType() == XmlRpc::XmlRpcValue::TypeArray)
-        {
-            ROS_ERROR("Invalid/missing device information on the param server");
-            ROS_BREAK();
-        }
-
-        //number of ports defined
-        num_ports = ports.size();
-
-        //For every port, load and verify its information
-        for (int i = 0; i < ports.size(); i++)
-        {
-
-            portInfo port;
-
-            bool use_group_comms;
-
-            /************************* PORT ARGUMENTS *********************/
-
-
-            //check if info exists for specified port
-            if (!ports[i].getType() == XmlRpc::XmlRpcValue::TypeStruct)
-            {
-                ROS_ERROR("Invalid/Missing info-struct for servo index %d", i);
-                ROS_BREAK();
-            }           
-
-
-            //get port name
-            if (!ports[i]["port_name"].getType() == XmlRpc::XmlRpcValue::TypeString)
-            {
-                ROS_ERROR("Invalid/Missing port name for port %d", i);
-                ROS_BREAK();
-            }
-            else
-            { 
-                port.port_name = static_cast<std::string>(ports[i]["port_name"]);
-            }
-
-
-            //get device name
-            if (!ports[i]["device"].getType() == XmlRpc::XmlRpcValue::TypeString)
-            {
-                ROS_ERROR("Invalid/Missing device name for port %d", i);
-                ROS_BREAK();
-            }
-            else
-            {
-                port.device = static_cast<std::string>(ports[i]["device"]);
-            }
-
-            //get baud rate
-            if (!ports[i]["baudrate"].getType() == XmlRpc::XmlRpcValue::TypeInt)
-            {
-                ROS_ERROR("Invalid/Missing baudrate for port %d", i);
-                ROS_BREAK();
-            }
-            else
-            {
-                port.baudrate = static_cast<int>(ports[i]["baudrate"]);
-            }
-
-            //get protocol
-            if (!ports[i]["protocol"].getType() == XmlRpc::XmlRpcValue::TypeString)
-            {
-                ROS_ERROR("Invalid/Missing protocol type for port %d", i);
-                ROS_BREAK();
-            }
-            else
-            {
-                port.protocol = static_cast<std::string>(ports[i]["protocol"]);
-            }
-
-            //get group comms enabled
-            if (!ports[i]["group_comms_enabled"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
-            {
-                ROS_ERROR("Invalid/Missing group_comms_enabled option for port %d", i);
-                ROS_BREAK();
-            }
-            else
-            {
-                use_group_comms = static_cast<bool>(ports[i]["group_comms_enabled"]);
-            }
-
-            /************************* Driver initialisation *********************/
-
-            //Attempt to start driver
-            try
-            {
-                port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate, port.protocol, use_group_comms);    
-            }
-            catch (int n)
-            {
-                ROS_ERROR("Unable to start driver!, code %d", n);
-                ROS_BREAK();
-            }         
-
-            /************************* Dynamixel initialisation *********************/
-
-            int num_servos = 0;
-
-            XmlRpc::XmlRpcValue servos;
-            
-            //If there is no servos array in the param server, return
-            if (!servos.getType() == XmlRpc::XmlRpcValue::TypeArray)
-            {
-                ROS_ERROR("Invalid/missing servo information on the param server");
-                ROS_BREAK();
-            }
-            else
-            {
-                servos = ports[i]["servos"];
-            }
-
-            //number of servos defined
-            num_servos = servos.size();
-
-            //For every servo, load and verify its information
-            for (int j = 0; j < servos.size(); j++)
-            {
-                //store the loaded information in this struct
-                dynamixelInfo info;
-
-                //check if info exists for specified joint
-                if (!servos[j].getType() == XmlRpc::XmlRpcValue::TypeStruct)
-                {
-                    ROS_ERROR("Invalid/Missing info-struct for servo index %d", i);
-                    ROS_BREAK();
-                }
-
-                //get joint id
-                if ( (!servos[j].hasMember("id")) || (!servos[j]["id"].getType() == XmlRpc::XmlRpcValue::TypeInt) ) 
-                {
-                    ROS_ERROR("Invalid/Missing id for servo index %d", i);
-                    ROS_BREAK();
-                }
-                else
-                {
-                    //store the servo's ID
-                    info.id = static_cast<int>(servos[j]["id"]);
-                }
-
-                //get joint name
-                if ( (!servos[j].hasMember("joint_name")) || 
-                        (!servos[j]["joint_name"].getType() == XmlRpc::XmlRpcValue::TypeString) )
-                {
-                    ROS_ERROR("Invalid/Missing joint name for servo index %d, id: %d", i, info.id);
-                    ROS_BREAK();
-                }
-                else
-                {
-                    //store the servo's corresponding joint name
-                    info.joint_name = static_cast<std::string>(servos[j]["joint_name"]);
-
-                    //check this port and all previous ports for duplicate joint names (not allowed as joints are
-                    //referred to by name)
-                    if ( port.joints.find(info.joint_name) !=  port.joints.end() )
-                    {
-                        ROS_ERROR("Cannot have multiple joints with the same name [%s]", info.joint_name.c_str());
-                        ROS_BREAK();
-                    }
-                    else
-                    {
-                        for (int k = 0; k < dynamixel_ports_.size(); k++)
-                        {
-                            if ( dynamixel_ports_[k].joints.find(info.joint_name) !=  dynamixel_ports_[k].joints.end() )
-                            {
-                                ROS_ERROR("Cannot have multiple joints with the same name [%s]", 
-                                        info.joint_name.c_str());
-                                ROS_BREAK();
-                            }
-                        }
-                    }
-                }
-
-                //get joint initial position
-                if ( (!servos[j].hasMember("init")) || (!servos[j]["init"].getType() == XmlRpc::XmlRpcValue::TypeInt) )
-                {
-                    ROS_WARN("Invalid/Missing initial position for servo index %d, id: %d", i, info.id);
-                    ROS_BREAK();
-                }
-                else
-                {
-                    //store the servo's corresponding joint 
-                    info.init = static_cast<int>(servos[j]["init"]);
-                }
-
-                //get joint default min position
-                if ( (!servos[j].hasMember("min")) || (!servos[j]["min"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-                {
-                    ROS_WARN("Invalid/Missing min position for servo index %d, id: %d", i, info.id);
-                    ROS_BREAK();
-                }
-                else
-                {
-                    info.min = static_cast<int>(servos[j]["min"]);
-                }
-
-                //get joint default max position
-                if ( (!servos[j].hasMember("max")) || (servos[j]["max"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-                {
-                    ROS_WARN("Invalid/Missing max position for servo index %d, id: %d", i, info.id);
-                    ROS_BREAK();
-                }
-                else
-                {
-                    info.max = static_cast<int>(servos[j]["max"]);
-                }
-
-                //get joint default joint speed (or set to global if none specified)
-                if ( (!servos[j].hasMember("joint_speed")) || 
-                        (!servos[j]["joint_speed"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-                {
-                    info.joint_speed = global_joint_speed;
-                }
-                else
-                {
-                    info.joint_speed = static_cast<double>(servos[j]["joint_speed"]);
-                    if (info.joint_speed < 0.0)
-                    {
-                        info.joint_speed = global_joint_speed;
-                    }
-                }
-               
-
-                //get joint torque limit (or set to global if none specified)
-                if ( (!servos[j].hasMember("torque_limit")) || 
-                        (!servos[j]["torque_limit"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-                {
-                    info.torque_limit = global_torque_limit;
-                }
-                else
-                {
-                    info.torque_limit = static_cast<double>(servos[j]["torque_limit"]);
-                    if ((info.torque_limit > 1.0) || (info.torque_limit < 0.0))
-                    {
-                        info.torque_limit = global_torque_limit;
-                    }
-                }
-               
-                //get joint p_gain (or set to global if none specified)
-                if ( (!servos[j].hasMember("p_gain")) || 
-                        (!servos[j]["p_gain"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-                {
-                    info.p_gain = global_p_gain;
-                }
-                else
-                {
-                    info.p_gain = static_cast<double>(servos[j]["p_gain"]);
-                    if (info.p_gain < 0.0)
-                    {
-                        info.p_gain = global_p_gain;
-                    }
-                }
-
-                //get joint i_gain (or set to global if none specified)
-                if ( (!servos[j].hasMember("i_gain")) || 
-                        (!servos[j]["i_gain"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-                {
-                    info.i_gain = global_i_gain;
-                }
-                else
-                {
-                    info.i_gain = static_cast<double>(servos[j]["i_gain"]);
-                    if (info.i_gain < 0.0)
-                    {
-                        info.i_gain = global_i_gain;
-                    }
-                }
-
-                //get joint d_gain (or set to global if none specified)
-                if ( (!servos[j].hasMember("d_gain")) || 
-                        (!servos[j]["d_gain"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-                {
-                    info.d_gain = global_d_gain;
-                }
-                else
-                {
-                    info.d_gain = static_cast<double>(servos[j]["d_gain"]);
-                    if (info.d_gain < 0.0)
-                    {
-                        info.d_gain = global_d_gain;
-                    }
-                }
-
-                //sleep to make sure the bus is clear of comms
-                ros::Duration(0.2).sleep();
-
-                //Ping the servo to make sure that we can actually connect to it 
-                //and that it is alive and well on our bus, if not, sleep and try again
-                //if all retry's fail, throw an error
-                bool ping_success = true;
-                int ping_count = 0;
-                while (!port.driver->ping(info.id))
-                {
-                    //increment ping count
-                    ping_count++;
-
-                    ROS_WARN("Failed to ping id: %d, attempt %d, retrying...", info.id, ping_count);
-                    //max number of retry's
-                    if (ping_count > 5)
-                    {   
-                        //unable to ping
-                        ping_success = false;
-                        break;
-                    }
-
-                    //sleep and try again
-                    ros::Duration(0.5).sleep();
-
-                }
-
-                //only add if ping was successful
-                if (ping_success)
-                {
-                    bool success = true;
-                    info.model_number = 0;
-                    bool t_e;
-                    success &= port.driver->getModelNumber(info.id, &info.model_number);
-                   
-                    //If valid motor, setup in operating mode
-                    if ((success) || (info.model_number))
-                    {
-
-                        //set up the lookup tables that we'll use later in the code
-                        //to look up how to operate each joint
-                        info.cpr = model_number2specs_[info.model_number].cpr;
-                        info.gear_reduction = model_number2specs_[info.model_number].gear_reduction;
-                        info.model_name = model_number2specs_[info.model_number].name;
-                        info.torque_ratio = model_number2specs_[info.model_number].torque_ratio;
-                        info.current_ratio = model_number2specs_[info.model_number].current_ratio;
-                        info.torque_enabled = false;
-
-                        //Display joint info
-                        ROS_INFO("Joint Name: %s, ID: %d, Model: %s", info.joint_name.c_str(), info.id, 
-                                info.model_name.c_str());
-                        
-                        //maintain torque state in motor
-                        port.driver->getTorqueEnabled(info.id, &t_e);
-                        port.driver->setTorqueEnabled(info.id, 0);
-                     
-                        //check support for operating mode
-                        if ((control_type_ == TORQUE_CONTROL) && (info.model_number == 29))
-                        {
-                            ROS_ERROR("Torque Control mode not available with MX-28, skipping");
-                            continue;
-                        }
-
-                        //check for valid motor series
-                        if ( ((port.protocol == "1.0") && (info.model_number > 320)) 
-                                || ((port.protocol == "2.0") && (info.model_number > 1020))
-                                || ((port.protocol == "PRO") && (info.model_number < 35072)) )
-                        {
-                            ROS_ERROR("Wrong series of dynamixel found, skipping");
-                            continue;
-                        }
-
-                        //set operating mode for the motor
-                        if ( !port.driver->setOperatingMode(info.id, control_type_) )
-                        {
-                            ROS_WARN("Failed to set operating mode for %s motor (id %d)", info.joint_name.c_str(), 
-                                info.id);
-                        }
-
-                        //set torque limit for the motor
-                        //ROS_INFO("%f %f %d", info.torque_limit, info.torque_ratio, 
-                        //        (int) (info.torque_limit * info.torque_ratio));
-                        if ( !port.driver->setMaxTorque(info.id, (int) (info.torque_limit * info.torque_ratio)) )
-                        {
-                            ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), 
-                                    info.id);
-                        }
-
-                        //angle limits are only relevant in position control mode
-                        if (control_type_ == POSITION_CONTROL)
-                        {
-                            //set angle limits & direction
-                            if (info.min > info. max) 
-                            {
-                                if ( !port.driver->setAngleLimits(info.id, info.max, info.min) )
-                                {
-                                    ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(), 
-                                            info.id);
-                                }
-                            }
-                            else
-                            {
-                                if ( !port.driver->setAngleLimits(info.id, info.min, info.max) )
-                                {
-                                    ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(), 
-                                            info.id);
-                                }                
-                            }
-                        }
-
-                        //preserve torque enable state
-                        port.driver->setTorqueEnabled(info.id, t_e);
-
-
-                        //set PID tuning
-                        if (!port.driver->setPIDGains(info.id, control_type_, info.p_gain, info.i_gain, info.d_gain))
-                        {
-                            ROS_WARN("Failed to set PID tuning for %s motor (id %d)", info.joint_name.c_str(), info.id);
-                        }
-
-
-                        info.current_mode == control_type_;
-
-                        //add joint to port
-                        port.joints[info.joint_name] = info;
-
-                    }
-                    else
-                    {
-                        ROS_ERROR("Failed to load model information for dynamixel id %d", info.id);
-                        ROS_ERROR("Model Number: %d, Model Info: %d ", info.model_number, info.model_info);
-                        if (model_number2specs_.find(info.model_number) != model_number2specs_.end())
-                            ROS_ERROR("Info is in database");
-                        else
-                            ROS_ERROR("Info is not in database");
-                        ROS_BREAK();
-                    }
-                }
-                else
-                {
-                    ROS_ERROR("Cannot ping dynamixel id: %d", info.id);
-                }
-
-            }
-
-            //add port only if dynamixels were found
-            if (port.joints.size() > 0)
-            {
-                //add port information to server
-                dynamixel_ports_.push_back(port);
-            }
-            else
-            {
-                ROS_ERROR("No dynamixels found on %s, %s will not be used", port.device.c_str(), 
-                        port.port_name.c_str());
-            }
-
-        } 
+        parsePortInformation(ports);
 
         //shutdown if no valid ports
         if (dynamixel_ports_.size() == 0)
@@ -717,6 +266,474 @@ DynamixelInterfaceController::~DynamixelInterfaceController()
     }
         
 }
+
+
+
+/** 
+ * Parses the information in the yaml file for each port
+ * @param ports: the xml structure to be parsed
+ */
+void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue ports)
+{
+
+    //If there is no servos array in the param server, return
+    if (!ports.getType() == XmlRpc::XmlRpcValue::TypeArray)
+    {
+        ROS_ERROR("Invalid/missing device information on the param server");
+        ROS_BREAK();
+    }
+
+    //number of ports defined
+    int num_ports = ports.size();
+
+    //For every port, load and verify its information
+    for (int i = 0; i < ports.size(); i++)
+    {
+
+        struct portInfo port;
+
+        bool use_group_comms;
+
+        /************************* PORT ARGUMENTS *********************/
+
+
+        //check if info exists for specified port
+        if (!ports[i].getType() == XmlRpc::XmlRpcValue::TypeStruct)
+        {
+            ROS_ERROR("Invalid/Missing info-struct for servo index %d", i);
+            ROS_BREAK();
+        }           
+
+
+        //get port name
+        if (!ports[i]["port_name"].getType() == XmlRpc::XmlRpcValue::TypeString)
+        {
+            ROS_ERROR("Invalid/Missing port name for port %d", i);
+            ROS_BREAK();
+        }
+        else
+        { 
+            port.port_name = static_cast<std::string>(ports[i]["port_name"]);
+        }
+
+
+        //get device name
+        if (!ports[i]["device"].getType() == XmlRpc::XmlRpcValue::TypeString)
+        {
+            ROS_ERROR("Invalid/Missing device name for port %d", i);
+            ROS_BREAK();
+        }
+        else
+        {
+            port.device = static_cast<std::string>(ports[i]["device"]);
+        }
+
+        //get baud rate
+        if (!ports[i]["baudrate"].getType() == XmlRpc::XmlRpcValue::TypeInt)
+        {
+            ROS_ERROR("Invalid/Missing baudrate for port %d", i);
+            ROS_BREAK();
+        }
+        else
+        {
+            port.baudrate = static_cast<int>(ports[i]["baudrate"]);
+        }
+
+        //get protocol
+        if (!ports[i]["protocol"].getType() == XmlRpc::XmlRpcValue::TypeString)
+        {
+            ROS_ERROR("Invalid/Missing protocol type for port %d", i);
+            ROS_BREAK();
+        }
+        else
+        {
+            port.protocol = static_cast<std::string>(ports[i]["protocol"]);
+        }
+
+        //get group comms enabled
+        if (!ports[i]["group_comms_enabled"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
+        {
+            ROS_ERROR("Invalid/Missing group_comms_enabled option for port %d", i);
+            ROS_BREAK();
+        }
+        else
+        {
+            use_group_comms = static_cast<bool>(ports[i]["group_comms_enabled"]);
+        }
+
+        /************************* Driver initialisation *********************/
+
+        //Attempt to start driver
+        try
+        {
+            port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate, port.protocol, use_group_comms);    
+        }
+        catch (int n)
+        {
+            ROS_ERROR("Unable to start driver!, code %d", n);
+            ROS_BREAK();
+        }         
+
+        /************************* Dynamixel initialisation *********************/
+
+        XmlRpc::XmlRpcValue servos;
+        
+        //If there is no servos array in the param server, return
+        if (!servos.getType() == XmlRpc::XmlRpcValue::TypeArray)
+        {
+            ROS_ERROR("Invalid/missing servo information on the param server");
+            ROS_BREAK();
+        }
+        else
+        {
+            servos = ports[i]["servos"];
+        }
+
+        parseServoInformation(port, servos);
+
+        //add port only if dynamixels were found
+        if (port.joints.size() > 0)
+        {
+            //add port information to server
+            dynamixel_ports_.push_back(port);
+        }
+        else
+        {
+            ROS_ERROR("No dynamixels found on %s, %s will not be used", port.device.c_str(), 
+                    port.port_name.c_str());
+        }
+
+    } 
+}
+
+
+
+
+/** 
+ * Parses the information in the yaml file for each servo
+ * @param servos: the xml structure to be parsed
+ */
+void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, XmlRpc::XmlRpcValue servos)
+{
+
+    //number of servos defined
+    int num_servos = servos.size();
+
+    //For every servo, load and verify its information
+    for (int i = 0; i < servos.size(); i++)
+    {
+        //store the loaded information in this struct
+        dynamixelInfo info;
+
+        //check if info exists for specified joint
+        if (!servos[i].getType() == XmlRpc::XmlRpcValue::TypeStruct)
+        {
+            ROS_ERROR("Invalid/Missing info-struct for servo index %d", i);
+            ROS_BREAK();
+        }
+
+        //get joint id
+        if ( (!servos[i].hasMember("id")) || (!servos[i]["id"].getType() == XmlRpc::XmlRpcValue::TypeInt) ) 
+        {
+            ROS_ERROR("Invalid/Missing id for servo index %d", i);
+            ROS_BREAK();
+        }
+        else
+        {
+            //store the servo's ID
+            info.id = static_cast<int>(servos[i]["id"]);
+        }
+
+        //get joint name
+        if ( (!servos[i].hasMember("joint_name")) || 
+                (!servos[i]["joint_name"].getType() == XmlRpc::XmlRpcValue::TypeString) )
+        {
+            ROS_ERROR("Invalid/Missing joint name for servo index %d, id: %d", i, info.id);
+            ROS_BREAK();
+        }
+        else
+        {
+            //store the servo's corresponding joint name
+            info.joint_name = static_cast<std::string>(servos[i]["joint_name"]);
+
+            //check this port and all previous ports for duplicate joint names (not allowed as joints are
+            //referred to by name)
+            if ( port.joints.find(info.joint_name) !=  port.joints.end() )
+            {
+                ROS_ERROR("Cannot have multiple joints with the same name [%s]", info.joint_name.c_str());
+                ROS_BREAK();
+            }
+            else
+            {
+                for (int j = 0; j < dynamixel_ports_.size(); j++)
+                {
+                    if ( dynamixel_ports_[j].joints.find(info.joint_name) !=  dynamixel_ports_[j].joints.end() )
+                    {
+                        ROS_ERROR("Cannot have multiple joints with the same name [%s]", 
+                                info.joint_name.c_str());
+                        ROS_BREAK();
+                    }
+                }
+            }
+        }
+
+        //get joint initial position
+        if ( (!servos[i].hasMember("init")) || (!servos[i]["init"].getType() == XmlRpc::XmlRpcValue::TypeInt) )
+        {
+            ROS_WARN("Invalid/Missing initial position for servo index %d, id: %d", i, info.id);
+            ROS_BREAK();
+        }
+        else
+        {
+            //store the servo's corresponding joint 
+            info.init = static_cast<int>(servos[i]["init"]);
+        }
+
+        //get joint default min position
+        if ( (!servos[i].hasMember("min")) || (!servos[i]["min"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+        {
+            ROS_WARN("Invalid/Missing min position for servo index %d, id: %d", i, info.id);
+            ROS_BREAK();
+        }
+        else
+        {
+            info.min = static_cast<int>(servos[i]["min"]);
+        }
+
+        //get joint default max position
+        if ( (!servos[i].hasMember("max")) || (servos[i]["max"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+        {
+            ROS_WARN("Invalid/Missing max position for servo index %d, id: %d", i, info.id);
+            ROS_BREAK();
+        }
+        else
+        {
+            info.max = static_cast<int>(servos[i]["max"]);
+        }
+
+        //get joint default joint speed (or set to global if none specified)
+        if ( (!servos[i].hasMember("joint_speed")) || 
+                (!servos[i]["joint_speed"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+        {
+            info.joint_speed = global_joint_speed_;
+        }
+        else
+        {
+            info.joint_speed = static_cast<double>(servos[i]["joint_speed"]);
+            if (info.joint_speed < 0.0)
+            {
+                info.joint_speed = global_joint_speed_;
+            }
+        }
+        
+
+        //get joint torque limit (or set to global if none specified)
+        if ( (!servos[i].hasMember("torque_limit")) || 
+                (!servos[i]["torque_limit"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+        {
+            info.torque_limit = global_torque_limit_;
+        }
+        else
+        {
+            info.torque_limit = static_cast<double>(servos[i]["torque_limit"]);
+            if ((info.torque_limit > 1.0) || (info.torque_limit < 0.0))
+            {
+                info.torque_limit = global_torque_limit_;
+            }
+        }
+        
+        //get joint p_gain (or set to global if none specified)
+        if ( (!servos[i].hasMember("p_gain")) || 
+                (!servos[i]["p_gain"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+        {
+            info.p_gain = global_p_gain_;
+        }
+        else
+        {
+            info.p_gain = static_cast<double>(servos[i]["p_gain"]);
+            if (info.p_gain < 0.0)
+            {
+                info.p_gain = global_p_gain_;
+            }
+        }
+
+        //get joint i_gain (or set to global if none specified)
+        if ( (!servos[i].hasMember("i_gain")) || 
+                (!servos[i]["i_gain"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+        {
+            info.i_gain = global_i_gain_;
+        }
+        else
+        {
+            info.i_gain = static_cast<double>(servos[i]["i_gain"]);
+            if (info.i_gain < 0.0)
+            {
+                info.i_gain = global_i_gain_;
+            }
+        }
+
+        //get joint d_gain (or set to global if none specified)
+        if ( (!servos[i].hasMember("d_gain")) || 
+                (!servos[i]["d_gain"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+        {
+            info.d_gain = global_d_gain_;
+        }
+        else
+        {
+            info.d_gain = static_cast<double>(servos[i]["d_gain"]);
+            if (info.d_gain < 0.0)
+            {
+                info.d_gain = global_d_gain_;
+            }
+        }
+
+        //sleep to make sure the bus is clear of comms
+        ros::Duration(0.2).sleep();
+
+        //Ping the servo to make sure that we can actually connect to it 
+        //and that it is alive and well on our bus, if not, sleep and try again
+        //if all retry's fail, throw an error
+        bool ping_success = true;
+        int ping_count = 0;
+        while (!port.driver->ping(info.id))
+        {
+            //increment ping count
+            ping_count++;
+
+            ROS_WARN("Failed to ping id: %d, attempt %d, retrying...", info.id, ping_count);
+            //max number of retry's
+            if (ping_count > 5)
+            {   
+                //unable to ping
+                ping_success = false;
+                break;
+            }
+
+            //sleep and try again
+            ros::Duration(0.5).sleep();
+
+        }
+
+        //only add if ping was successful
+        if (ping_success)
+        {
+            bool success = true;
+            info.model_number = 0;
+            bool t_e;
+            success &= port.driver->getModelNumber(info.id, &info.model_number);
+            
+            //If valid motor, setup in operating mode
+            if ((success) || (info.model_number))
+            {
+
+                //set up the lookup tables that we'll use later in the code
+                //to look up how to operate each joint
+                info.cpr = model_number2specs_[info.model_number].cpr;
+                info.gear_reduction = model_number2specs_[info.model_number].gear_reduction;
+                info.model_name = model_number2specs_[info.model_number].name;
+                info.torque_ratio = model_number2specs_[info.model_number].torque_ratio;
+                info.current_ratio = model_number2specs_[info.model_number].current_ratio;
+                info.torque_enabled = false;
+
+                //Display joint info
+                ROS_INFO("Joint Name: %s, ID: %d, Model: %s", info.joint_name.c_str(), info.id, 
+                        info.model_name.c_str());
+                
+                //maintain torque state in motor
+                port.driver->getTorqueEnabled(info.id, &t_e);
+                port.driver->setTorqueEnabled(info.id, 0);
+                
+                //check support for operating mode
+                if ((control_type_ == TORQUE_CONTROL) && (info.model_number == 29))
+                {
+                    ROS_ERROR("Torque Control mode not available with MX-28, skipping");
+                    continue;
+                }
+
+                //check for valid motor series
+                if ( ((port.protocol == "1.0") && (info.model_number > 320)) 
+                        || ((port.protocol == "2.0") && (info.model_number > 1020))
+                        || ((port.protocol == "PRO") && (info.model_number < 35072)) )
+                {
+                    ROS_ERROR("Wrong series of dynamixel found, skipping");
+                    continue;
+                }
+
+                //set operating mode for the motor
+                if ( !port.driver->setOperatingMode(info.id, control_type_) )
+                {
+                    ROS_WARN("Failed to set operating mode for %s motor (id %d)", info.joint_name.c_str(), 
+                        info.id);
+                }
+
+                //set torque limit for the motor
+                //ROS_INFO("%f %f %d", info.torque_limit, info.torque_ratio, 
+                //        (int) (info.torque_limit * info.torque_ratio));
+                if ( !port.driver->setMaxTorque(info.id, (int) (info.torque_limit * info.torque_ratio)) )
+                {
+                    ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), 
+                            info.id);
+                }
+
+                //angle limits are only relevant in position control mode
+                if (control_type_ == POSITION_CONTROL)
+                {
+                    //set angle limits & direction
+                    if (info.min > info. max) 
+                    {
+                        if ( !port.driver->setAngleLimits(info.id, info.max, info.min) )
+                        {
+                            ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(), 
+                                    info.id);
+                        }
+                    }
+                    else
+                    {
+                        if ( !port.driver->setAngleLimits(info.id, info.min, info.max) )
+                        {
+                            ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(), 
+                                    info.id);
+                        }                
+                    }
+                }
+
+                //preserve torque enable state
+                port.driver->setTorqueEnabled(info.id, t_e);
+
+
+                //set PID tuning
+                if (!port.driver->setPIDGains(info.id, control_type_, info.p_gain, info.i_gain, info.d_gain))
+                {
+                    ROS_WARN("Failed to set PID tuning for %s motor (id %d)", info.joint_name.c_str(), info.id);
+                }
+
+
+                info.current_mode == control_type_;
+
+                //add joint to port
+                port.joints[info.joint_name] = info;
+
+            }
+            else
+            {
+                ROS_ERROR("Failed to load model information for dynamixel id %d", info.id);
+                ROS_ERROR("Model Number: %d", info.model_number);
+                if (model_number2specs_.find(info.model_number) != model_number2specs_.end())
+                    ROS_ERROR("Info is in database");
+                else
+                    ROS_ERROR("Info is not in database");
+                ROS_BREAK();
+            }
+        }
+        else
+        {
+            ROS_ERROR("Cannot ping dynamixel id: %d", info.id);
+        }
+
+    }
+}
+
+
 
 
 /**

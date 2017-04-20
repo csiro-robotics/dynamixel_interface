@@ -1859,11 +1859,6 @@ bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
     //perform sync read
    	dxl_comm_result = GroupBulkRead.txRxPacket();
 
-   	if (dxl_comm_result != COMM_SUCCESS)
-   	{
-   		return false;
-   	}
-
    	//clear original id_list
    	servo_ids->clear();
 
@@ -1890,11 +1885,26 @@ bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
 	        //place id back into vector to validate response
             servo_ids->push_back(read_ids.at(i));
 
-    	}
+    	} 
+		else if(readRegisters(read_ids.at(i), address, length, response))
+		{
+			//place vector into map of responses
+	        responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));
+
+	        //place id back into vector to validate response
+            servo_ids->push_back(read_ids.at(i));
+		}
 
     } 
 
-    return true;
+	if (servo_ids->empty())
+	{
+		return false;
+	}
+	else
+	{
+    	return true;
+	}
 
 }
 
@@ -1981,10 +1991,25 @@ bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
             servo_ids->push_back(read_ids.at(i));
 
     	}
+		else if(readRegisters(read_ids.at(i), address, length, response))
+		{
+			//place vector into map of responses
+	        responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));
+
+	        //place id back into vector to validate response
+            servo_ids->push_back(read_ids.at(i));
+		}
 
     }  	
 
-    return true;
+	if (servo_ids->empty())
+	{
+		return false;
+	}
+	else
+	{
+    	return true;
+	}
 
 }
 

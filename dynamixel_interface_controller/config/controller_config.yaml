@@ -11,20 +11,20 @@
 publish_rate: 1000                  # desired rate for joint state updates. actual rate may be less depending on number
                                     # of dynamixels on each port
 
-control_mode: Torque                # control mode, either 'Position', 'Velocity', or 'Torque'
+control_mode: Position                # control mode, either 'Position', 'Velocity', or 'Torque'
 
 dynamic_mode_switching: false       # enables dynamixe switching between torque and position control when in position control mode
                                     # (CAUTION: EXPERIMENTAL)
 
-disable_torque_on_shutdown: true    # with this enabled the motors will switch off when the controller closes
+disable_torque_on_shutdown: false    # with this enabled the motors will switch off when the controller closes
 
-echo_joint_commands: true           # debug flag to echo write commands sent to the controller, useful for measuring write rates
+echo_joint_commands: false           # debug flag to echo write commands sent to the controller, useful for measuring write rates
 
 use_torque_as_effort: false         # when sending and receiving joint states, report effort as torque or raw % of max
 
 mx_effort_use_current: false        # Use the current register instead of the load register on the mx series (IO performance hit)
 
-diagnostics_rate: 1                 # rate to publish diagnostic information
+diagnostics_rate: 0                 # rate to publish diagnostic information
 
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for 
 # the servo below
@@ -80,6 +80,117 @@ ports:
           # 
           # This servo doesn't have any optional values defined, the global defaults will be used
           #
+
+        - id: 3
+          joint_name: AL_tibia_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+    #---------------------------------------------------------------------------- 
+
+        - id: 4 
+          joint_name: BL_coxa_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+        - id: 5
+          joint_name: BL_femur_joint
+          init: 2048
+          min: 4095
+          max: 0
+
+        - id: 6
+          joint_name: BL_tibia_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+
+    #----------------------------------------------------------------------------   
+
+
+        - id: 7
+          joint_name: CL_coxa_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+        - id: 8
+          joint_name: CL_femur_joint
+          init: 2048
+          min: 4095
+          max: 0
+
+        - id: 9
+          joint_name: CL_tibia_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+    #---------------------------------------------------------------------------- 
+
+
+        - id: 10
+          joint_name: AR_coxa_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+        - id: 11
+          joint_name: AR_femur_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+        - id: 12
+          joint_name: AR_tibia_joint
+          init: 2048
+          min: 4095
+          max: 0
+
+    #----------------------------------------------------------------------------  
+
+        - id: 13
+          joint_name: BR_coxa_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+        - id: 14
+          joint_name: BR_femur_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+        - id: 15
+          joint_name: BR_tibia_joint
+          init: 2048
+          min: 4095
+          max: 0
+
+    #----------------------------------------------------------------------------   
+
+        - id: 16
+          joint_name: CR_coxa_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+        - id: 17
+          joint_name: CR_femur_joint
+          init: 2048
+          min: 0
+          max: 4095
+
+        - id: 18
+          joint_name: CR_tibia_joint
+          init: 2048
+          min: 4095
+          max: 0
+
+    #----------------------------------------------------------------------------   
 
   # # ------------------------------------------------------------------------- #   
 
