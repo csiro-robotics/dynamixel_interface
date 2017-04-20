@@ -1270,7 +1270,7 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
     }
 
     //get state info back from all dynamixels
-    if( port.driver->getBulkStateInfo(servo_ids, responses, mx_effort_use_current_) ) {
+    if( port.driver->getBulkStateInfo(servo_ids, responses, mx_effort_use_current_) && !servo_ids->empty() ) {
         
         //Iterate over all connected servos and add to list
         for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
