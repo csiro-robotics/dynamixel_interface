@@ -11,7 +11,7 @@
 publish_rate: 1000                  # desired rate for joint state updates. actual rate may be less depending on number
                                     # of dynamixels on each port
 
-control_mode: Position              # control mode, either 'Position', 'Velocity', or 'Torque'
+control_mode: Position            # control mode, either 'Position', 'Velocity', or 'Torque'
 
 dynamic_mode_switching: false       # enables dynamixe switching between torque and position control when in position control mode
                                     # (CAUTION: EXPERIMENTAL)
@@ -20,16 +20,16 @@ disable_torque_on_shutdown: true    # with this enabled the motors will switch o
 
 echo_joint_commands: true           # debug flag to echo write commands sent to the controller, useful for measuring write rates
 
-use_torque_as_effort: true         # when sending and receiving joint states, report effort as torque or raw % of max
+use_torque_as_effort: false         # when sending and receiving joint states, report effort as torque or raw % of max
 
 mx_effort_use_current: true        # Use the current register instead of the load register on the mx series (IO performance hit)
 
-diagnostics_rate: 1                 # rate to publish diagnostic information
+diagnostics_rate: 0                 # rate to publish diagnostic information
 
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for 
 # the servo below
 
-global_joint_speed: 2.0             # maximum joint speed (rad/s) (in position or velocity control)
+global_joint_speed: 5.0             # maximum joint speed (rad/s) (in position or velocity control)
 
 global_torque_limit: 1.0            # maximum motor torque for all modes, given as a fraction of rated max (0-1)
 
@@ -48,13 +48,13 @@ ports:
   - name: Port_1                    # name for this port in config
     device: /dev/ttyUSB0            # serial device this port will communicate on
     baudrate: 1000000               # baudrate in use (see dynamixel_driver.h for valid values)
-    series: MX                     # motor series in use, must be 'MX', 'XM', or 'PRO'
+    series: XM                     # motor series in use, must be 'MX', 'XM', or 'PRO'
     group_comms_enabled: true
     servos:
         
         # SERVO LIST FOR THIS PORT
 
-        - id: 2                     # (ID set in servo eeprom, must be unique on this port)
+        - id: 1                     # (ID set in servo eeprom, must be unique on this port)
           joint_name: joint_1       # (MUST BE UNIQUE ACROSS ALL PORTS)
           # 
           # The three values below are mandatory, they define the orientation and zeroing of the dynamixel:
@@ -83,32 +83,32 @@ ports:
 
   # # ------------------------------------------------------------------------- #   
 
-  - name: Port_2
-    device: /dev/ttyUSB1
-    baudrate: 2000000
-    series: XM
-    servos:
+  # - name: Port_2
+  #   device: /dev/ttyUSB1
+  #   baudrate: 2000000
+  #   series: XM
+  #   servos:
 
-        - id: 1
-          joint_name: joint_3
-          init: 1000
-          min: 1000
-          max: 3000
-          joint_speed: 1.0
-          torque_limit: 0.5
-          p_gain: 1.0
-          i_gain: 0.0
-          d_gain: 0.0
+  #       - id: 1
+  #         joint_name: joint_3
+  #         init: 1000
+  #         min: 1000
+  #         max: 3000
+  #         joint_speed: 1.0
+  #         torque_limit: 0.5
+  #         p_gain: 1.0
+  #         i_gain: 0.0
+  #         d_gain: 0.0
 
-        - id: 2
-          joint_name: joint_4
-          init: 2048
-          min: 0
-          max: 4095
-          joint_speed: 5.0
-          torque_limit: 1.0
-          p_gain: -1.0
-          i_gain: -1.0
-          d_gain: -1.0
+  #       - id: 2
+  #         joint_name: joint_4
+  #         init: 2048
+  #         min: 0
+  #         max: 4095
+  #         joint_speed: 5.0
+  #         torque_limit: 1.0
+  #         p_gain: -1.0
+  #         i_gain: -1.0
+  #         d_gain: -1.0
 
 # # --------------------------------------------------------------------------- # #   

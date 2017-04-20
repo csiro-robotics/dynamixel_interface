@@ -1408,7 +1408,8 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				response.push_back(value);
 
 				//get load (data[4] - data[5])
-				value = MAKEWORD(data[0], data[1]);
+				int16_t temp = MAKEWORD(data[0], data[1]);
+				value = temp;
 				response.push_back(value);
 
 				//place responses into return data
@@ -1447,7 +1448,8 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				response.push_back(value);
 
 				//get load (data[4] - data[5])
-				value = MAKEWORD(data[0], data[1]);
+				int16_t temp = MAKEWORD(data[0], data[1]);
+				value = temp;
 				response.push_back(value);
 
 				//place responses into return data
@@ -1484,7 +1486,8 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				response.push_back(value);
 
 				//get load (data[4] - data[5])
-				value = MAKEWORD(data[8], data[9]);
+				int16_t temp = MAKEWORD(data[8], data[9]);
+				value = temp;
 				response.push_back(value);
 
 				//place responses into return data
@@ -1522,7 +1525,8 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				response.push_back(value);
 
 				//get load (data[4] - data[5])
-				value = MAKEWORD(data[8], data[9]);
+				int16_t temp = MAKEWORD(data[8], data[9]);
+				value = temp;
 				response.push_back(value);
 
 				//place responses into return data

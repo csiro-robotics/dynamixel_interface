@@ -553,14 +553,14 @@ DynamixelInterfaceController::DynamixelInterfaceController()
                             continue;
                         }
 
-                        //check for valid motor series
-                        if ( ((port.series == "MX") && (info.model_number > 320)) 
-                                || ((port.series == "XM") && ((info.model_number < 350) || (info.model_number > 1020)))
-                                || ((port.series == "PRO") && (info.model_number < 35072)) )
-                        {
-                            ROS_ERROR("Wrong series of dynamixel found, skipping");
-                            continue;
-                        }
+                        // //check for valid motor series
+                        // if ( ((port.series == "MX") && (info.model_number > 320)) 
+                        //         || ((port.series == "XM") && ((info.model_number < 350) || (info.model_number > 1020)))
+                        //         || ((port.series == "PRO") && (info.model_number < 35072)) )
+                        // {
+                        //     ROS_ERROR("Wrong series of dynamixel found, skipping");
+                        //     continue;
+                        // }
 
                         //set operating mode for the motor
                         if ( !port.driver->setOperatingMode(info.id, control_type_) )
@@ -1321,7 +1321,6 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
             //convert raw value to fraction of max torque
             int raw_torque = response[2];
             double torque = 0;
-
             
             if (use_torque_as_effort_)
             {
