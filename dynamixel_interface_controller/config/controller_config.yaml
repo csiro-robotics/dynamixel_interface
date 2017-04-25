@@ -48,7 +48,7 @@ ports:
   - name: Port_1                    # name for this port in config
     device: /dev/ttyUSB0            # serial device this port will communicate on
     baudrate: 1000000               # baudrate in use (see dynamixel_driver.h for valid values)
-    protocol: "2.0"                     # motor series in use, must be 'MX', 'XM', or 'PRO'
+    protocol: "2.0"                 # motor protocol in use, must be "1.0", "2.0", or "PRO"
     group_comms_enabled: true
     servos:
         
@@ -81,145 +81,34 @@ ports:
           # This servo doesn't have any optional values defined, the global defaults will be used
           #
 
-        - id: 3
-          joint_name: AL_tibia_joint
+  # ------------------------------------------------------------------------- #   
+
+  - name: Port_2                    # more ports can be defined in the same manner as above, each port can even have a 
+    device: /dev/ttyUSB1            # different baudrate and protcol
+    baudrate: 2000000
+    protocol: "2.0"
+    servos:
+
+        - id: 1                     # id 1 only needs to be unique for each port and so can be reused here
+          joint_name: joint_3
+          init: 1000
+          min: 1000
+          max: 3000
+          joint_speed: 1.0
+          torque_limit: 0.5
+          p_gain: 1.0
+          i_gain: 0.0
+          d_gain: 0.0
+
+        - id: 2
+          joint_name: joint_4
           init: 2048
           min: 0
           max: 4095
-
-    #---------------------------------------------------------------------------- 
-
-        - id: 4 
-          joint_name: BL_coxa_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-        - id: 5
-          joint_name: BL_femur_joint
-          init: 2048
-          min: 4095
-          max: 0
-
-        - id: 6
-          joint_name: BL_tibia_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-
-    #----------------------------------------------------------------------------   
-
-
-        - id: 7
-          joint_name: CL_coxa_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-        - id: 8
-          joint_name: CL_femur_joint
-          init: 2048
-          min: 4095
-          max: 0
-
-        - id: 9
-          joint_name: CL_tibia_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-    #---------------------------------------------------------------------------- 
-
-
-        - id: 10
-          joint_name: AR_coxa_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-        - id: 11
-          joint_name: AR_femur_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-        - id: 12
-          joint_name: AR_tibia_joint
-          init: 2048
-          min: 4095
-          max: 0
-
-    #----------------------------------------------------------------------------  
-
-        - id: 13
-          joint_name: BR_coxa_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-        - id: 14
-          joint_name: BR_femur_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-        - id: 15
-          joint_name: BR_tibia_joint
-          init: 2048
-          min: 4095
-          max: 0
-
-    #----------------------------------------------------------------------------   
-
-        - id: 16
-          joint_name: CR_coxa_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-        - id: 17
-          joint_name: CR_femur_joint
-          init: 2048
-          min: 0
-          max: 4095
-
-        - id: 18
-          joint_name: CR_tibia_joint
-          init: 2048
-          min: 4095
-          max: 0
-
-    #----------------------------------------------------------------------------   
-
-  # # ------------------------------------------------------------------------- #   
-
-  # - name: Port_2
-  #   device: /dev/ttyUSB1
-  #   baudrate: 2000000
-  #   protocol: 2.0
-  #   servos:
-
-  #       - id: 1
-  #         joint_name: joint_3
-  #         init: 1000
-  #         min: 1000
-  #         max: 3000
-  #         joint_speed: 1.0
-  #         torque_limit: 0.5
-  #         p_gain: 1.0
-  #         i_gain: 0.0
-  #         d_gain: 0.0
-
-  #       - id: 2
-  #         joint_name: joint_4
-  #         init: 2048
-  #         min: 0
-  #         max: 4095
-  #         joint_speed: 5.0
-  #         torque_limit: 1.0
-  #         p_gain: -1.0
-  #         i_gain: -1.0
-  #         d_gain: -1.0
+          joint_speed: 5.0
+          torque_limit: 1.0
+          p_gain: -1.0
+          i_gain: -1.0
+          d_gain: -1.0
 
 # # --------------------------------------------------------------------------- # #   

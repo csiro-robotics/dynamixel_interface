@@ -644,7 +644,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
                 port.driver->setTorqueEnabled(info.id, 0);
                 
                 //check support for operating mode
-                if ((control_type_ == TORQUE_CONTROL) && (info.model_number == 29))
+                if ((control_type_ == TORQUE_CONTROL) && ((info.model_number == 29) || (info.model_number == 30)))
                 {
                     ROS_ERROR("Torque Control mode not available with MX-28, skipping");
                     continue;
