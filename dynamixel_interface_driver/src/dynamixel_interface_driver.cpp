@@ -1573,6 +1573,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 	uint8_t error;
 	bool bulk_read_success = false;
 	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
+	std::map<int, std::vector<uint8_t> > *raw2 = new std::map<int, std::vector<uint8_t> >;
 
 	//get original id list
 	std::vector<int> read_ids = *servo_ids;
@@ -1583,7 +1584,8 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 	{		
 
 		//Read data from dynamixels
-		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_VOLTAGE, 2, raw))
+		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_VOLTAGE, 2, raw) && 
+				bulkRead(servo_ids, DXL_MX_TORQUE_CONTROL_ENABLE, 1, raw2))
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1591,6 +1593,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 
 				//get raw data response
 				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				std::vector<uint8_t> data2 = raw2->at(servo_ids->at(i));
 
 				//get present voltage (data[12])
 				value = data[0];
@@ -1603,6 +1606,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				//get error status
 				packetHandlerP1_->ping(portHandler_, servo_ids->at(i), &error);
 				response.push_back(error);
+
+				//get torque control register state
+				value = data2[0];
+				response.push_back(value);
 
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
@@ -1630,6 +1637,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				{
 					continue;
 				}
+				else if (!readRegisters(read_ids.at(i), DXL_MX_TORQUE_CONTROL_ENABLE, 1, &data))
+				{
+					continue;
+				}
 
 				//get present voltage (data[12])
 				value = data[0];
@@ -1642,6 +1653,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				//get error status
 				packetHandlerP1_->ping(portHandler_, read_ids.at(i), &error);
 				response.push_back(error);
+
+				//get torque control register state
+				value = data[2];
+				response.push_back(value);
 
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));

@@ -1416,6 +1416,12 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
 
                     diag_msg.error_states.push_back(response[2]);
 
+                    //get mx torque_control states
+                    if (port.series == "MX")
+                    {   
+                        diag_msg.mx_torque_control_active.push_back(response[3]);
+                    }
+
                 }
 
                 //publish diagnostic info
