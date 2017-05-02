@@ -1322,19 +1322,26 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
             int raw_torque = response[2];
             double torque = 0;
             
+            //if we want to report torque as NM
             if (use_torque_as_effort_)
             {
+                //conversion is different for MX series
                 if (port.series == "MX")
                 {
+                    //if we've read current in the value is in range 0 - 4095
                     if (mx_effort_use_current_)
                     {
+                        //divide by current to torque conversion ratio
                         torque = (double) (raw_torque - 2048) / info.current_ratio;
                     }
+
+                    //else the effort value is in range 0 - 2048
                     else
                     {
-                        torque = ((double) (response[2] & 0x3FF)) / info.current_ratio;
+                        //adjust effort range value to be calculated using half current ratio
+                        torque = (((double) (response[2] & 0x3FF)) * 2) / info.current_ratio;
                         //check sign 
-                        if (response[2] < 1023)
+                        if (response[2] < 1024)
                         {
                             torque = 0.0 - torque;
                         }
@@ -1342,30 +1349,38 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
                 }
                 else
                 {
+                    //all other series just convert by current ratio
                     torque = ((double) (response[2]) / info.current_ratio);
                 }  
             }
+
+            //reporting torque as %maximum, the way load is reported using mx series
             else
             {
+                
                 if (port.series == "MX")
                 {
+
                     if (mx_effort_use_current_)
                     {
-                        torque = (double) (raw_torque - 2048) / info.torque_ratio;
+                        torque = (double) (raw_torque - 2048) / (info.torque_ratio * 2);
                     }
                     else
                     {
                         torque = ((double) (response[2] & 0x3FF)) / info.torque_ratio;
                         //check sign 
-                        if (response[2] < 1023)
+                        if (response[2] < 1024)
                         {
                             torque = 0.0 - torque;
                         }
                     }
                 }
+
                 else
                 {
+
                     torque = ((double) (response[2]) / info.torque_ratio);
+
                 }             
             }
 
