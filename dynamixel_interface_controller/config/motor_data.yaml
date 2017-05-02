@@ -6,75 +6,75 @@
   model_number: 53768 
   cpr: 502000
   gear_reduction: 500.0
-  torque_ratio: 32767
-  current_ratio: 1
+  effort_ratio: 32767
+  current_ratio: 16.113
 
 - name: H42
   model_number: 51200
   cpr: 304000 
   gear_reduction: 300.0
-  torque_ratio: 32767
-  current_ratio: 1
+  effort_ratio: 32767
+  current_ratio: 4.028
 
 - name: H54
   model_number: 54024 
   cpr: 502000
   gear_reduction: 500.0
-  torque_ratio: 32767
-  current_ratio: 1
+  effort_ratio: 32767
+  current_ratio: 16.113
 
 - name: MX28
   model_number: 29 
   cpr: 4096
   gear_reduction: 8.772
-  torque_ratio: 1023
-  current_ratio: 123.457
+  effort_ratio: 1023
+  current_ratio: 4.5
 
 - name: MX28-(2.0)
   model_number: 30
   cpr: 4096
   gear_reduction: 4.367
-  torque_ratio: 2047
-  current_ratio: 1
+  effort_ratio: 2047
+  current_ratio: 3.36
 
 - name: MX64
   model_number: 310
   cpr: 4096  
   gear_reduction: 8.772
-  torque_ratio: 1023
-  current_ratio: 123.457
+  effort_ratio: 1023
+  current_ratio: 4.5
 
 - name: MX64-(2.0)
   model_number: 311
   cpr: 4096
   gear_reduction: 4.367
-  torque_ratio: 2047
-  current_ratio: 1
+  effort_ratio: 2047
+  current_ratio: 3.36
 
 - name: MX106
   model_number: 320 
   cpr: 4096
   gear_reduction: 8.772
-  torque_ratio: 1023
-  current_ratio: 123.457
+  effort_ratio: 1023
+  current_ratio: 4.5
 
 - name: MX106-(2.0)
   model_number: 321 
   cpr: 4096
   gear_reduction: 4.367
-  torque_ratio: 2047
-  current_ratio: 1
+  effort_ratio: 2047
+  current_ratio: 3.36
 
 - name: XM430-W350
   model_number: 1020
   cpr: 4096
   gear_reduction: 4.367
-  torque_ratio: 1193
-  current_ratio: 1
+  effort_ratio: 1193
+  current_ratio: 2.69
 
 - name: XH430-W350
   model_number: 1000
   cpr: 4096
   gear_reduction: 4.367
-  torque_ratio: 1193
-  current_ratio: 1
+  effort_ratio: 1193
+  current_ratio: 2.69
