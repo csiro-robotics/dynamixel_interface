@@ -1339,7 +1339,7 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
                     else
                     {
                         //adjust effort range value to be calculated using half current ratio
-                        torque = (((double) (response[2] & 0x3FF)) * 2) / info.current_ratio;
+                        torque = ((double) (response[2] & 0x3FF)) / info.current_ratio;
                         //check sign 
                         if (response[2] < 1024)
                         {
