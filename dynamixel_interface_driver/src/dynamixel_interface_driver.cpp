@@ -1859,6 +1859,11 @@ bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
     //perform sync read
    	dxl_comm_result = GroupBulkRead.txRxPacket();
 
+	if (dxl_comm_result != COMM_SUCCESS)
+   	{
+   		return false;
+   	}
+
    	//clear original id_list
    	servo_ids->clear();
 
