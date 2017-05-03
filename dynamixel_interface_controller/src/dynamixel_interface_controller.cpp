@@ -1095,7 +1095,7 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
             {
                 if (info.current_ratio != 0)
                 {
-                    torque = (int) (input_torque * info.current_ratio);
+                    torque = (int) (input_torque / info.current_ratio);
                     torque = abs(torque);
 
                     if ((input_torque < 0) != (info.min > info.max))
@@ -1346,11 +1346,11 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
                 {
                     if (mx_effort_use_current_)
                     {
-                        torque = (double) (raw_torque - 2048) / info.current_ratio;
+                        torque = (double) (raw_torque - 2048) * info.current_ratio;
                     }
                     else
                     {
-                        torque = ((double) (response[2] & 0x3FF)) / info.current_ratio;
+                        torque = ((double) (response[2] & 0x3FF)) * info.current_ratio;
                         //check sign 
                         if (response[2] < 1023)
                         {
