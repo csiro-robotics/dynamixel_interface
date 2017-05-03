@@ -120,7 +120,7 @@ struct dynamixelSpec
     double gear_reduction;
 
     /** Torque ratio */
-    double torque_ratio;
+    double effort_ratio;
 
     /** Current ratio */
     double current_ratio;
@@ -202,7 +202,7 @@ struct dynamixelInfo
     double gear_reduction; 
 
     /** Motor torque reading to register value ratio */ 
-    double torque_ratio; 
+    double effort_ratio; 
 
     /** Motor current reading to register value ratio */
     double current_ratio;

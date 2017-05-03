@@ -146,7 +146,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
         doc[i]["model_number"] >> spec.model_number;
         doc[i]["cpr"]  >> spec.cpr;
         doc[i]["gear_reduction"]  >> spec.gear_reduction;
-        doc[i]["torque_ratio"] >> spec.torque_ratio;
+        doc[i]["effort_ratio"] >> spec.effort_ratio;
         doc[i]["current_ratio"] >> spec.current_ratio;
 
         model_number2specs_[spec.model_number] = spec;
@@ -631,7 +631,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
                 info.cpr = model_number2specs_[info.model_number].cpr;
                 info.gear_reduction = model_number2specs_[info.model_number].gear_reduction;
                 info.model_name = model_number2specs_[info.model_number].name;
-                info.torque_ratio = model_number2specs_[info.model_number].torque_ratio;
+                info.effort_ratio = model_number2specs_[info.model_number].effort_ratio;
                 info.current_ratio = model_number2specs_[info.model_number].current_ratio;
                 info.torque_enabled = false;
 
@@ -667,9 +667,9 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
                 }
 
                 //set torque limit for the motor
-                //ROS_INFO("%f %f %d", info.torque_limit, info.torque_ratio, 
-                //        (int) (info.torque_limit * info.torque_ratio));
-                if ( !port.driver->setMaxTorque(info.id, (int) (info.torque_limit * info.torque_ratio)) )
+                //ROS_INFO("%f %f %d", info.torque_limit, info.effort_ratio, 
+                //        (int) (info.torque_limit * info.effort_ratio));
+                if ( !port.driver->setMaxTorque(info.id, (int) (info.torque_limit * info.effort_ratio)) )
                 {
                     ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), 
                             info.id);
@@ -1113,9 +1113,9 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
             }
             else
             {
-                if (info.torque_ratio != 0)
+                if (info.effort_ratio != 0)
                 {
-                    torque = (int) (input_torque * info.torque_ratio);
+                    torque = (int) (input_torque * info.effort_ratio);
                     torque = abs(torque);
 
                     if ((input_torque < 0) != (info.min > info.max))
@@ -1369,11 +1369,11 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
                 {
                     if (mx_effort_use_current_)
                     {
-                        torque = (double) (raw_torque - 2048) / info.torque_ratio;
+                        torque = (double) (raw_torque - 2048) / info.effort_ratio;
                     }
                     else
                     {
-                        torque = ((double) (response[2] & 0x3FF)) / info.torque_ratio;
+                        torque = ((double) (response[2] & 0x3FF)) / info.effort_ratio;
                         //check sign 
                         if (response[2] < 1023)
                         {
@@ -1383,7 +1383,7 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
                 }
                 else
                 {
-                    torque = ((double) (response[2]) / info.torque_ratio);
+                    torque = ((double) (response[2]) / info.effort_ratio);
                 }             
             }
 
