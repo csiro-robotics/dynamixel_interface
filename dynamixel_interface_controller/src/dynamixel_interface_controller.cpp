@@ -620,11 +620,19 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
             bool success = true;
             info.model_number = 0;
             bool t_e;
-            success &= port.driver->getModelNumber(info.id, &info.model_number);
+            success = port.driver->getModelNumber(info.id, &info.model_number);
             
             //If valid motor, setup in operating mode
             if ((success) || (info.model_number))
             {
+
+                if (model_number2specs_.find(info.model_number) == model_number2specs_.end())
+                {
+                    ROS_ERROR("Failed to load model information for dynamixel id %d", info.id);
+                    ROS_ERROR("Model Number: %d", info.model_number);
+                    ROS_ERROR("Info is not in database");
+                    ROS_BREAK();
+                }
 
                 //set up the lookup tables that we'll use later in the code
                 //to look up how to operate each joint
@@ -716,12 +724,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
             }
             else
             {
-                ROS_ERROR("Failed to load model information for dynamixel id %d", info.id);
-                ROS_ERROR("Model Number: %d", info.model_number);
-                if (model_number2specs_.find(info.model_number) != model_number2specs_.end())
-                    ROS_ERROR("Info is in database");
-                else
-                    ROS_ERROR("Info is not in database");
+                ROS_ERROR("Failed to retrieve model number for id %d", info.id);
                 ROS_BREAK();
             }
         }
