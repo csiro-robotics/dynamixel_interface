@@ -1247,6 +1247,11 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
 	std::map<int, std::vector<uint8_t> > *raw2 = new std::map<int, std::vector<uint8_t> >;
 
+	if (servo_ids->size() == 0)
+	{
+		return false;
+	}
+
 	//get original id list
 	std::vector<int> read_ids = *servo_ids;
 
@@ -1279,7 +1284,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			{
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get position (data[0] - data[1])
 				value = MAKEWORD(data[0], data[1]);
@@ -1345,7 +1350,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 					continue;
 				}
 				
-				if (data.size() > 0)
+				if (data.size() > 5)
 				{	
 					//get position (data[0] - data[1])
 					value = MAKEWORD(data[0], data[1]);
@@ -1355,17 +1360,8 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 					value = MAKEWORD(data[2], data[3]);
 					response.push_back(value);
 
-
-					if(mx_read_current)
-					{
-						//get current (data[32] - data[33])
-						value = MAKEWORD(data[32], data[33]);
-					}
-					else
-					{
-						//get load (data[4] - data[5])
-						value = MAKEWORD(data[4], data[5]);
-					}
+					//get current (data[32] - data[33])
+					value = MAKEWORD(data[4], data[5]);
 					response.push_back(value);
 	
 					//place responses into return data
@@ -1397,7 +1393,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			{	
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get position (data[0] - data[1])
 				value = MAKEINT(MAKEWORD(data[6], data[7]),MAKEWORD(data[8], data[9]));
@@ -1417,9 +1413,11 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 
 				response.clear();
 				data.clear();
-			
+
 			}
+		
 			return true;
+
 		}
 		else
 		{
@@ -1436,29 +1434,29 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 					continue;
 				}
 
-				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				if (data.size() > 9)
+				{
+					//get position (data[0] - data[1])
+					value = MAKEINT(MAKEWORD(data[6], data[7]),MAKEWORD(data[8], data[9]));
+					response.push_back(value);
 
-				//get position (data[0] - data[1])
-				value = MAKEINT(MAKEWORD(data[6], data[7]),MAKEWORD(data[8], data[9]));
-				response.push_back(value);
+					//get velocity (data[2] - data[3])
+					value = MAKEINT(MAKEWORD(data[2], data[3]),MAKEWORD(data[4], data[5]));
+					response.push_back(value);
 
-				//get velocity (data[2] - data[3])
-				value = MAKEINT(MAKEWORD(data[2], data[3]),MAKEWORD(data[4], data[5]));
-				response.push_back(value);
+					//get load (data[4] - data[5])
+					int16_t temp = MAKEWORD(data[0], data[1]);
+					value = temp;
+					response.push_back(value);
 
-				//get load (data[4] - data[5])
-				int16_t temp = MAKEWORD(data[0], data[1]);
-				value = temp;
-				response.push_back(value);
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+					servo_ids->push_back(read_ids.at(i));
 
-				servo_ids->push_back(read_ids.at(i));
-
-				response.clear();
-				data.clear();
+					response.clear();
+					data.clear();
+				}
 			
 			}
 			return true;
@@ -1475,8 +1473,8 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			{
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
-
+				data = raw->at(servo_ids->at(i));	
+			
 				//get position (data[0] - data[1])
 				value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
 				response.push_back(value);
@@ -1494,8 +1492,8 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
 
 				response.clear();
-				data.clear();
-			
+				data.clear();	
+
 			}
 			return true;
 		}
@@ -1514,29 +1512,29 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				}
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				if (data.size() > 9)
+				{
+					//get position (data[0] - data[1])
+					value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
+					response.push_back(value);
 
-				//get position (data[0] - data[1])
-				value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
-				response.push_back(value);
+					//get velocity (data[2] - data[3])
+					value = MAKEINT(MAKEWORD(data[4], data[5]),MAKEWORD(data[6], data[7]));
+					response.push_back(value);
 
-				//get velocity (data[2] - data[3])
-				value = MAKEINT(MAKEWORD(data[4], data[5]),MAKEWORD(data[6], data[7]));
-				response.push_back(value);
+					//get load (data[4] - data[5])
+					int16_t temp = MAKEWORD(data[8], data[9]);
+					value = temp;
+					response.push_back(value);
 
-				//get load (data[4] - data[5])
-				int16_t temp = MAKEWORD(data[8], data[9]);
-				value = temp;
-				response.push_back(value);
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+					servo_ids->push_back(read_ids.at(i));
 
-				servo_ids->push_back(read_ids.at(i));
-
-				response.clear();
-				data.clear();
-			
+					response.clear();
+					data.clear();
+				}
 			}
 			return true;
 		}
@@ -1590,7 +1588,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			{
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get present voltage (data[12])
 				value = data[0];
@@ -1631,26 +1629,29 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 					continue;
 				}
 
-				//get present voltage (data[12])
-				value = data[0];
-				response.push_back(value);
+				if (data.size() > 1)
+				{
+					//get present voltage (data[12])
+					value = data[0];
+					response.push_back(value);
 
-				//get present temperature (data[13])
-				value = data[1];
-				response.push_back(value);
+					//get present temperature (data[13])
+					value = data[1];
+					response.push_back(value);
 
-				//get error status
-				packetHandlerP1_->ping(portHandler_, read_ids.at(i), &error);
-				response.push_back(error);
+					//get error status
+					packetHandlerP1_->ping(portHandler_, read_ids.at(i), &error);
+					response.push_back(error);
 
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
-				//push back id to list
-				servo_ids->push_back(read_ids.at(i));
+					//push back id to list
+					servo_ids->push_back(read_ids.at(i));
 
-				response.clear();
-				data.clear();
+					response.clear();
+					data.clear();
+				}
 			}
 
 			return true;
@@ -1670,7 +1671,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			{
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get present Voltage
 				value = MAKEWORD(data[0], data[1]);
@@ -1709,26 +1710,29 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 					continue;
 				}
 
-				//get present Voltage
-				value = MAKEWORD(data[0], data[1]);
-				response.push_back(value);
+				if (data.size() > 2)
+				{
+					//get present Voltage
+					value = MAKEWORD(data[0], data[1]);
+					response.push_back(value);
 
-				//get temperature
-				value = data[2];
-				response.push_back(value);
+					//get temperature
+					value = data[2];
+					response.push_back(value);
 
-				//get error status
-				packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
-				response.push_back(error);
+					//get error status
+					packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
+					response.push_back(error);
 
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
-				//push back id to list
-				servo_ids->push_back(read_ids.at(i));
+					//push back id to list
+					servo_ids->push_back(read_ids.at(i));
 
-				response.clear();
-				data.clear();
+					response.clear();
+					data.clear();
+				}
 			
 			}
 			return true;
@@ -1744,7 +1748,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			for (int i = 0; i < servo_ids->size(); i++)
 			{
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get voltage
 				value = MAKEWORD(data[0], data[1]);
@@ -1763,6 +1767,8 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 
 				response.clear();
 				data.clear();
+
+
 			}
 			return true;
 		}
@@ -1780,26 +1786,29 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 					continue;
 				}
 
-				//get voltage
-				value = MAKEWORD(data[0], data[1]);
-				response.push_back(value);
+				if (data.size() > 29)
+				{
+					//get voltage
+					value = MAKEWORD(data[0], data[1]);
+					response.push_back(value);
 
-				//get temperature
-				value = data[2];
-				response.push_back(value);
-				
-				//get error status
-				packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
-				response.push_back(error);
+					//get temperature
+					value = data[2];
+					response.push_back(value);
+					
+					//get error status
+					packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
+					response.push_back(error);
 
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
-				//push back id to list
-				servo_ids->push_back(read_ids.at(i));
-				
-				response.clear();
-				data.clear();
+					//push back id to list
+					servo_ids->push_back(read_ids.at(i));
+					
+					response.clear();
+					data.clear();
+				}
 			}
 			return true;
 		}
