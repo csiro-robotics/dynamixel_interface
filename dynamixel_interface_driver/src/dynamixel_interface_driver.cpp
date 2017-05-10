@@ -132,6 +132,9 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
     // set indicator for using group comms
     use_group_comms_ = use_group_comms;
 
+	// intialise failsafe fallback counter
+	single_read_fallback_counter_ = 0;
+
     if (!strncmp(protocol.c_str(), "1.0", 3))
     {
     	servo_protocol_ = '1';
@@ -1261,7 +1264,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	{		
 		//Read data from dynamixels
 
-		if(use_group_comms_)
+		if (use_group_comms_)
 		{
 			if(mx_read_current)
 			{
@@ -1315,10 +1318,25 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				data.clear();
 
 			}
+
+			//reset fallback counter
+			single_read_fallback_counter_ = 0;
+			
 			return true;
+		}
+		else if ((use_group_comms_) && (single_read_fallback_counter_ < 50))
+		{
+			//if we fail 50 bulk comms in a row fallback on single read
+			single_read_fallback_counter_++;
+			if (single_read_fallback_counter_ == 50)
+			{
+				use_group_comms_ = false;
+			}
+			return false;
 		}
 		else
 		{
+
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
 
@@ -1415,13 +1433,25 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				data.clear();
 
 			}
-		
+
+			//reset fallback counter
+			single_read_fallback_counter_ = 0;
 			return true;
 
 		}
+		else if ((use_group_comms_) && (single_read_fallback_counter_ < 50))
+		{
+			//if we fail 50 bulk comms in a row fallback on single read
+			single_read_fallback_counter_++;
+			if (single_read_fallback_counter_ == 50)
+			{
+				use_group_comms_ = false;
+			}
+			return false;
+		}
 		else
 		{
-			
+
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
 
@@ -1495,7 +1525,21 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				data.clear();	
 
 			}
+			
+			//reset fallback counter
+			single_read_fallback_counter_ = 0;
 			return true;
+
+		}
+		else if ((use_group_comms_) && (single_read_fallback_counter_ < 50))
+		{
+			//if we fail 50 bulk comms in a row fallback on single read
+			single_read_fallback_counter_++;
+			if (single_read_fallback_counter_ == 50)
+			{
+				use_group_comms_ = false;
+			}
+			return false;
 		}
 		else
 		{
@@ -1614,7 +1658,8 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 		}
 		else
 		{
-			
+			return false;
+
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
 			response.clear();
@@ -1696,6 +1741,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 		}
 		else
 		{
+			return false;
 			
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
@@ -1900,14 +1946,14 @@ bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
             servo_ids->push_back(read_ids.at(i));
 
     	} 
-		else if(readRegisters(read_ids.at(i), address, length, response))
-		{
-			//place vector into map of responses
-	        responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));
+		// else if(readRegisters(read_ids.at(i), address, length, response))
+		// {
+		// 	//place vector into map of responses
+	    //     responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));
 
-	        //place id back into vector to validate response
-            servo_ids->push_back(read_ids.at(i));
-		}
+	    //     //place id back into vector to validate response
+        //     servo_ids->push_back(read_ids.at(i));
+		// }
 
     } 
 
@@ -2005,14 +2051,14 @@ bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
             servo_ids->push_back(read_ids.at(i));
 
     	}
-		else if(readRegisters(read_ids.at(i), address, length, response))
-		{
-			//place vector into map of responses
-	        responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));
+		// else if(readRegisters(read_ids.at(i), address, length, response))
+		// {
+		// 	//place vector into map of responses
+	    //     responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));
 
-	        //place id back into vector to validate response
-            servo_ids->push_back(read_ids.at(i));
-		}
+	    //     //place id back into vector to validate response
+        //     servo_ids->push_back(read_ids.at(i));
+		// }
 
     }  	
 

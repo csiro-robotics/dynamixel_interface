@@ -915,7 +915,10 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     lock.unlock();
 
     //publish joint states
-    joint_state_publisher_.publish(read_msg);
+    if (read_msg.name.size() > 0)
+    {
+        joint_state_publisher_.publish(read_msg);
+    }
 
 
     publish_diagnostics_ = false;
@@ -1448,7 +1451,7 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
     }
     else
     {
-        ROS_ERROR("READ FAILURE, UNABLE TO GET JOINT STATES ON PORT %s", port.device.c_str());
+        ;//ROS_ERROR("READ FAILURE, UNABLE TO GET JOINT STATES ON PORT %s", port.device.c_str());
     }
 
     read_msg.header.stamp = ros::Time::now();

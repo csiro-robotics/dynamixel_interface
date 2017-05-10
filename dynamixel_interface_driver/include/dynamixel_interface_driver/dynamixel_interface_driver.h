@@ -735,6 +735,9 @@ private:
     /** Indicates whether or not to use the group communication methods */
     bool use_group_comms_;
 
+    /** indicates group comm failure fallback interval */
+    uint8_t single_read_fallback_counter_;
+    
 };
 
 }
