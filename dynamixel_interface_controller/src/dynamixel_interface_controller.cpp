@@ -817,10 +817,6 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
                 dynamixelInfo info = it->second;
                 int32_t priorPos = info.init;
 
-                //this is to ensure that the motor is enabled at it's current position
-                dynamixel_ports_[i].driver->getPosition(info.id, &priorPos);
-                dynamixel_ports_[i].driver->setPosition(info.id, priorPos);
-
                 //enable motor torque
                 if (!dynamixel_ports_[i].driver->setTorqueEnabled(info.id, 1))
                 {
