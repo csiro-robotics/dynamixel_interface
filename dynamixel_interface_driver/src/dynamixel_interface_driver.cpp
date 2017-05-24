@@ -1656,9 +1656,8 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			return true;
 
 		}
-		else
+		else if (!use_group_comms_)
 		{
-			return false;
 
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
@@ -1728,6 +1727,16 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 
 				//get error status
 				packetHandlerP2_->ping(portHandler_, servo_ids->at(i), &error);
+
+				//check if error was a hardware status error, read register if necessary
+				if (error == 128)
+				{
+					if(readRegisters(read_ids.at(i), DXL_X_HARDWARE_ERROR_STATUS,  1, &data))
+					{
+						error += data[3];
+					}
+				}
+
 				response.push_back(error);
 
 				//place responses into return data
@@ -1739,9 +1748,8 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			}
 			return true;
 		}
-		else
+		else if (!use_group_comms_)
 		{
-			return false;
 			
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
@@ -1768,6 +1776,16 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 
 					//get error status
 					packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
+
+					//check if error was a hardware status error, read register if necessary
+					if (error == 128)
+					{
+						if(readRegisters(read_ids.at(i), DXL_X_HARDWARE_ERROR_STATUS,  1, &data))
+						{
+							error += data[3];
+						}
+					}
+
 					response.push_back(error);
 
 					//place responses into return data
@@ -1818,7 +1836,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			}
 			return true;
 		}
-		else
+		else if (!use_group_comms_)
 		{
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
