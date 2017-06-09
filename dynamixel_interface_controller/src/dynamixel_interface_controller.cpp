@@ -1188,6 +1188,18 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
             }
             port.driver->setMultiTorqueControl(data);
 
+        } 
+        else if (dynamic_mode_switching_)
+        {
+            vector< vector<int> > data;
+            for (int i = 0; i < ids.size(); i++)
+            {
+                vector<int> temp;
+                temp.push_back(ids[i]);
+                temp.push_back(0);
+                data.push_back(temp);
+            }
+            port.driver->setMultiTorqueControl(data);
         }
 
         //set the profile velocities if they have been defined
