@@ -137,7 +137,7 @@ enum controlMode
     POSITION_CONTROL = 3,
     VELOCITY_CONTROL = 1,
     TORQUE_CONTROL = 0,
-    UNKOWN  = -1
+    UNKNOWN  = -1
 };
 
 
@@ -311,14 +311,14 @@ private:
      * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
      * @param perform_write boolean indicating whether or not to write latest joint_state to servos
      */
-    void multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg, bool perform_write);
+    void multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg, bool perform_write);
 
     /**
      * Function called in each thread to perform a write on a port
      * @param port_num index used to retrieve port information from port list
      * @param joint_commands message cointaining the commands for each joint
      */
-    void multiThreadedWrite(int port_num, sensor_msgs::JointState joint_commands);
+    void multiThreadedWrite(portInfo &port, sensor_msgs::JointState joint_commands);
     
 
     /**
@@ -326,7 +326,7 @@ private:
      * @param port_num index used to retrieve port information from port list
      * @param read_msg the msg this ports join data is read into.
      */
-    void multiThreadedRead(int port_num, sensor_msgs::JointState &read_msg);
+    void multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg);
 
 
     /** Handler for the ROS Node */

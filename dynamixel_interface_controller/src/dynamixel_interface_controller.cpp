@@ -715,8 +715,8 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
                     ROS_WARN("Failed to set PID tuning for %s motor (id %d)", info.joint_name.c_str(), info.id);
                 }
 
-
-                info.current_mode == control_type_;
+                //store current control mode
+                info.current_mode = control_type_;
 
                 //add joint to port
                 port.joints[info.joint_name] = info;
@@ -724,12 +724,14 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
             }
             else
             {
+                //can detect but cannot communicate, possibly serial error
                 ROS_ERROR("Failed to retrieve model number for id %d", info.id);
                 ROS_BREAK();
             }
         }
         else
         {
+            //unable to detect motor
             ROS_ERROR("Cannot ping dynamixel id: %d", info.id);
         }
 
@@ -823,12 +825,20 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
                     ROS_ERROR("failed to enable torque on motor %d", info.id);
                 }
 
-                //if in position control mode we enable the default join movement speed (profile velocity)
-                if (control_type_ == POSITION_CONTROL)
+                if (control_type_ != TORQUE_CONTROL)
                 {
-                    int regVal = (int) ((double) (info.joint_speed) * (60/(2.0 * M_PI)) * info.gear_reduction);
-                    dynamixel_ports_[i].driver->setProfileVelocity(info.id, regVal);
-                } 
+
+                    dynamixel_ports_[i].driver->setTorqueControlEnabled(info.id, false);
+                
+                    //if in position control mode we enable the default join movement speed (profile velocity)
+                    if (control_type_ == POSITION_CONTROL)
+                    {
+                        
+                        int regVal = (int) ((double) (info.joint_speed) * (60/(2.0 * M_PI)) * info.gear_reduction);
+                        dynamixel_ports_[i].driver->setProfileVelocity(info.id, regVal);
+                    } 
+
+                }
                 else if (control_type_ == TORQUE_CONTROL)
                 {
                     dynamixel_ports_[i].driver->setOperatingMode(info.id, control_type_);
@@ -848,7 +858,10 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     {
         num_servos = num_servos + dynamixel_ports_[i].joints.size();
         reads[i] = sensor_msgs::JointState();
-        std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this, i, std::ref(reads[i]), write_ready_);
+        
+        std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this, 
+                std::ref(dynamixel_ports_[i]), std::ref(reads[i]), write_ready_);
+
         threads.push_back(move(readThread));
     }
 
@@ -869,11 +882,11 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
         {
             debug_publisher_.publish(temp_msg);
         }
-        multiThreadedWrite(0, temp_msg);
+        multiThreadedWrite(dynamixel_ports_[0], temp_msg);
     }
 
     //perform read
-    multiThreadedRead(0, reads[0]);
+    multiThreadedRead(dynamixel_ports_[0], reads[0]);
 
 
     //loop and get port information (wait for threads in order if any were created)
@@ -927,7 +940,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
  * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
  * @param perform_write boolean indicating whether or not to write latest joint_state to servos
  */
-void DynamixelInterfaceController::multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg, bool perform_write)
+void DynamixelInterfaceController::multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg, bool perform_write)
 {
 
     sensor_msgs::JointState thread_write_msg = write_msg_;
@@ -935,11 +948,11 @@ void DynamixelInterfaceController::multiThreadedIO(int port_num, sensor_msgs::Jo
     //perform write
     if (write_ready_)
     {
-        multiThreadedWrite(port_num, thread_write_msg);
+        multiThreadedWrite(port, thread_write_msg);
     }
 
     //perform read
-    multiThreadedRead(port_num, read_msg);
+    multiThreadedRead(port, read_msg);
 
 }
 
@@ -949,11 +962,8 @@ void DynamixelInterfaceController::multiThreadedIO(int port_num, sensor_msgs::Jo
  * @param port_num index used to retrieve port information from port list
  * @param joint_commands message cointaining the commands for each joint
  */
-void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs::JointState joint_commands)
+void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msgs::JointState joint_commands)
 {
-
-    //get this threads port information
-    portInfo port = dynamixel_ports_[port_num];
 
     //ignore empty messages
     if (joint_commands.name.size() < 1)
@@ -977,10 +987,19 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
             ((control_type_ == POSITION_CONTROL) && dynamic_mode_switching_)) )
     {
         has_torque = true; 
+    } 
+    
+    if ( (!has_torque) && (!has_pos) && (!has_vel) )
+    {
+        //no valid array sizes for current control mode, ignore
+        return;
     }
 
     //vectors to store the calculated values
     vector<int> ids, velocities, positions, torques, modes;
+
+    //vector to store params for mode switch (if enabled)
+    vector< vector<int> > mode_switch_data;
 
     //loop and calculate the values for each specified joint
     for (int i = 0; i < joint_commands.name.size(); i++)
@@ -994,10 +1013,10 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
         }
 
         //Retrieve dynamixel information
-        dynamixelInfo info = joint_it->second;
+        dynamixelInfo *info = &joint_it->second;
 
         //prepare data to be sent to the motor
-        ids.push_back(info.id);
+        ids.push_back(info->id);
 
         //calculate the position register value for the motor
         if (has_pos)
@@ -1010,20 +1029,20 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
             double rad_pos = joint_commands.position[i];
             
             //define our clamping limits to avoid exceeding safe joint angles
-            if (info.min > info.max)
+            if (info->min > info->max)
             {
                 rad_pos = -rad_pos;
-                up_lim = info.min;
-                dn_lim = info.max;
+                up_lim = info->min;
+                dn_lim = info->max;
             }
             else
             {
-                up_lim = info.max;
-                dn_lim = info.min;
+                up_lim = info->max;
+                dn_lim = info->min;
             }
 
             //convert from radians to motor encoder value
-            int pos = (int)(rad_pos / 2.0 / M_PI * info.cpr + 0.5) + info.init;
+            int pos = (int)(rad_pos / 2.0 / M_PI * info->cpr + 0.5) + info->init;
 
 
             //clamp joint angle to be within safe limit
@@ -1039,6 +1058,17 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
             //push motor encoder value onto list
             positions.push_back(pos);
 
+            //if in torque control and we want to be in position control
+            if ((!has_torque) && (info->current_mode == TORQUE_CONTROL))
+            {
+                //add mode switch data to vector
+                vector<int> temp;
+                temp.push_back(info->id);
+                temp.push_back(0);
+                mode_switch_data.push_back(temp);
+                info->current_mode = POSITION_CONTROL;
+            }
+
         }
 
         //calculate the velocity register value for the motor
@@ -1049,14 +1079,14 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
             double rad_s_vel = joint_commands.velocity[i];
 
             //clamp to joint speed limit
-            if (abs(rad_s_vel) > info.joint_speed) {
+            if (abs(rad_s_vel) > info->joint_speed) {
 
-                rad_s_vel = (rad_s_vel < 0) ? (-info.joint_speed) : (info.joint_speed);
+                rad_s_vel = (rad_s_vel < 0) ? (-info->joint_speed) : (info->joint_speed);
 
             }
 
             //convert to motor encoder value
-            int vel = (int) ((rad_s_vel * (60/(2.0 * M_PI)) * info.gear_reduction));
+            int vel = (int) ((rad_s_vel * (60/(2.0 * M_PI)) * info->gear_reduction));
 
             //Velocity values serve 2 different functions, in velocity control mode their sign
             //defines direction, however in position control mode their absolute value is used
@@ -1065,7 +1095,7 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
 
             //we also need to take an absolute value as each motor series handles negative inputs
             //differently
-            if ((control_type_ == VELOCITY_CONTROL) && ((rad_s_vel < 0) != (info.min > info.max)))
+            if ((control_type_ == VELOCITY_CONTROL) && ((rad_s_vel < 0) != (info->min > info->max)))
             {
 
                 if (port.protocol == "1.0")
@@ -1093,14 +1123,15 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
 
             int torque = 0;
 
+            //if this flag set, input and outputs are current values (in mA)
             if (use_torque_as_effort_)
             {
-                if (info.current_ratio != 0)
+                if (info->current_ratio != 0)
                 {
-                    torque = (int) (input_torque / info.current_ratio);
+                    torque = (int) (input_torque / info->current_ratio);
                     torque = abs(torque);
 
-                    if ((input_torque < 0) != (info.min > info.max))
+                    if ((input_torque < 0) != (info->min > info->max))
                     {
                         if (port.protocol == "1.0")
                         {
@@ -1113,14 +1144,16 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
                     }
                 }
             }
+
+            //we output a relative value that is a fraction of max load (legacy support for mx protocol 1.0 registers)
             else
             {
-                if (info.effort_ratio != 0)
+                if (info->effort_ratio != 0)
                 {
-                    torque = (int) (input_torque * info.effort_ratio);
+                    torque = (int) (input_torque * info->effort_ratio);
                     torque = abs(torque);
 
-                    if ((input_torque < 0) != (info.min > info.max))
+                    if ((input_torque < 0) != (info->min > info->max))
                     {
                         if (port.protocol == "1.0")
                         {
@@ -1136,16 +1169,30 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
 
             torques.push_back(torque);
 
+            //update control mode for motor if relevant
             if (dynamic_mode_switching_)
             {
-                //update control mode for motor if relevant
-                if ((control_type_ == POSITION_CONTROL) && (torque != 0))
+
+                //if in position control and we want to be in torque control
+                if ((input_torque != 0) && (info->current_mode == POSITION_CONTROL))
                 {
-                    modes.push_back(1);
+                    //add mode switch data to vector
+                    vector<int> temp;
+                    temp.push_back(info->id);
+                    temp.push_back(1);
+                    mode_switch_data.push_back(temp);
+                    info->current_mode = TORQUE_CONTROL;
                 }
-                else if ((control_type_ == POSITION_CONTROL) && (torque == 0))
+
+                //if in torque control and we want to be in position control
+                else if ((input_torque == 0) && (info->current_mode == TORQUE_CONTROL))
                 {
-                    modes.push_back(0);
+                    //add mode switch data to vector
+                    vector<int> temp;
+                    temp.push_back(info->id);
+                    temp.push_back(0);
+                    mode_switch_data.push_back(temp);
+                    info->current_mode = POSITION_CONTROL;
                 }
             }
 
@@ -1163,7 +1210,6 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
         if (has_torque && dynamic_mode_switching_)
         {
 
-
             //set the torque values for each motor
             vector< vector<int> > data;
             for (int i = 0; i < ids.size(); i++)
@@ -1174,32 +1220,13 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
                 data.push_back(temp);
             }
             port.driver->setMultiTorque(data);
-
-
-            //set torque control mode enable for each motor
-            data.clear();
             
-            for (int i = 0; i < ids.size(); i++)
-            {
-                vector<int> temp;
-                temp.push_back(ids[i]);
-                temp.push_back(modes[i]);
-                data.push_back(temp);
-            }
-            port.driver->setMultiTorqueControl(data);
-
         } 
-        else if (dynamic_mode_switching_)
+
+        //update torque control registers for specific motors
+        if (dynamic_mode_switching_)
         {
-            vector< vector<int> > data;
-            for (int i = 0; i < ids.size(); i++)
-            {
-                vector<int> temp;
-                temp.push_back(ids[i]);
-                temp.push_back(0);
-                data.push_back(temp);
-            }
-            port.driver->setMultiTorqueControl(data);
+            port.driver->setMultiTorqueControl(mode_switch_data);
         }
 
         //set the profile velocities if they have been defined
@@ -1268,11 +1295,10 @@ void DynamixelInterfaceController::multiThreadedWrite(int port_num, sensor_msgs:
  * @param port_num index used to retrieve port information from port list
  * @param read_msg the msg this ports join data is read into.
  */
-void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::JointState &read_msg)
+void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg)
 {
 
     bool comm_success;
-    portInfo port = dynamixel_ports_[port_num];
     std::vector<int> *servo_ids = new std::vector<int>;
     std::map<int, std::vector<int32_t> >  *responses = new std::map<int, std::vector<int32_t> >;
 
@@ -1447,6 +1473,8 @@ void DynamixelInterfaceController::multiThreadedRead(int port_num, sensor_msgs::
                     diag_msg.temperatures.push_back( (double)(response[1]));
 
                     diag_msg.error_states.push_back(response[2]);
+
+                    diag_msg.modes.push_back(info.current_mode);
 
                 }
 
