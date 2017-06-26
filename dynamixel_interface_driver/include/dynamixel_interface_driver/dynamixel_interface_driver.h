@@ -109,7 +109,8 @@ public:
      * @param baud    The baud rate to use
      * @param series  The servo series in use (MX, XM or Pro)  
      */
-    DynamixelInterfaceDriver(std::string device, int baud, std::string series, bool use_group_comms);
+    DynamixelInterfaceDriver(std::string device, int baud, std::string protocol, bool use_group_read, 
+            bool use_group_write);
 
     /**
      * Destructor. Closes and releases serial port.
@@ -733,7 +734,8 @@ private:
     char servo_protocol_;
 
     /** Indicates whether or not to use the group communication methods */
-    bool use_group_comms_;
+    bool use_group_read_;
+    bool use_group_write_;
 
     /** indicates group comm failure fallback interval */
     uint8_t single_read_fallback_counter_;

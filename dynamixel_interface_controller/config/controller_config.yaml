@@ -24,6 +24,8 @@ use_torque_as_effort: true         # when sending and receiving joint states, re
 
 mx_effort_use_current: true        # Use the current register instead of the load register on the mx series (IO performance hit)
 
+ignore_input_velocity: false        # ignore input velocity commands in position mode (no profile velocity)
+
 diagnostics_rate: 0                 # rate to publish diagnostic information
 
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for 
@@ -46,10 +48,11 @@ ports:
   # PORT LIST
 
   - name: Port_1                    # name for this port in config
-    device: /dev/ttyUSB1            # serial device this port will communicate on
+    device: /dev/ttyUSB0            # serial device this port will communicate on
     baudrate: 1000000               # baudrate in use (see dynamixel_driver.h for valid values)
-    protocol: "1.0"                 # motor protocol in use, must be "1.0", "2.0", or "PRO"
-    group_comms_enabled: true
+    protocol: "2.0"                 # motor protocol in use, must be "1.0", "2.0", or "PRO"
+    group_read_enabled: true        # specify whether to use group comms for reading/writing
+    group_write_enabled: true
     servos:
         
         # SERVO LIST FOR THIS PORT

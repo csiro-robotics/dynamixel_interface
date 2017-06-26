@@ -161,6 +161,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     nh_->param<bool>("echo_joint_commands", echo_joint_commands_, false);
     nh_->param<bool>("use_torque_as_effort", use_torque_as_effort_, false);
     nh_->param<bool>("mx_effort_use_current", mx_effort_use_current_, false);
+    nh_->param<bool>("ignore_input_velocity", ignore_input_velocity_, false);
     nh_->param<double>("diagnostics_rate", diagnostics_rate_, 0.0);
 
     nh_->param<std::string>("control_mode", mode, "Position");
@@ -292,7 +293,8 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
 
         struct portInfo port;
 
-        bool use_group_comms;
+        bool use_group_read;
+        bool use_group_write;
 
         /************************* PORT ARGUMENTS *********************/
 
@@ -350,23 +352,36 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
             port.protocol = static_cast<std::string>(ports[i]["protocol"]);
         }
 
-        //get group comms enabled
-        if (!ports[i]["group_comms_enabled"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
+        //get group read enabled
+        if (!ports[i]["group_read_enabled"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
         {
-            ROS_ERROR("Invalid/Missing group_comms_enabled option for port %d", i);
+            ROS_ERROR("Invalid/Missing group_read_enabled option for port %d", i);
             ROS_BREAK();
         }
         else
         {
-            use_group_comms = static_cast<bool>(ports[i]["group_comms_enabled"]);
+            use_group_read = static_cast<bool>(ports[i]["group_read_enabled"]);
         }
+
+        //get group write enabled
+        if (!ports[i]["group_write_enabled"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
+        {
+            ROS_ERROR("Invalid/Missing group_write_enabled option for port %d", i);
+            ROS_BREAK();
+        }
+        else
+        {
+            use_group_write = static_cast<bool>(ports[i]["group_write_enabled"]);
+        }
+
 
         /************************* Driver initialisation *********************/
 
         //Attempt to start driver
         try
         {
-            port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate, port.protocol, use_group_comms);    
+            port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate, 
+                    port.protocol, use_group_read, use_group_write);    
         }
         catch (int n)
         {
@@ -979,7 +994,8 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
     {
         has_pos = true;
     }
-    if ((joint_commands.velocity.size() == joint_commands.name.size()) && (control_type_ != TORQUE_CONTROL))
+    if ((joint_commands.velocity.size() == joint_commands.name.size()) && ((control_type_ == VELOCITY_CONTROL) ||
+            (control_type_ == POSITION_CONTROL && !ignore_input_velocity_)))
     {
         has_vel = true;
     }
@@ -994,7 +1010,7 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
         //no valid array sizes for current control mode, ignore
         return;
     }
-
+    
     //vectors to store the calculated values
     vector<int> ids, velocities, positions, torques, modes;
 
@@ -1230,7 +1246,7 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
         }
 
         //set the profile velocities if they have been defined
-        if (has_vel)
+        if ((has_vel) && (!ignore_input_velocity_))
         {
             vector< vector<int> > data;
             for (int i = 0; i < ids.size(); i++)

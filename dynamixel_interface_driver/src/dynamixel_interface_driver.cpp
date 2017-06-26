@@ -118,7 +118,8 @@ namespace dynamixel_interface_driver
  * @param protocol  The servo protocol in use (1.0, 2.0 or PRO)  
  */
 DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyUSB0",
-                         int baud=1000000, std::string protocol="1", bool use_group_comms=true)
+                         int baud=1000000, std::string protocol="1", 
+						 bool use_group_read=true, bool use_group_write=true)
 {
 
 
@@ -130,7 +131,8 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
     portHandler_ = dynamixel::PortHandler::getPortHandler(device.c_str());
 
     // set indicator for using group comms
-    use_group_comms_ = use_group_comms;
+    use_group_read_ = use_group_read;
+	use_group_write_ = use_group_write;
 
 	// intialise failsafe fallback counter
 	single_read_fallback_counter_ = 0;
@@ -1264,7 +1266,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	{		
 		//Read data from dynamixels
 
-		if (use_group_comms_)
+		if (use_group_read_)
 		{
 			if(mx_read_current)
 			{
@@ -1324,13 +1326,13 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			
 			return true;
 		}
-		else if ((use_group_comms_) && (single_read_fallback_counter_ < 50))
+		else if ((use_group_read_) && (single_read_fallback_counter_ < 50))
 		{
 			//if we fail 50 bulk comms in a row fallback on single read
 			single_read_fallback_counter_++;
 			if (single_read_fallback_counter_ == 50)
 			{
-				use_group_comms_ = false;
+				use_group_read_ = false;
 			}
 			return false;
 		}
@@ -1403,7 +1405,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	{
 
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_X_PRESENT_CURRENT, 10, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_X_PRESENT_CURRENT, 10, raw) )
 		{
 
 			//DECODE RAW DATA
@@ -1439,13 +1441,13 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			return true;
 
 		}
-		else if ((use_group_comms_) && (single_read_fallback_counter_ < 50))
+		else if ((use_group_read_) && (single_read_fallback_counter_ < 50))
 		{
 			//if we fail 50 bulk comms in a row fallback on single read
 			single_read_fallback_counter_++;
 			if (single_read_fallback_counter_ == 50)
 			{
-				use_group_comms_ = false;
+				use_group_read_ = false;
 			}
 			return false;
 		}
@@ -1496,7 +1498,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	else if (servo_protocol_ == 'P')
 	{
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_PRO_PRESENT_POSITION, 10, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_PRO_PRESENT_POSITION, 10, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1531,13 +1533,13 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			return true;
 
 		}
-		else if ((use_group_comms_) && (single_read_fallback_counter_ < 50))
+		else if ((use_group_read_) && (single_read_fallback_counter_ < 50))
 		{
 			//if we fail 50 bulk comms in a row fallback on single read
 			single_read_fallback_counter_++;
 			if (single_read_fallback_counter_ == 50)
 			{
-				use_group_comms_ = false;
+				use_group_read_ = false;
 			}
 			return false;
 		}
@@ -1625,7 +1627,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 	{		
 
 		//Read data from dynamixels
-		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_VOLTAGE, 2, raw))
+		if(use_group_read_ && bulkRead(servo_ids, DXL_MX_PRESENT_VOLTAGE, 2, raw))
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1656,7 +1658,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			return true;
 
 		}
-		else if (!use_group_comms_)
+		else if (!use_group_read_)
 		{
 
 			//bulk_read failure, reset and try individual read
@@ -1708,7 +1710,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 	{
 
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_X_PRESENT_INPUT_VOLTAGE, 3, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_X_PRESENT_INPUT_VOLTAGE, 3, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1748,7 +1750,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			}
 			return true;
 		}
-		else if (!use_group_comms_)
+		else if (!use_group_read_)
 		{
 			
 			//bulk_read failure, reset and try individual read
@@ -1806,7 +1808,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 	else if (servo_protocol_ == 'P')
 	{
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_PRO_PRESENT_VOLTAGE, 3, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_PRO_PRESENT_VOLTAGE, 3, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1836,7 +1838,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			}
 			return true;
 		}
-		else if (!use_group_comms_)
+		else if (!use_group_read_)
 		{
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
@@ -3591,7 +3593,7 @@ bool DynamixelInterfaceDriver::syncWrite(std::vector<std::vector<int> > value_pa
 	dynamixel::PacketHandler *pHandle;
 
 	//only use the group comms method if specified
-	if (use_group_comms_)
+	if (use_group_write_)
 	{
 		//This prevents a scoping issue
 		if (protocol == 1.0)

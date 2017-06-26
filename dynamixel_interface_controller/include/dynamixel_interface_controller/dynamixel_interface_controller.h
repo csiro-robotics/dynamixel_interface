@@ -359,6 +359,9 @@ private:
     /** Can echo commands sent to the motors (useful for monitoring write values/rates) */
     bool echo_joint_commands_;
 
+    /** can set driver to ignore profile velocity commands in position mode */
+    bool ignore_input_velocity_;
+
     /** Indicates if we should get diagnostic info (voltage and temperature) */
     bool publish_diagnostics_;
 
