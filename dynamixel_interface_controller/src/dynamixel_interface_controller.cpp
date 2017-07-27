@@ -230,7 +230,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     }
 
     //Start listening to command messages
-    joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_state", 
+    joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_states", 
         1, &DynamixelInterfaceController::jointStateCallback, this);
 }
 
