@@ -791,9 +791,11 @@ void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointSt
     {
         write_msg_ = *joint_commands;    
     }
-    else
+    //avoid array length issues
+    else if ((write_msg_.position.empty() == joint_commands->position.empty()) && 
+            (write_msg_.velocity.empty() == joint_commands->velocity.empty()) &&
+            (write_msg_.effort.empty() == joint_commands->effort.empty()))
     {
-
         //only add joint if not already in list (THIS TAKES N*M TIME, NEED TO OPTIMISE)
         for (int i = 0; i < joint_commands->name.size(); i++)
         {
