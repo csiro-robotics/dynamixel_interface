@@ -783,11 +783,79 @@ void DynamixelInterfaceController::startBroadcastingJointStates()
  */
 void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointState::ConstPtr &joint_commands)
 {
-    
+
+    //thread safe modification
     std::unique_lock<std::mutex> lock(write_mutex_);
-    write_msg_ = *joint_commands;
+
+    if (write_msg_.name.empty())
+    {
+        write_msg_ = *joint_commands;    
+    }
+    else
+    {
+
+        //only add joint if not already in list (THIS TAKES N*M TIME, NEED TO OPTIMISE)
+        for (int i = 0; i < joint_commands->name.size(); i++)
+        {
+            
+            bool in_msg = false;
+
+            //if joint already in message, update values
+            for (int j = 0; j < write_msg_.name.size(); j++)
+            {
+
+                if (joint_commands->name[i] == write_msg_.name[j])
+                {
+                    
+                    if(!write_msg_.position.empty() && !joint_commands->position.empty())
+                    {
+                        write_msg_.position[j] = joint_commands->position[i];
+                    }
+
+                    if(!write_msg_.velocity.empty() && !joint_commands->velocity.empty())
+                    {
+                        write_msg_.velocity[j] = joint_commands->velocity[i];
+                    }
+
+                    if(!write_msg_.effort.empty() && !joint_commands->effort.empty())
+                    {
+                        write_msg_.effort[j] = joint_commands->effort[i];
+                    }
+
+                    in_msg = true;
+                    break;
+
+                }
+
+            }
+
+            //not already in message, push back
+            if (!in_msg)
+            {
+
+                write_msg_.name.push_back(joint_commands->name[i]);
+                
+                if(!write_msg_.position.empty() && !joint_commands->position.empty())
+                {
+                    write_msg_.position.push_back(joint_commands->position[i]);
+                }
+                
+                if(!write_msg_.velocity.empty() && !joint_commands->velocity.empty())
+                {                
+                    write_msg_.velocity.push_back(joint_commands->velocity[i]);
+                }
+                
+                if(!write_msg_.effort.empty() && !joint_commands->effort.empty())
+                {
+                    write_msg_.effort.push_back(joint_commands->effort[i]);
+                }
+
+            }
+        }
+    }
     write_ready_ = true;
     lock.unlock();
+
 }
 
 
@@ -934,8 +1002,12 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     if (write_ready_)
     {
         write_ready_ = false;
-
+        write_msg_.name.clear();
+        write_msg_.position.clear();
+        write_msg_.velocity.clear();
+        write_msg_.effort.clear();
     } 
+
     lock.unlock();
 
     //publish joint states
@@ -1461,6 +1533,8 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
 
                 dynamixel_interface_controller::ServoState diag_msg;
 
+                diag_msg.header.frame_id = port.port_name.c_str();
+
                 //Iterate over all connected servos and add to list
                 for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
                 {
@@ -1525,8 +1599,9 @@ int main(int argc, char **argv)
 
   //Use a multi threaded spinner to handle the timer based IO callback and
   //write topic subscriber callbacks simultaneously
-  ros::MultiThreadedSpinner spinner(2);
-  spinner.spin();
+//   ros::MultiThreadedSpinner spinner(4);
+//   spinner.spin();
+  ros::spin();
 
 }
 
