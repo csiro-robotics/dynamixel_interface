@@ -105,7 +105,9 @@ void operator >> (const YAML::Node& node, T& i)
 #endif
 
 #include <ros/package.h>
-
+#include <ros/spinner.h>
+#include <ros/callback_queue.h>
+#include <ros/transport_hints.h>
 #include <dynamixel_interface_controller/dynamixel_interface_controller.h>
 #include <dynamixel_interface_driver/dynamixel_interface_driver.h>
 
@@ -159,7 +161,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     nh_->param<double>("publish_rate", publish_rate_, 50.0);
     nh_->param<bool>("disable_torque_on_shutdown", stop_motors_on_shutdown_, false);
     nh_->param<bool>("echo_joint_commands", echo_joint_commands_, false);
-    nh_->param<bool>("use_torque_as_effort", use_torque_as_effort_, false);
+    nh_->param<bool>("effort_use_raw", use_torque_as_effort_, false);
     nh_->param<bool>("mx_effort_use_current", mx_effort_use_current_, false);
     nh_->param<bool>("ignore_input_velocity", ignore_input_velocity_, false);
     nh_->param<double>("diagnostics_rate", diagnostics_rate_, 0.0);
@@ -213,11 +215,6 @@ DynamixelInterfaceController::DynamixelInterfaceController()
         ROS_BREAK();
     }
 
-
-
-    //advertise the sensor feedback topic 
-    joint_state_publisher_  = nh_->advertise<sensor_msgs::JointState>("/joint_states", 1);
-
     //advertise the debug topic
     if (echo_joint_commands_)
     {
@@ -229,9 +226,17 @@ DynamixelInterfaceController::DynamixelInterfaceController()
         diagnostics_publisher_ = nh_->advertise<dynamixel_interface_controller::ServoState>("/servo_diagnostics", 1);
     }
 
-    //Start listening to command messages
+    //advertise the joint state input and output topics 
+    joint_state_publisher_  = nh_->advertise<sensor_msgs::JointState>("/joint_states", 1);
+
     joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_states", 
-        1, &DynamixelInterfaceController::jointStateCallback, this);
+         1, &DynamixelInterfaceController::jointStateCallback, this, ros::TransportHints().tcpNoDelay());
+
+    // Set custom callback queue for either input or output callback
+    io_handle_.setCallbackQueue(&io_queue_);
+
+    io_spinner_ = new ros::AsyncSpinner(1, &io_queue_);
+    io_spinner_->start();    
 }
 
 
@@ -244,6 +249,7 @@ DynamixelInterfaceController::~DynamixelInterfaceController()
     ROS_INFO("shutting_down_ dynamixel_interface_controller");
 
     shutting_down_ = false;
+    io_spinner_->stop();
     delete nh_;
 
     if (stop_motors_on_shutdown_)
@@ -762,7 +768,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
 void DynamixelInterfaceController::startBroadcastingJointStates()
 {
     
-    broadcast_timer_ = nh_->createTimer(ros::Duration(1.0 / publish_rate_), 
+    broadcast_timer_ = io_handle_.createTimer(ros::Duration(1.0 / publish_rate_), 
             &DynamixelInterfaceController::publishJointStates, this);
 
     if (diagnostics_rate_ > 0)
@@ -770,6 +776,7 @@ void DynamixelInterfaceController::startBroadcastingJointStates()
         diagnostics_timer_ = nh_->createTimer(ros::Duration(1.0 / diagnostics_rate_), 
                 &DynamixelInterfaceController::diagnosticsRateCallback, this);       
     }
+    
 }
 
 
@@ -1596,13 +1603,14 @@ int main(int argc, char **argv)
  
   DynamixelInterfaceController controller;
   
-  //Initialize Timer callback, this starts the IO
+  //Initialize Timer callback and the async spinner for write commands, this starts the IO.
   controller.startBroadcastingJointStates();
+  
+//   ros::MultiThreadedSpinner spinner(2); // Use 2 threads
+//   spinner.spin(); // spin() will not return until the node has been shutdown
 
-  //Use a multi threaded spinner to handle the timer based IO callback and
-  //write topic subscriber callbacks simultaneously
-//   ros::MultiThreadedSpinner spinner(4);
-//   spinner.spin();
+  //Use a single threaded spinner for the global queue to service the joint states callback, (this callback will be
+  //primarily rate limited by the motors)
   ros::spin();
 
 }

@@ -1,6 +1,6 @@
 # This file contains servo parameters specific to each model, used to convert 
 # input positions, velocities and torques into servo register values. 
-# These values should not need to be edited.
+# These values should NOT need to be edited.
 
 # --------------------------- MX SERIES ---------------------------- #
 

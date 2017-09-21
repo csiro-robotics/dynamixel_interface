@@ -8,21 +8,24 @@
 
 # GLOBAL OPERATION PARAMETERS
 
-publish_rate: 200                  # desired rate for joint state updates. actual rate may be less depending on number
-                                    # of dynamixels on each port
+publish_rate: 100                   # desired rate for joint state updates. actual rate may be less depending on number
+                                    # of dynamixels connected and port baud rate.
 
-control_mode: Position                # control mode, either 'Position', 'Velocity', or 'Torque'
+control_mode: Position              # control mode, either 'Position', 'Velocity', or 'Torque'
 
-dynamic_mode_switching: true       # enables dynamixe switching between torque and position control when in position control mode
-                                    # (CAUTION: EXPERIMENTAL)
+dynamic_mode_switching: true        # enables dynamixe switching between torque and position control when in position 
+                                    # control mode (CAUTION: EXPERIMENTAL)
 
 disable_torque_on_shutdown: true    # with this enabled the motors will switch off when the controller closes
 
-echo_joint_commands: false           # debug flag to echo write commands sent to the controller, useful for measuring write rates
+echo_joint_commands: true           # debug flag to echo write commands sent to the controller, useful for measuring 
+                                    # write rates
 
-use_torque_as_effort: true         # when sending and receiving joint states, report effort as torque or raw % of max
+effort_use_raw: true                # when sending and receiving joint states, report effort as raw current (mA) or
+                                    # fraction of max load (0-1)
 
-mx_effort_use_current: true        # Use the current register instead of the load register on the mx series (IO performance hit)
+mx_effort_use_current: true         # Use the current register instead of the load register on the mx series (IO 
+                                    # performance hit but much more accurate for reading effort)
 
 ignore_input_velocity: false        # ignore input velocity commands in position mode (no profile velocity)
 
@@ -35,9 +38,9 @@ global_joint_speed: 5.0             # maximum joint speed (rad/s) (in position o
 
 global_torque_limit: 1.0            # maximum motor torque for all modes, given as a fraction of rated max (0-1)
 
-global_p_gain: -1.0                 # proportional gain value (values > 0 are set, -1.0 indicates to leave on default)
-global_i_gain: -1.0                 # integral gain value (values > 0 are set, -1.0 indicates to leave on default)
-global_d_gain: -1.0                 # derivative gain value (values > 0 are set, -1.0 indicates to leave on default)
+global_p_gain: -1.0                 # proportional gain value (values >= 0 are set, -1.0 indicates to leave on default)
+global_i_gain: -1.0                 # integral gain value (values >= 0 are set, -1.0 indicates to leave on default)
+global_d_gain: -1.0                 # derivative gain value (values >= 0 are set, -1.0 indicates to leave on default)
 
 
 # # --------------------------------------------------------------------------- # #   
@@ -50,9 +53,9 @@ ports:
   - name: Port_1                    # name for this port in config
     device: /dev/ttyUSB0            # serial device this port will communicate on
     baudrate: 1000000               # baudrate in use (see dynamixel_driver.h for valid values)
-    protocol: "2.0"                 # motor protocol in use, must be "1.0", "2.0", or "PRO"
-    group_read_enabled: true        # specify whether to use group comms for reading/writing
-    group_write_enabled: true
+    protocol: "1.0"                 # motor protocol in use, must be "1.0", "2.0", or "PRO"
+    group_read_enabled: true        # specify whether to use group comms (MUCH faster) for reading/writing (for more 
+    group_write_enabled: true       # info refer to the bulk/sync read/write in the dynamixel communications protocols)
     servos:
         
         # SERVO LIST FOR THIS PORT
@@ -68,11 +71,11 @@ ports:
           # 
           # The below arguments are all optional and override the global values:
           # 
-          joint_speed: 5.0          # maximum joint speed (rad/s) (in position or velocity control)
-          torque_limit: 1.0         # maximum motor torque for all modes, given as a fraction of rated max (0-1)
-          p_gain: -1.0              # proportional gain value (values > 0 are set, -1.0 indicates to leave on default)
-          i_gain: -1.0              # integral gain value (values > 0 are set, -1.0 indicates to leave on default)
-          d_gain: -1.0              # derivative gain value (values > 0 are set, -1.0 indicates to leave on default)
+          joint_speed: 2.0          # maximum joint speed (rad/s) (in position or velocity control)
+          torque_limit: 0.5         # maximum motor torque for all modes, given as a fraction of rated max (0-1)
+          p_gain: 1.0               # proportional gain value (values >= 0 are set, -1.0 indicates to leave on default)
+          i_gain: 0.0               # integral gain value (values >= 0 are set, -1.0 indicates to leave on default)
+          d_gain: 0.2               # derivative gain value (values >= 0 are set, -1.0 indicates to leave on default)
 
 
         - id: 2
@@ -86,32 +89,22 @@ ports:
 
   # ------------------------------------------------------------------------- #   
 
-  # - name: Port_2                    # more ports can be defined in the same manner as above, each port can even have a 
-  #   device: /dev/ttyUSB1            # different baudrate and protcol
-  #   baudrate: 2000000
-  #   protocol: "2.0"
-  #   servos:
+  - name: Port_2                    # more ports can be defined in the same manner as above, each port can even have a 
+    device: /dev/ttyUSB1            # different baudrate and protcol
+    baudrate: 3000000
+    protocol: "2.0"
+    servos:
 
-  #       - id: 1                     # id 1 only needs to be unique for each port and so can be reused here
-  #         joint_name: joint_3
-  #         init: 1000
-  #         min: 1000
-  #         max: 3000
-  #         joint_speed: 1.0
-  #         torque_limit: 0.5
-  #         p_gain: 1.0
-  #         i_gain: 0.0
-  #         d_gain: 0.0
+        - id: 1                     # id only needs to be unique for each port and so id 1 can be reused here
+          joint_name: joint_3
+          init: 1000
+          min: 1000
+          max: 3000
 
-  #       - id: 2
-  #         joint_name: joint_4
-  #         init: 2048
-  #         min: 0
-  #         max: 4095
-  #         joint_speed: 5.0
-  #         torque_limit: 1.0
-  #         p_gain: -1.0
-  #         i_gain: -1.0
-  #         d_gain: -1.0
+        - id: 2
+          joint_name: joint_4
+          init: 2048
+          min: 0
+          max: 4095
 
 # # --------------------------------------------------------------------------- # #   

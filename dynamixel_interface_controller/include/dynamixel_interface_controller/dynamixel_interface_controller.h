@@ -88,6 +88,8 @@
 #include <mutex>
 #include <XmlRpcValue.h>
 #include <ros/ros.h>
+#include <ros/spinner.h>
+#include <ros/callback_queue.h>
 #include <sensor_msgs/JointState.h>
 
 #include "dynamixel_interface_controller/ServoState.h"
@@ -331,6 +333,10 @@ private:
 
     /** Handler for the ROS Node */
     ros::NodeHandle *nh_;
+
+    ros::CallbackQueue io_queue_;
+    ros::NodeHandle io_handle_;
+    ros::AsyncSpinner *io_spinner_;
 
     /** Rate at which joint state information is published */
     double publish_rate_;     
