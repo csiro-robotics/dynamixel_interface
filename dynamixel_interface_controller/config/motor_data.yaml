@@ -1,27 +1,8 @@
 # This file contains servo parameters specific to each model, used to convert 
 # input positions, velocities and torques into servo register values. 
-# These values should not need to be edited.
+# These values should NOT need to be edited.
 
-- name: H54
-  model_number: 53768 
-  cpr: 502000
-  gear_reduction: 500.0
-  effort_ratio: 32767
-  current_ratio: 16.113
-
-- name: H42
-  model_number: 51200
-  cpr: 304000 
-  gear_reduction: 300.0
-  effort_ratio: 32767
-  current_ratio: 4.028
-
-- name: H54
-  model_number: 54024 
-  cpr: 502000
-  gear_reduction: 500.0
-  effort_ratio: 32767
-  current_ratio: 16.113
+# --------------------------- MX SERIES ---------------------------- #
 
 - name: MX28
   model_number: 29 
@@ -30,26 +11,12 @@
   effort_ratio: 1023
   current_ratio: 4.5
 
-- name: MX28-(2.0)
-  model_number: 30
-  cpr: 4096
-  gear_reduction: 4.367
-  effort_ratio: 2047
-  current_ratio: 3.36
-
 - name: MX64
   model_number: 310
   cpr: 4096  
   gear_reduction: 8.772
   effort_ratio: 1023
   current_ratio: 4.5
-
-- name: MX64-(2.0)
-  model_number: 311
-  cpr: 4096
-  gear_reduction: 4.367
-  effort_ratio: 2047
-  current_ratio: 3.36
 
 - name: MX106
   model_number: 320 
@@ -58,6 +25,22 @@
   effort_ratio: 1023
   current_ratio: 4.5
 
+# ------------------------ MX SERIES (2.0) ------------------------- #
+
+- name: MX28-(2.0)
+  model_number: 30
+  cpr: 4096
+  gear_reduction: 4.367
+  effort_ratio: 2047
+  current_ratio: 3.36
+
+- name: MX64-(2.0)
+  model_number: 311
+  cpr: 4096
+  gear_reduction: 4.367
+  effort_ratio: 2047
+  current_ratio: 3.36
+
 - name: MX106-(2.0)
   model_number: 321 
   cpr: 4096
@@ -65,8 +48,42 @@
   effort_ratio: 2047
   current_ratio: 3.36
 
+# ---------------------------- X SERIES ---------------------------- #
+
+# ---- XM ---- #
+
+- name: XM430-W210
+  model_number: 1030
+  cpr: 4096
+  gear_reduction: 4.367
+  effort_ratio: 1193
+  current_ratio: 2.69
+
 - name: XM430-W350
   model_number: 1020
+  cpr: 4096
+  gear_reduction: 4.367
+  effort_ratio: 1193
+  current_ratio: 2.69
+
+# ---- XH ---- #
+
+- name: XH430-V210
+  model_number: 1050
+  cpr: 4096
+  gear_reduction: 4.367
+  effort_ratio: 689
+  current_ratio: 1.34
+
+- name: XH430-V350
+  model_number: 1040
+  cpr: 4096
+  gear_reduction: 4.367
+  effort_ratio: 689
+  current_ratio: 1.34
+
+- name: XH430-W210
+  model_number: 1010
   cpr: 4096
   gear_reduction: 4.367
   effort_ratio: 1193
@@ -78,3 +95,89 @@
   gear_reduction: 4.367
   effort_ratio: 1193
   current_ratio: 2.69
+
+# -------------------------- PRO SERIES ---------------------------- #
+
+
+ # ---- L ---- #
+
+- name: L42-10-S300
+  model_number: 35072
+  cpr: 4096
+  gear_reduction: 300
+  effort_ratio: 1023
+  current_ratio: 4.028
+
+- name: L54-30-S400
+  model_number: 37928
+  cpr: 288393
+  gear_reduction: 400
+  effort_ratio: 32767
+  current_ratio: 16.113 
+
+- name: L54-50-S290
+  model_number: 38176
+  cpr: 207692
+  gear_reduction: 290
+  effort_ratio: 32767
+  current_ratio: 16.113 
+
+- name: L54-30-S500
+  model_number: 37896
+  cpr: 361385
+  gear_reduction: 500
+  effort_ratio: 32767
+  current_ratio: 16.113 
+
+- name: L54-50-S500
+  model_number: 38152
+  cpr: 361385
+  gear_reduction: 500
+  effort_ratio: 32767
+  current_ratio: 16.113 
+
+# ---- M ---- #
+
+- name: M42-10-S260
+  model_number: 43288
+  cpr: 263187
+  gear_reduction: 260
+  effort_ratio: 32767
+  current_ratio: 4.028
+
+- name: M54-40-S250
+  model_number: 46096
+  cpr: 251417
+  gear_reduction: 250
+  effort_ratio: 32767
+  current_ratio: 16.113 
+
+- name: M54-60-S250
+  model_number: 46352
+  cpr: 251417
+  gear_reduction: 250
+  effort_ratio: 32767
+  current_ratio: 16.113 
+
+# ---- H ---- #
+
+- name: H42-20-S300
+  model_number: 51200
+  cpr: 303751 
+  gear_reduction: 300.0
+  effort_ratio: 32767
+  current_ratio: 4.028
+
+- name: H54-100-S500
+  model_number: 53768 
+  cpr: 501923
+  gear_reduction: 500.0
+  effort_ratio: 32767
+  current_ratio: 16.113
+
+- name: H54-200-S500
+  model_number: 54024 
+  cpr: 501923
+  gear_reduction: 500.0
+  effort_ratio: 32767
+  current_ratio: 16.113

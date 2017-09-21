@@ -115,14 +115,15 @@ namespace dynamixel_interface_driver
  * baud rate.
  * @param device  The serial port to connect to
  * @param baud    The baud rate to use
- * @param series  The servo series in use (MX, XM or Pro)  
+ * @param protocol  The servo protocol in use (1.0, 2.0 or PRO)  
  */
 DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyUSB0",
-                         int baud=1000000, std::string series="MX", bool use_group_comms=true)
+                         int baud=1000000, std::string protocol="1", 
+						 bool use_group_read=true, bool use_group_write=true)
 {
 
 
-    ROS_INFO("Device is '%s' with baud rate '%d', servos are of series '%s'",device.c_str(), baud, series.c_str());
+    ROS_INFO("Device is '%s' with baud rate '%d', using protocol '%s'",device.c_str(), baud, protocol.c_str());
 
     // Initialize PortHandler instance
     // Set the port path
@@ -130,23 +131,27 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
     portHandler_ = dynamixel::PortHandler::getPortHandler(device.c_str());
 
     // set indicator for using group comms
-    use_group_comms_ = use_group_comms;
+    use_group_read_ = use_group_read;
+	use_group_write_ = use_group_write;
 
-    if (!strncmp(series.c_str(), "MX", 2))
+	// intialise failsafe fallback counter
+	single_read_fallback_counter_ = 0;
+
+    if (!strncmp(protocol.c_str(), "1.0", 3))
     {
-    	servo_series_ = 'M';
+    	servo_protocol_ = '1';
     }
-    else if (!strncmp(series.c_str(), "XM", 2))
+    else if (!strncmp(protocol.c_str(), "2.0", 3))
     {
-    	servo_series_ = 'X';
+    	servo_protocol_ = '2';
     }
-    else if (!strncmp(series.c_str(), "PRO", 3))
+    else if (!strncmp(protocol.c_str(), "PRO", 3))
 	{
-		servo_series_ = 'P';
+		servo_protocol_ = 'P';
 	}
 	else
 	{
-		ROS_ERROR("Invlaid Motor Series: %s, Valid series: 'MX', 'XM, 'PRO'", series.c_str());
+		ROS_ERROR("Invlaid Motor Protocol: %s, Valid Protocols: '1.0', '2.0', 'PRO'", protocol.c_str());
 		throw 1;
 	}
 
@@ -202,11 +207,11 @@ bool DynamixelInterfaceDriver::ping(int servo_id)
 	int dxl_comm_result;
 
 	//ping dynamixel on bus
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->ping(portHandler_, servo_id, &error);
 	}
-	else if ((servo_series_ == 'X') || (servo_series_ == 'P'))
+	else if ((servo_protocol_ == '2') || (servo_protocol_ == 'P'))
 	{
 		dxl_comm_result = packetHandlerP2_->ping(portHandler_, servo_id, &error);
 	}
@@ -244,12 +249,12 @@ bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t* model_numb
 	int dxl_comm_result;
 
 	//ping dynamixel on bus
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		//read in first 2 bytes of eeprom (same for all series)
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, 0, model_number, &error);
 	}
-	else if ((servo_series_ == 'X') || (servo_series_ == 'P'))
+	else if ((servo_protocol_ == '2') || (servo_protocol_ == 'P'))
 	{
 		//read in first 2 bytes of eeprom (same for all series)
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, 0, model_number, &error);
@@ -282,11 +287,11 @@ bool DynamixelInterfaceDriver::getModelInfo(int servo_id, uint32_t* model_info)
 	int dxl_comm_result;
 
 	// no model information on MX series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		return false;
 	}
-	else if ((servo_series_ == 'X') || (servo_series_ == 'P'))
+	else if ((servo_protocol_ == '2') || (servo_protocol_ == 'P'))
 	{
 		//address = 2, size = 4
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_MODEL_INFO, model_info, &error);
@@ -319,15 +324,15 @@ bool DynamixelInterfaceDriver::getFirmwareVersion(int servo_id, uint8_t* firmwar
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_FIRMWARE_VERSION, firmware_version, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_FIRMWARE_VERSION, firmware_version, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_FIRMWARE_VERSION, firmware_version, &error);
 	}
@@ -361,15 +366,15 @@ bool DynamixelInterfaceDriver::getBaudRate(int servo_id, uint8_t* baud_rate)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_BAUD_RATE, baud_rate, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_BAUD_RATE, baud_rate, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_BAUD_RATE, baud_rate, &error);
 	}
@@ -403,15 +408,15 @@ bool DynamixelInterfaceDriver::getReturnDelayTime(int servo_id, uint8_t* return_
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_RETURN_DELAY_TIME, return_delay_time, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_RETURN_DELAY_TIME, return_delay_time, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_RETURN_DELAY_TIME, return_delay_time, &error);
 	}
@@ -445,15 +450,15 @@ bool DynamixelInterfaceDriver::getOperatingMode(int servo_id, uint8_t* operating
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		return false;
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_OPERATING_MODE, operating_mode, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_OPERATING_MODE, operating_mode, &error);
 	}
@@ -508,18 +513,18 @@ bool DynamixelInterfaceDriver::getMaxAngleLimit(int servo_id, uint32_t* angle)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_CCW_ANGLE_LIMIT, 
 				(uint16_t*) angle, &error);
 
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_MAX_POSITION_LIMIT, 
 				angle, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_MAX_ANGLE_LIMIT, 
 				angle, &error);
@@ -554,17 +559,17 @@ bool DynamixelInterfaceDriver::getMinAngleLimit(int servo_id, uint32_t* angle)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_CW_ANGLE_LIMIT, 
 				(uint16_t*) angle, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_MIN_POSITION_LIMIT, 
 				angle, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_MIN_ANGLE_LIMIT, 
 				angle, &error);
@@ -621,17 +626,17 @@ bool DynamixelInterfaceDriver::getMinVoltageLimit(int servo_id, float* min_volta
 	uint16_t data = 0;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_DOWN_LIMIT_VOLTAGE, 
 				(uint8_t*) &data, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_X_MIN_VOLTAGE_LIMIT, 
 				&data, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_PRO_DOWN_LIMIT_VOLTAGE, 
 				&data, &error);
@@ -668,17 +673,17 @@ bool DynamixelInterfaceDriver::getMaxVoltageLimit(int servo_id, float* max_volta
 	uint16_t data = 0;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_UP_LIMIT_VOLTAGE, 
 				(uint8_t*) &data, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_X_MAX_VOLTAGE_LIMIT, 
 				&data, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_PRO_UP_LIMIT_VOLTAGE, 
 				&data, &error);
@@ -714,17 +719,17 @@ bool DynamixelInterfaceDriver::getTemperatureLimit(int servo_id, uint8_t* max_te
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_LIMIT_TEMPERATURE, 
 				max_temperature, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_TEMPERATURE_LIMIT, 
 				max_temperature, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_LIMIT_TEMPERATURE, 
 				max_temperature, &error);
@@ -760,17 +765,17 @@ bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, uint16_t* max_torque)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_MAX_TORQUE, 
 				(uint8_t*) max_torque, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_X_CURRENT_LIMIT, 
 				max_torque, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_PRO_MAX_TORQUE, 
 				max_torque, &error);
@@ -806,15 +811,15 @@ bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, bool *torque_enabl
 	uint8_t data = 0;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_ENABLE, &data, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_TORQUE_ENABLE, &data, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_TORQUE_ENABLE, &data, &error);
 	}
@@ -849,18 +854,18 @@ bool DynamixelInterfaceDriver::getTargetPosition(int servo_id, int32_t* target_p
 	int16_t data = 0;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_GOAL_POSITION_L, 
 				(uint16_t*) &data, &error);
 		*target_position = data;
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_GOAL_POSITION, 
 				(uint32_t*) target_position, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_POSITION, 
 				(uint32_t*) target_position, &error);
@@ -895,18 +900,18 @@ bool DynamixelInterfaceDriver::getTargetVelocity(int servo_id, int32_t* target_v
 	int16_t data = 0;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_GOAL_SPEED_L, 
 				(uint16_t*) &data, &error);
 		*target_velocity = data;
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_GOAL_VELOCITY, 
 				(uint32_t*) target_velocity, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_VELOCITY, 
 				(uint32_t*) target_velocity, &error);
@@ -942,18 +947,18 @@ bool DynamixelInterfaceDriver::getPosition(int servo_id, int32_t* position)
 	int16_t data = 0;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_PRESENT_POSITION_L, 
 				(uint16_t*) &data, &error);
 		*position = data;
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_PRESENT_POSITION, 
 				(uint32_t*) &data, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_PRESENT_POSITION, 
 				(uint32_t*) &data, &error);
@@ -989,17 +994,17 @@ bool DynamixelInterfaceDriver::getVelocity(int servo_id, int32_t* velocity)
 	int16_t data = 0;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_PRESENT_SPEED_L, 
 				(uint16_t*) &data, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_X_PRESENT_POSITION, 
 				(uint32_t*) velocity, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read4ByteTxRx(portHandler_, servo_id, DXL_PRO_PRESENT_POSITION, 
 				(uint32_t*) velocity, &error);
@@ -1034,17 +1039,17 @@ bool DynamixelInterfaceDriver::getCurrent(int servo_id, uint16_t* current)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_PRESENT_CURRENT_L, 
 				current, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_X_PRESENT_CURRENT, 
 				current, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_PRO_PRESENT_CURRENT, 
 				current, &error);
@@ -1080,17 +1085,17 @@ bool DynamixelInterfaceDriver::getVoltage(int servo_id, float* voltage)
 	uint16_t data = 0;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_PRESENT_VOLTAGE, 
 				(uint8_t*) &data, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_X_PRESENT_INPUT_VOLTAGE, 
 				&data, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_PRO_PRESENT_VOLTAGE, 
 				&data, &error);
@@ -1126,17 +1131,17 @@ bool DynamixelInterfaceDriver::getTemperature(int servo_id, uint8_t* temperature
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->read1ByteTxRx(portHandler_, servo_id, DXL_MX_LIMIT_TEMPERATURE, 
 				temperature, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_X_TEMPERATURE_LIMIT, 
 				temperature, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->read1ByteTxRx(portHandler_, servo_id, DXL_PRO_LIMIT_TEMPERATURE, 
 				temperature, &error);
@@ -1176,15 +1181,15 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uin
 	uint8_t* data = (uint8_t*) malloc(length * sizeof(uint8_t));
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->readTxRx(portHandler_, servo_id, address, length, data, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->readTxRx(portHandler_, servo_id, address, length, data, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->readTxRx(portHandler_, servo_id, address, length, data, &error);
 	}
@@ -1247,16 +1252,21 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
 	std::map<int, std::vector<uint8_t> > *raw2 = new std::map<int, std::vector<uint8_t> >;
 
+	if (servo_ids->size() == 0)
+	{
+		return false;
+	}
+
 	//get original id list
 	std::vector<int> read_ids = *servo_ids;
 
 	uint32_t value = 0;
 
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{		
 		//Read data from dynamixels
 
-		if(use_group_comms_)
+		if (use_group_read_)
 		{
 			if(mx_read_current)
 			{
@@ -1279,7 +1289,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			{
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get position (data[0] - data[1])
 				value = MAKEWORD(data[0], data[1]);
@@ -1310,10 +1320,25 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				data.clear();
 
 			}
+
+			//reset fallback counter
+			single_read_fallback_counter_ = 0;
+			
 			return true;
+		}
+		else if ((use_group_read_) && (single_read_fallback_counter_ < 50))
+		{
+			//if we fail 50 bulk comms in a row fallback on single read
+			single_read_fallback_counter_++;
+			if (single_read_fallback_counter_ == 50)
+			{
+				use_group_read_ = false;
+			}
+			return false;
 		}
 		else
 		{
+
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
 
@@ -1345,7 +1370,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 					continue;
 				}
 				
-				if (data.size() > 0)
+				if (data.size() > 5)
 				{	
 					//get position (data[0] - data[1])
 					value = MAKEWORD(data[0], data[1]);
@@ -1355,17 +1380,8 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 					value = MAKEWORD(data[2], data[3]);
 					response.push_back(value);
 
-
-					if(mx_read_current)
-					{
-						//get current (data[32] - data[33])
-						value = MAKEWORD(data[32], data[33]);
-					}
-					else
-					{
-						//get load (data[4] - data[5])
-						value = MAKEWORD(data[4], data[5]);
-					}
+					//get current (data[32] - data[33])
+					value = MAKEWORD(data[4], data[5]);
 					response.push_back(value);
 	
 					//place responses into return data
@@ -1385,11 +1401,11 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 		return false;
 
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_X_PRESENT_CURRENT, 10, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_X_PRESENT_CURRENT, 10, raw) )
 		{
 
 			//DECODE RAW DATA
@@ -1397,7 +1413,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			{	
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get position (data[0] - data[1])
 				value = MAKEINT(MAKEWORD(data[6], data[7]),MAKEWORD(data[8], data[9]));
@@ -1417,13 +1433,27 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 
 				response.clear();
 				data.clear();
-			
+
 			}
+
+			//reset fallback counter
+			single_read_fallback_counter_ = 0;
 			return true;
+
+		}
+		else if ((use_group_read_) && (single_read_fallback_counter_ < 50))
+		{
+			//if we fail 50 bulk comms in a row fallback on single read
+			single_read_fallback_counter_++;
+			if (single_read_fallback_counter_ == 50)
+			{
+				use_group_read_ = false;
+			}
+			return false;
 		}
 		else
 		{
-			
+
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
 
@@ -1436,47 +1466,47 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 					continue;
 				}
 
-				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				if (data.size() > 9)
+				{
+					//get position (data[0] - data[1])
+					value = MAKEINT(MAKEWORD(data[6], data[7]),MAKEWORD(data[8], data[9]));
+					response.push_back(value);
 
-				//get position (data[0] - data[1])
-				value = MAKEINT(MAKEWORD(data[6], data[7]),MAKEWORD(data[8], data[9]));
-				response.push_back(value);
+					//get velocity (data[2] - data[3])
+					value = MAKEINT(MAKEWORD(data[2], data[3]),MAKEWORD(data[4], data[5]));
+					response.push_back(value);
 
-				//get velocity (data[2] - data[3])
-				value = MAKEINT(MAKEWORD(data[2], data[3]),MAKEWORD(data[4], data[5]));
-				response.push_back(value);
+					//get load (data[4] - data[5])
+					int16_t temp = MAKEWORD(data[0], data[1]);
+					value = temp;
+					response.push_back(value);
 
-				//get load (data[4] - data[5])
-				int16_t temp = MAKEWORD(data[0], data[1]);
-				value = temp;
-				response.push_back(value);
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+					servo_ids->push_back(read_ids.at(i));
 
-				servo_ids->push_back(read_ids.at(i));
-
-				response.clear();
-				data.clear();
+					response.clear();
+					data.clear();
+				}
 			
 			}
 			return true;
 		}
 		return false;
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_PRO_PRESENT_POSITION, 10, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_PRO_PRESENT_POSITION, 10, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
 			{
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
-
+				data = raw->at(servo_ids->at(i));	
+			
 				//get position (data[0] - data[1])
 				value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
 				response.push_back(value);
@@ -1494,10 +1524,24 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
 
 				response.clear();
-				data.clear();
-			
+				data.clear();	
+
 			}
+			
+			//reset fallback counter
+			single_read_fallback_counter_ = 0;
 			return true;
+
+		}
+		else if ((use_group_read_) && (single_read_fallback_counter_ < 50))
+		{
+			//if we fail 50 bulk comms in a row fallback on single read
+			single_read_fallback_counter_++;
+			if (single_read_fallback_counter_ == 50)
+			{
+				use_group_read_ = false;
+			}
+			return false;
 		}
 		else
 		{
@@ -1514,29 +1558,29 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				}
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				if (data.size() > 9)
+				{
+					//get position (data[0] - data[1])
+					value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
+					response.push_back(value);
 
-				//get position (data[0] - data[1])
-				value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
-				response.push_back(value);
+					//get velocity (data[2] - data[3])
+					value = MAKEINT(MAKEWORD(data[4], data[5]),MAKEWORD(data[6], data[7]));
+					response.push_back(value);
 
-				//get velocity (data[2] - data[3])
-				value = MAKEINT(MAKEWORD(data[4], data[5]),MAKEWORD(data[6], data[7]));
-				response.push_back(value);
+					//get load (data[4] - data[5])
+					int16_t temp = MAKEWORD(data[8], data[9]);
+					value = temp;
+					response.push_back(value);
 
-				//get load (data[4] - data[5])
-				int16_t temp = MAKEWORD(data[8], data[9]);
-				value = temp;
-				response.push_back(value);
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
+					servo_ids->push_back(read_ids.at(i));
 
-				servo_ids->push_back(read_ids.at(i));
-
-				response.clear();
-				data.clear();
-			
+					response.clear();
+					data.clear();
+				}
 			}
 			return true;
 		}
@@ -1573,27 +1617,24 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 	uint8_t error;
 	bool bulk_read_success = false;
 	std::map<int, std::vector<uint8_t> > *raw = new std::map<int, std::vector<uint8_t> >;
-	std::map<int, std::vector<uint8_t> > *raw2 = new std::map<int, std::vector<uint8_t> >;
 
 	//get original id list
 	std::vector<int> read_ids = *servo_ids;
 
 	uint32_t value = 0;
 
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{		
 
 		//Read data from dynamixels
-		if(use_group_comms_ && bulkRead(servo_ids, DXL_MX_PRESENT_VOLTAGE, 2, raw) && 
-				bulkRead(servo_ids, DXL_MX_TORQUE_CONTROL_ENABLE, 1, raw2))
+		if(use_group_read_ && bulkRead(servo_ids, DXL_MX_PRESENT_VOLTAGE, 2, raw))
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
 			{
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
-				std::vector<uint8_t> data2 = raw2->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get present voltage (data[12])
 				value = data[0];
@@ -1607,10 +1648,6 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				packetHandlerP1_->ping(portHandler_, servo_ids->at(i), &error);
 				response.push_back(error);
 
-				//get torque control register state
-				value = data2[0];
-				response.push_back(value);
-
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
 
@@ -1621,9 +1658,9 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			return true;
 
 		}
-		else
+		else if (!use_group_read_)
 		{
-			
+
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
 			response.clear();
@@ -1637,35 +1674,30 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				{
 					continue;
 				}
-				else if (!readRegisters(read_ids.at(i), DXL_MX_TORQUE_CONTROL_ENABLE, 1, &data))
+
+				if (data.size() > 1)
 				{
-					continue;
+					//get present voltage (data[12])
+					value = data[0];
+					response.push_back(value);
+
+					//get present temperature (data[13])
+					value = data[1];
+					response.push_back(value);
+
+					//get error status
+					packetHandlerP1_->ping(portHandler_, read_ids.at(i), &error);
+					response.push_back(error);
+
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+
+					//push back id to list
+					servo_ids->push_back(read_ids.at(i));
+
+					response.clear();
+					data.clear();
 				}
-
-				//get present voltage (data[12])
-				value = data[0];
-				response.push_back(value);
-
-				//get present temperature (data[13])
-				value = data[1];
-				response.push_back(value);
-
-				//get error status
-				packetHandlerP1_->ping(portHandler_, read_ids.at(i), &error);
-				response.push_back(error);
-
-				//get torque control register state
-				value = data[2];
-				response.push_back(value);
-
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
-
-				//push back id to list
-				servo_ids->push_back(read_ids.at(i));
-
-				response.clear();
-				data.clear();
 			}
 
 			return true;
@@ -1674,18 +1706,18 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 		return false;
 
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_X_PRESENT_INPUT_VOLTAGE, 3, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_X_PRESENT_INPUT_VOLTAGE, 3, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
 			{
 
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get present Voltage
 				value = MAKEWORD(data[0], data[1]);
@@ -1697,6 +1729,16 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 
 				//get error status
 				packetHandlerP2_->ping(portHandler_, servo_ids->at(i), &error);
+
+				//check if error was a hardware status error, read register if necessary
+				if (error == 128)
+				{
+					if(readRegisters(read_ids.at(i), DXL_X_HARDWARE_ERROR_STATUS,  1, &data))
+					{
+						error += data[3];
+					}
+				}
+
 				response.push_back(error);
 
 				//place responses into return data
@@ -1708,7 +1750,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 			}
 			return true;
 		}
-		else
+		else if (!use_group_read_)
 		{
 			
 			//bulk_read failure, reset and try individual read
@@ -1724,42 +1766,55 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 					continue;
 				}
 
-				//get present Voltage
-				value = MAKEWORD(data[0], data[1]);
-				response.push_back(value);
+				if (data.size() > 2)
+				{
+					//get present Voltage
+					value = MAKEWORD(data[0], data[1]);
+					response.push_back(value);
 
-				//get temperature
-				value = data[2];
-				response.push_back(value);
+					//get temperature
+					value = data[2];
+					response.push_back(value);
 
-				//get error status
-				packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
-				response.push_back(error);
+					//get error status
+					packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
 
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+					//check if error was a hardware status error, read register if necessary
+					if (error == 128)
+					{
+						if(readRegisters(read_ids.at(i), DXL_X_HARDWARE_ERROR_STATUS,  1, &data))
+						{
+							error += data[3];
+						}
+					}
 
-				//push back id to list
-				servo_ids->push_back(read_ids.at(i));
+					response.push_back(error);
 
-				response.clear();
-				data.clear();
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+
+					//push back id to list
+					servo_ids->push_back(read_ids.at(i));
+
+					response.clear();
+					data.clear();
+				}
 			
 			}
 			return true;
 		}
 		return false;
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		//read data from dynamixels
-		if(use_group_comms_ && syncRead(servo_ids, DXL_PRO_PRESENT_VOLTAGE, 3, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_PRO_PRESENT_VOLTAGE, 3, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
 			{
 				//get raw data response
-				std::vector<uint8_t> data = raw->at(servo_ids->at(i));
+				data = raw->at(servo_ids->at(i));			
 
 				//get voltage
 				value = MAKEWORD(data[0], data[1]);
@@ -1778,10 +1833,12 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 
 				response.clear();
 				data.clear();
+
+
 			}
 			return true;
 		}
-		else
+		else if (!use_group_read_)
 		{
 			//bulk_read failure, reset and try individual read
 			servo_ids->clear();
@@ -1795,26 +1852,29 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 					continue;
 				}
 
-				//get voltage
-				value = MAKEWORD(data[0], data[1]);
-				response.push_back(value);
+				if (data.size() > 29)
+				{
+					//get voltage
+					value = MAKEWORD(data[0], data[1]);
+					response.push_back(value);
 
-				//get temperature
-				value = data[2];
-				response.push_back(value);
-				
-				//get error status
-				packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
-				response.push_back(error);
+					//get temperature
+					value = data[2];
+					response.push_back(value);
+					
+					//get error status
+					packetHandlerP2_->ping(portHandler_, read_ids.at(i), &error);
+					response.push_back(error);
 
-				//place responses into return data
-				responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
+					//place responses into return data
+					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
 
-				//push back id to list
-				servo_ids->push_back(read_ids.at(i));
-				
-				response.clear();
-				data.clear();
+					//push back id to list
+					servo_ids->push_back(read_ids.at(i));
+					
+					response.clear();
+					data.clear();
+				}
 			}
 			return true;
 		}
@@ -1857,7 +1917,7 @@ bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
 	std::vector<int> read_ids = *servo_ids;
 
 	//MX SERIES ONLY
-	if (servo_series_ != 'M')
+	if (servo_protocol_ != '1')
 	{
 		return false;
 	}
@@ -1874,7 +1934,7 @@ bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
     //perform sync read
    	dxl_comm_result = GroupBulkRead.txRxPacket();
 
-   	if (dxl_comm_result != COMM_SUCCESS)
+	if (dxl_comm_result != COMM_SUCCESS)
    	{
    		return false;
    	}
@@ -1905,11 +1965,26 @@ bool DynamixelInterfaceDriver::bulkRead(std::vector<int> *servo_ids,
 	        //place id back into vector to validate response
             servo_ids->push_back(read_ids.at(i));
 
-    	}
+    	} 
+		// else if(readRegisters(read_ids.at(i), address, length, response))
+		// {
+		// 	//place vector into map of responses
+	    //     responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));
+
+	    //     //place id back into vector to validate response
+        //     servo_ids->push_back(read_ids.at(i));
+		// }
 
     } 
 
-    return true;
+	if (servo_ids->empty())
+	{
+		return false;
+	}
+	else
+	{
+    	return true;
+	}
 
 }
 
@@ -1944,7 +2019,7 @@ bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
 
 
 	//PRO AND X SERIES ONLY
-	if ((servo_series_ != 'X') && (servo_series_ != 'P'))
+	if ((servo_protocol_ != '2') && (servo_protocol_ != 'P'))
 	{
 		return false;
 	}
@@ -1996,10 +2071,25 @@ bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
             servo_ids->push_back(read_ids.at(i));
 
     	}
+		// else if(readRegisters(read_ids.at(i), address, length, response))
+		// {
+		// 	//place vector into map of responses
+	    //     responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));
+
+	    //     //place id back into vector to validate response
+        //     servo_ids->push_back(read_ids.at(i));
+		// }
 
     }  	
 
-    return true;
+	if (servo_ids->empty())
+	{
+		return false;
+	}
+	else
+	{
+    	return true;
+	}
 
 }
 
@@ -2028,15 +2118,15 @@ bool DynamixelInterfaceDriver::setId(int servo_id, uint8_t new_id)
 	}
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_ID, new_id, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_X_ID, new_id, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_PRO_ID, new_id, &error);
 	}
@@ -2080,15 +2170,15 @@ bool DynamixelInterfaceDriver::setBaudRate(int servo_id, uint8_t baud_rate)
 	}
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_BAUD_RATE, baud_rate, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_X_BAUD_RATE, baud_rate, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_PRO_BAUD_RATE, baud_rate, 
 				&error);
@@ -2123,17 +2213,17 @@ bool DynamixelInterfaceDriver::setReturnDelayTime(int servo_id, uint8_t return_d
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_RETURN_DELAY_TIME, 
 				return_delay_time, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_X_RETURN_DELAY_TIME, 
 				return_delay_time, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_PRO_RETURN_DELAY_TIME, 
 				return_delay_time, &error);
@@ -2165,7 +2255,9 @@ bool DynamixelInterfaceDriver::setReturnDelayTime(int servo_id, uint8_t return_d
  * @param operating_mode The method of control: values are defined as:
  *  - 0: Torque Control
  *  - 1: Velocity Control
- *  - 3: Position Control 
+ *  - 3: Position Control
+ *  - 4: Multi-Turn
+ *	- 5: Position-Torque Control 
  * @return True on comm success and valid operating mode, false otherwise.
  */  
 bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_mode)
@@ -2176,9 +2268,9 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_
 	bool success = true;
 	
 
-	ROS_INFO("operating_mode: %d, %c", operating_mode, servo_series_);
+	ROS_INFO("operating_mode: %d, %c", operating_mode, servo_protocol_);
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 
 		//MX Series has no operating mode register, instead operating mode depends on
@@ -2222,17 +2314,30 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, uint8_t operating_
      					1, &error);       	
             }
         }
+        else if (operating_mode == 4)
+        {
+        	//Multi-Turn control, turn off angle limits
+            success = setAngleLimits(servo_id, 4095, 4095); //Master mode, normal roatation
+        	//Torque control mode, there is actually a register for this
+            success = getModelNumber(servo_id, &model_num);
+            if ( (model_num == 310) || (model_num == 320) ) //No torque control on MX-28
+            {
+            	ROS_INFO("torque_control_enabled");
+     			dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_CONTROL_ENABLE, 
+     					0, &error);       	
+            }
+        }
         else
         {
         	return false;
         }
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_X_OPERATING_MODE, 
 				operating_mode, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_PRO_OPERATING_MODE, 
 				operating_mode, &error);
@@ -2266,17 +2371,17 @@ bool DynamixelInterfaceDriver::setReverseDirection(int servo_id, bool reverse)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_DRIVE_MODE,  
 				(reverse == true) ? 1 : 0, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_X_DRIVE_MODE, 
 				(reverse == true) ? 1 : 0, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return false;
 	}
@@ -2330,17 +2435,17 @@ bool DynamixelInterfaceDriver::setMinAngleLimit(int servo_id, int32_t angle)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write2ByteTxRx(portHandler_, servo_id, DXL_MX_CW_ANGLE_LIMIT, 
 				(int16_t) angle, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_X_MIN_POSITION_LIMIT, 
 				angle, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_PRO_MIN_ANGLE_LIMIT, 
 				angle, &error);
@@ -2375,18 +2480,18 @@ bool DynamixelInterfaceDriver::setMaxAngleLimit(int servo_id, int32_t angle)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 
 		dxl_comm_result = packetHandlerP1_->write2ByteTxRx(portHandler_, servo_id, DXL_MX_CCW_ANGLE_LIMIT, 
 				(int16_t) angle, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_X_MAX_POSITION_LIMIT, 
 				angle, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_PRO_MAX_ANGLE_LIMIT, 
 				angle, &error);
@@ -2421,17 +2526,17 @@ bool DynamixelInterfaceDriver::setTemperatureLimit(int servo_id, uint8_t max_tem
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_LIMIT_TEMPERATURE, 
 				max_temperature, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_X_TEMPERATURE_LIMIT, 
 				max_temperature, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_PRO_LIMIT_TEMPERATURE, 
 				max_temperature, &error);
@@ -2466,19 +2571,19 @@ bool DynamixelInterfaceDriver::setMaxTorque(int servo_id, uint16_t max_torque)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write2ByteTxRx(portHandler_, servo_id, DXL_MX_MAX_TORQUE, 
 				max_torque, &error);
 		dxl_comm_result = packetHandlerP1_->write2ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_LIMIT_L, 
 				max_torque, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_X_CURRENT_LIMIT, 
 				max_torque, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_PRO_MAX_TORQUE, 
 				max_torque, &error);
@@ -2514,23 +2619,17 @@ bool DynamixelInterfaceDriver::setTorqueEnabled(int servo_id, bool on)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
-		dxl_comm_result = getModelNumber(servo_id, &model_num);
-        if (((model_num == 310) || (model_num == 320) ) && (on == false))
-        {
- 			dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_CONTROL_ENABLE, 
- 				0, &error);       	
-        }
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_TORQUE_ENABLE, 
 				(uint8_t) on, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_X_TORQUE_ENABLE, 
 				(uint8_t) on, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write1ByteTxRx(portHandler_, servo_id, DXL_PRO_TORQUE_ENABLE, 
 				(uint8_t) on, &error);
@@ -2566,7 +2665,7 @@ bool DynamixelInterfaceDriver::setTorqueControlEnabled(int servo_id, bool on)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
      	//Torque control mode, there is actually a register for this
         getModelNumber(servo_id, &model_num);
@@ -2622,7 +2721,7 @@ bool DynamixelInterfaceDriver::setPIDGains(int servo_id, uint8_t operating_mode,
 	uint16_t p_val, i_val, d_val;
 
 	//Convert values based on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		//ROS_INFO("%f, %f, %f", p_gain, i_gain, d_gain);
 		p_val = (uint16_t) (p_gain * 8.0);
@@ -2630,13 +2729,13 @@ bool DynamixelInterfaceDriver::setPIDGains(int servo_id, uint8_t operating_mode,
 		d_val = (uint16_t) (d_gain / (4.0 / 1000.0));
 		//ROS_INFO("%d, %d, %d", p_val, i_val, d_val);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		p_val = (uint16_t) (p_gain * 128.0);
 		i_val = (uint16_t) (i_gain * 65536.0);
 		d_val = (uint16_t) (d_gain * 16.0);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return false;
 	}
@@ -2746,17 +2845,17 @@ bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, uint16_
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_P_GAIN,  
 				(uint8_t) (gain & 0x00FF), &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_X_POSITION_P_GAIN,  
 				gain, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_PRO_POSITION_P_GAIN,  
 				gain, &error);
@@ -2791,17 +2890,17 @@ bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, uint16_t ga
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_D_GAIN,  
 				(uint8_t) (gain & 0x00FF), &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_X_POSITION_D_GAIN,  
 				gain, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return false;
 	}
@@ -2834,17 +2933,17 @@ bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, uint16_t 
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_D_GAIN,  
 				(uint8_t) (gain & 0x00FF), &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_X_POSITION_D_GAIN,  
 				gain, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return false;
 	}
@@ -2877,17 +2976,17 @@ bool DynamixelInterfaceDriver::setVelocityProportionalGain(int servo_id, uint16_
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_P_GAIN,  
 				(uint8_t) (gain & 0x00FF), &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_X_VELOCITY_P_GAIN,  
 				gain, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_PRO_VELOCITY_P_GAIN,  
 				gain, &error);
@@ -2921,17 +3020,17 @@ bool DynamixelInterfaceDriver::setVelocityIntegralGain(int servo_id, uint16_t ga
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_I_GAIN,  
 				(uint8_t) (gain & 0x00FF), &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_X_VELOCITY_I_GAIN,  
 				gain, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_PRO_VELOCITY_I_GAIN,  
 				gain, &error);
@@ -2966,16 +3065,16 @@ bool DynamixelInterfaceDriver::setVelocityDerivativeGain(int servo_id, uint16_t 
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_D_GAIN,  
 				(uint8_t) (gain & 0x00FF), &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		return false;
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return false;
 	}
@@ -3008,16 +3107,16 @@ bool DynamixelInterfaceDriver::setTorqueProportionalGain(int servo_id, uint16_t 
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_P_GAIN,  
 				(uint8_t) (gain & 0x00FF), &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		return false;
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return false;
 	}
@@ -3050,16 +3149,16 @@ bool DynamixelInterfaceDriver::setTorqueIntegralGain(int servo_id, uint16_t  gai
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_I_GAIN,  
 				(uint8_t) (gain & 0x00FF), &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		return false;
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return false;
 	}
@@ -3092,16 +3191,16 @@ bool DynamixelInterfaceDriver::setTorqueDerivativeGain(int servo_id, uint16_t ga
 	int dxl_comm_result;
 	
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write1ByteTxRx(portHandler_, servo_id, DXL_MX_D_GAIN,  
 				(uint8_t) (gain & 0x00FF), &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		return false;
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return false;
 	}
@@ -3134,17 +3233,17 @@ bool DynamixelInterfaceDriver::setPosition(int servo_id, uint32_t position)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write2ByteTxRx(portHandler_, servo_id, DXL_MX_GOAL_POSITION_L, 
 				(uint16_t) position, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_X_GOAL_POSITION, 
 				position, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_POSITION, 
 				position, &error);
@@ -3179,17 +3278,17 @@ bool DynamixelInterfaceDriver::setVelocity(int servo_id, int32_t velocity)
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write2ByteTxRx(portHandler_, servo_id, DXL_MX_GOAL_SPEED_L, 
 				(uint16_t) velocity, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_X_GOAL_VELOCITY, 
 				velocity, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_VELOCITY, 
 				velocity, &error);
@@ -3225,17 +3324,17 @@ bool DynamixelInterfaceDriver::setProfileVelocity(int servo_id, int32_t velocity
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->write2ByteTxRx(portHandler_, servo_id, DXL_MX_GOAL_SPEED_L, 
 				(uint16_t) velocity, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_X_PROFILE_VELOCITY, 
 				velocity, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_VELOCITY, 
 				velocity, &error);
@@ -3275,15 +3374,15 @@ bool DynamixelInterfaceDriver::writeRegisters(int servo_id, uint32_t address, ui
 	int dxl_comm_result;
 
 	//Read address and size always depends on servo series
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		dxl_comm_result = packetHandlerP1_->writeTxRx(portHandler_, servo_id, address, length, data, &error);
 	}
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		dxl_comm_result = packetHandlerP2_->writeTxRx(portHandler_, servo_id, address, length, data, &error);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		dxl_comm_result = packetHandlerP2_->writeTxRx(portHandler_, servo_id, address, length, data, &error);
 	}
@@ -3315,15 +3414,15 @@ bool DynamixelInterfaceDriver::writeRegisters(int servo_id, uint32_t address, ui
 bool DynamixelInterfaceDriver::setMultiPosition(std::vector<std::vector<int> > value_pairs)
 {
 	
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		return syncWrite(value_pairs, DXL_MX_GOAL_POSITION_L, 2, 1.0);
 	} 
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		return syncWrite(value_pairs, DXL_X_GOAL_POSITION, 4, 2.0);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return syncWrite(value_pairs, DXL_PRO_GOAL_POSITION, 4, 2.0);
 	}
@@ -3345,15 +3444,15 @@ bool DynamixelInterfaceDriver::setMultiPosition(std::vector<std::vector<int> > v
 bool DynamixelInterfaceDriver::setMultiVelocity(std::vector<std::vector<int> > value_pairs)
 {
 
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		return syncWrite(value_pairs, DXL_MX_GOAL_SPEED_L, 2, 1.0);
 	} 
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		return syncWrite(value_pairs, DXL_X_GOAL_VELOCITY, 4, 2.0);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return syncWrite(value_pairs, DXL_PRO_GOAL_VELOCITY, 4, 2.0);
 	}
@@ -3374,15 +3473,15 @@ bool DynamixelInterfaceDriver::setMultiVelocity(std::vector<std::vector<int> > v
 bool DynamixelInterfaceDriver::setMultiProfileVelocity(std::vector<std::vector<int> > value_pairs)
 {
 
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		return syncWrite(value_pairs, DXL_MX_GOAL_SPEED_L, 2, 1.0);
 	} 
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		return syncWrite(value_pairs, DXL_X_PROFILE_VELOCITY, 4, 2.0);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return syncWrite(value_pairs, DXL_PRO_GOAL_VELOCITY, 4, 2.0);
 	}
@@ -3402,15 +3501,15 @@ bool DynamixelInterfaceDriver::setMultiProfileVelocity(std::vector<std::vector<i
 bool DynamixelInterfaceDriver::setMultiTorqueEnabled(std::vector<std::vector<int> > value_pairs)
 {
 
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		return syncWrite(value_pairs, DXL_MX_TORQUE_ENABLE, 1, 1.0);
 	} 
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		return syncWrite(value_pairs, DXL_X_TORQUE_ENABLE, 1, 2.0);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return syncWrite(value_pairs, DXL_PRO_TORQUE_ENABLE, 1, 2.0);
 	}
@@ -3430,15 +3529,15 @@ bool DynamixelInterfaceDriver::setMultiTorqueEnabled(std::vector<std::vector<int
 bool DynamixelInterfaceDriver::setMultiTorque(std::vector<std::vector<int> > value_pairs)
 {
 
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		return syncWrite(value_pairs, DXL_MX_GOAL_TORQUE_L, 2, 1.0);
 	} 
-	else if (servo_series_ == 'X')
+	else if (servo_protocol_ == '2')
 	{
 		return syncWrite(value_pairs, DXL_X_GOAL_CURRENT, 2, 2.0);
 	}
-	else if (servo_series_ == 'P')
+	else if (servo_protocol_ == 'P')
 	{
 		return syncWrite(value_pairs, DXL_PRO_GOAL_TORQUE, 2, 2.0);
 	}
@@ -3459,7 +3558,7 @@ bool DynamixelInterfaceDriver::setMultiTorque(std::vector<std::vector<int> > val
 bool DynamixelInterfaceDriver::setMultiTorqueControl(std::vector<std::vector<int> > value_pairs)
 {
 
-	if (servo_series_ == 'M')
+	if (servo_protocol_ == '1')
 	{
 		return syncWrite(value_pairs, DXL_MX_TORQUE_CONTROL_ENABLE, 1, 1.0);
 	} 
@@ -3494,7 +3593,7 @@ bool DynamixelInterfaceDriver::syncWrite(std::vector<std::vector<int> > value_pa
 	dynamixel::PacketHandler *pHandle;
 
 	//only use the group comms method if specified
-	if (use_group_comms_)
+	if (use_group_write_)
 	{
 		//This prevents a scoping issue
 		if (protocol == 1.0)

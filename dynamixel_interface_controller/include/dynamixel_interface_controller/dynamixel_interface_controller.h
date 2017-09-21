@@ -86,8 +86,10 @@
 #include <string>
 #include <map>
 #include <mutex>
-
+#include <XmlRpcValue.h>
 #include <ros/ros.h>
+#include <ros/spinner.h>
+#include <ros/callback_queue.h>
 #include <sensor_msgs/JointState.h>
 
 #include "dynamixel_interface_controller/ServoState.h"
@@ -137,7 +139,7 @@ enum controlMode
     POSITION_CONTROL = 3,
     VELOCITY_CONTROL = 1,
     TORQUE_CONTROL = 0,
-    UNKOWN  = -1
+    UNKNOWN  = -1
 };
 
 
@@ -231,7 +233,7 @@ struct portInfo
     int baudrate;
 
     /** Which series of motor is on the port */
-    std::string series;
+    std::string protocol;
 
     /** Pointer to the serial driver */
     dynamixel_interface_driver::DynamixelInterfaceDriver *driver;
@@ -272,6 +274,18 @@ public:
 
 private:
 
+    /** 
+    * Parses the information in the yaml file for each port
+    * @param ports: the xml structure to be parsed
+    */
+    void parsePortInformation(XmlRpc::XmlRpcValue ports);
+
+    /** 
+    * Parses the information in the yaml file for each servo
+    * @param servos: the xml structure to be parsed
+    */
+    void parseServoInformation(struct portInfo &port, XmlRpc::XmlRpcValue servos);
+
 
     /** 
      * Callback for setting diagnostic publishing flags
@@ -299,14 +313,14 @@ private:
      * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
      * @param perform_write boolean indicating whether or not to write latest joint_state to servos
      */
-    void multiThreadedIO(int port_num, sensor_msgs::JointState &read_msg, bool perform_write);
+    void multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg, bool perform_write);
 
     /**
      * Function called in each thread to perform a write on a port
      * @param port_num index used to retrieve port information from port list
      * @param joint_commands message cointaining the commands for each joint
      */
-    void multiThreadedWrite(int port_num, sensor_msgs::JointState joint_commands);
+    void multiThreadedWrite(portInfo &port, sensor_msgs::JointState joint_commands);
     
 
     /**
@@ -314,11 +328,15 @@ private:
      * @param port_num index used to retrieve port information from port list
      * @param read_msg the msg this ports join data is read into.
      */
-    void multiThreadedRead(int port_num, sensor_msgs::JointState &read_msg);
+    void multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg);
 
 
     /** Handler for the ROS Node */
     ros::NodeHandle *nh_;
+
+    ros::CallbackQueue io_queue_;
+    ros::NodeHandle io_handle_;
+    ros::AsyncSpinner *io_spinner_;
 
     /** Rate at which joint state information is published */
     double publish_rate_;     
@@ -347,8 +365,19 @@ private:
     /** Can echo commands sent to the motors (useful for monitoring write values/rates) */
     bool echo_joint_commands_;
 
+    /** can set driver to ignore profile velocity commands in position mode */
+    bool ignore_input_velocity_;
+
     /** Indicates if we should get diagnostic info (voltage and temperature) */
     bool publish_diagnostics_;
+
+    /** global override parameters */
+    double global_joint_speed_;
+    double global_torque_limit_;
+    double global_p_gain_;
+    double global_i_gain_;
+    double global_d_gain_;
+
 
     /** Stores the last message received from the write command topic */
     sensor_msgs::JointState write_msg_;
@@ -386,6 +415,7 @@ private:
 
     /** Debug message publisher */
     ros::Publisher debug_publisher_;
+    
 
 };
 
