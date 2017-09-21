@@ -93,6 +93,8 @@ ports:
     device: /dev/ttyUSB1            # different baudrate and protcol
     baudrate: 3000000
     protocol: "2.0"
+    group_read_enabled: true
+    group_write_enabled: true
     servos:
 
         - id: 1                     # id only needs to be unique for each port and so id 1 can be reused here
