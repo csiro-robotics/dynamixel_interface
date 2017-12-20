@@ -30,6 +30,7 @@ mx_effort_use_current: true         # Use the current register instead of the lo
 ignore_input_velocity: false        # ignore input velocity commands in position mode (no profile velocity)
 
 diagnostics_rate: 0                 # rate to publish diagnostic information
+pro_dataport_rate: 0                # rate to read from dynamixel pro external dataport 1
 
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for 
 # the servo below

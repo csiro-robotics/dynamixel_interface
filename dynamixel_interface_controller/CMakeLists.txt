@@ -39,6 +39,7 @@ endif(NOT ${yaml-cpp_VERSION} VERSION_LESS "0.5")
 
 add_message_files(
   FILES
+  DataPort.msg
   ServoState.msg
   ServoMode.msg
 )

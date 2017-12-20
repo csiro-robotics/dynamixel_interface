@@ -353,8 +353,8 @@ public:
      *
      * @return True on comm success, false otherwise
      */
-    bool getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, 
-                            std::vector<int32_t> > *responses, bool mx_read_current);
+    bool getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, std::vector<int32_t> > *responses, 
+                          bool mx_read_current, bool pro_read_dataport);
 
     /**
      * Bulk Reads the following servo state variables in one instruction
@@ -736,6 +736,9 @@ private:
     /** Indicates whether or not to use the group communication methods */
     bool use_group_read_;
     bool use_group_write_;
+
+    /** Indicates the number of external dataports to read on the pro series */
+    bool pro_expose_dataport_;
 
     /** indicates group comm failure fallback interval */
     uint8_t single_read_fallback_counter_;

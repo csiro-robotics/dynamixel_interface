@@ -92,6 +92,7 @@
 #include <ros/callback_queue.h>
 #include <sensor_msgs/JointState.h>
 
+#include "dynamixel_interface_controller/DataPort.h"
 #include "dynamixel_interface_controller/ServoState.h"
 #include "dynamixel_interface_controller/ServoMode.h"
 
@@ -292,6 +293,11 @@ private:
      */
     void diagnosticsRateCallback(const ros::TimerEvent& event);
 
+    /**
+    * TimeEvent callback for handling pro external dataport read rate
+    */
+    void dataportRateCallback(const ros::TimerEvent& event);
+
     /** 
      * Callback for recieving a command from the /desired_joint_state topic.
      * The function atomically updates the class member variable containing the latest message and sets
@@ -313,7 +319,8 @@ private:
      * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
      * @param perform_write boolean indicating whether or not to write latest joint_state to servos
      */
-    void multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg, bool perform_write);
+    void multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg, 
+                         dynamixel_interface_controller::DataPort &dataport_msg, bool perform_write);
 
     /**
      * Function called in each thread to perform a write on a port
@@ -328,7 +335,8 @@ private:
      * @param port_num index used to retrieve port information from port list
      * @param read_msg the msg this ports join data is read into.
      */
-    void multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg);
+    void multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg,
+                           dynamixel_interface_controller::DataPort &dataport_msg);
 
 
     /** Handler for the ROS Node */
@@ -343,6 +351,10 @@ private:
 
     /** Rate at which servo diagnostic information is published */
     double diagnostics_rate_;
+    std::chrono::steady_clock::time_point last_diagnostics_time_;
+    
+    /** Rate at which the pro external dataport is read */
+    double pro_dataport_read_rate_;
 
     /** Indicates to callbacks that the controller is shutting down */
     volatile bool shutting_down_;
@@ -370,6 +382,10 @@ private:
 
     /** Indicates if we should get diagnostic info (voltage and temperature) */
     bool publish_diagnostics_;
+    
+    /** Indicates if we should read the external dataport on the pro series dynamixel */
+    bool pro_read_dataport_;
+    std::chrono::steady_clock::time_point last_dataport_time_;
 
     /** global override parameters */
     double global_joint_speed_;
@@ -407,11 +423,11 @@ private:
     /** Gets joint states for writes */
     ros::Subscriber joint_state_subscriber_;
 
-    /** Timer that controls the rate of the IO callback */
-    ros::Timer broadcast_timer_;
+    /** Publishes the data from the external ports on dynamixel_pros */
+    ros::Publisher dataport_publisher_;
 
     /** Timer that controls the rate of the IO callback */
-    ros::Timer diagnostics_timer_;
+    ros::Timer broadcast_timer_;
 
     /** Debug message publisher */
     ros::Publisher debug_publisher_;

@@ -1243,7 +1243,7 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uin
  * @return True on comm success, false otherwise
  */
 bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int, 
-		std::vector<int32_t> > *responses, bool mx_read_current)
+		std::vector<int32_t> > *responses, bool mx_read_current, bool pro_read_dataport)
 {
 	
 	std::vector<int32_t> response;
@@ -1497,8 +1497,14 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	}
 	else if (servo_protocol_ == 'P')
 	{
+		int read_len = 10;
+		if (pro_read_dataport == true)
+		{
+			read_len = 17;
+		}
+		
 		//read data from dynamixels
-		if(use_group_read_ && syncRead(servo_ids, DXL_PRO_PRESENT_POSITION, 10, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_PRO_PRESENT_POSITION, read_len, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1507,19 +1513,26 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 				//get raw data response
 				data = raw->at(servo_ids->at(i));	
 			
-				//get position (data[0] - data[1])
+				//get position (data[0] - data[3])
 				value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
 				response.push_back(value);
 
-				//get velocity (data[2] - data[3])
+				//get velocity (data[4] - data[7])
 				value = MAKEINT(MAKEWORD(data[4], data[5]),MAKEWORD(data[6], data[7]));
 				response.push_back(value);
 
-				//get load (data[4] - data[5])
+				//get load (data[8] - data[9])
 				int16_t temp = MAKEWORD(data[8], data[9]);
 				value = temp;
 				response.push_back(value);
 
+				//get external dataport value (data[13] - data[14])
+				if (pro_read_dataport)
+				{
+					value = MAKEWORD(data[15], data[16]);
+					response.push_back(value);
+				}
+				
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
 
@@ -1552,13 +1565,13 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 			for (int i = 0; i < read_ids.size(); i++)
 			{
 				//if individual read fails, ignore
-				if(!readRegisters(read_ids.at(i), DXL_PRO_PRESENT_POSITION, 10, &data))
+				if(!readRegisters(read_ids.at(i), DXL_PRO_PRESENT_POSITION, read_len, &data))
 				{
 					continue;
 				}
 
 				//get raw data response
-				if (data.size() > 9)
+				if (data.size() >= read_len)
 				{
 					//get position (data[0] - data[1])
 					value = MAKEINT(MAKEWORD(data[0], data[1]),MAKEWORD(data[2], data[3]));
@@ -1572,6 +1585,13 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 					int16_t temp = MAKEWORD(data[8], data[9]);
 					value = temp;
 					response.push_back(value);
+
+					//get external dataport value
+					if (pro_read_dataport)
+					{
+						value = MAKEWORD(data[15], data[16]);
+						response.push_back(value);
+					}
 
 					//place responses into return data
 					responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
@@ -1808,7 +1828,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 	else if (servo_protocol_ == 'P')
 	{
 		//read data from dynamixels
-		if(use_group_read_ && syncRead(servo_ids, DXL_PRO_PRESENT_VOLTAGE, 3, raw) )
+		if(use_group_read_ && syncRead(servo_ids, DXL_PRO_PRESENT_VOLTAGE, 5, raw) )
 		{
 			//DECODE RAW DATA
 			for (int i = 0; i < servo_ids->size(); i++)
@@ -1828,6 +1848,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 				packetHandlerP2_->ping(portHandler_, servo_ids->at(i), &error);
 				response.push_back(error);
 
+				//get external dataport value
+				value = MAKEWORD(data[3], data[4]);
+				response.push_back(value);
+				
 				//place responses into return data
 				responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
 
@@ -2058,11 +2082,9 @@ bool DynamixelInterfaceDriver::syncRead(std::vector<int> *servo_ids,
 	        // Get values from read and place into vector
 	        for (int j = 0; j < length; j++)
 	        {
-
-	        	byte = GroupSyncRead.getData(read_ids.at(i), address + j, 1);
+				byte = GroupSyncRead.getData(read_ids.at(i), address + j, 1);
 	            response->push_back(byte);
-
-	        }
+			}
 
     		//place vector into map of responses
 	        responses->insert(std::pair<int, std::vector<uint8_t> >(read_ids.at(i), *response));

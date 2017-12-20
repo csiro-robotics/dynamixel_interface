@@ -164,15 +164,38 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     nh_->param<bool>("effort_use_raw", use_torque_as_effort_, false);
     nh_->param<bool>("mx_effort_use_current", mx_effort_use_current_, false);
     nh_->param<bool>("ignore_input_velocity", ignore_input_velocity_, false);
+    
+    nh_->param<double>("pro_dataport_rate", pro_dataport_read_rate_, 0.0);
     nh_->param<double>("diagnostics_rate", diagnostics_rate_, 0.0);
-
+    
     nh_->param<std::string>("control_mode", mode, "Position");
     nh_->param<bool>("dynamic_mode_switching", dynamic_mode_switching_, false);
+
     nh_->param<double>("global_joint_speed", global_joint_speed_, 5.0);
     nh_->param<double>("global_torque_limit", global_torque_limit_, 1.0);
     nh_->param<double>("global_p_gain", global_p_gain_, -1.0);
     nh_->param<double>("global_i_gain", global_i_gain_, -1.0);
     nh_->param<double>("global_d_gain", global_d_gain_, -1.0);
+
+    //clamp read rates to sensible values
+    if (publish_rate_ < 0)
+    {
+        publish_rate_ = 0;
+    }
+    
+    if (diagnostics_rate_ < 0)
+    {
+        diagnostics_rate_ = 0;
+    }
+    
+    if (pro_dataport_read_rate_ < 0)
+    {
+        pro_dataport_read_rate_ = 0;
+    }
+    else if (pro_dataport_read_rate_ > 50)
+    {
+        pro_dataport_read_rate_ = 50;
+    }
 
     // Set control mode for this run
     if (!strncmp(mode.c_str(), "Position", 8))
@@ -226,6 +249,11 @@ DynamixelInterfaceController::DynamixelInterfaceController()
         diagnostics_publisher_ = nh_->advertise<dynamixel_interface_controller::ServoState>("/servo_diagnostics", 1);
     }
 
+    if (pro_dataport_read_rate_ > 0)
+    {
+        dataport_publisher_  = nh_->advertise<dynamixel_interface_controller::DataPort>("/external_dataport", 1);
+    }
+
     //advertise the joint state input and output topics 
     joint_state_publisher_  = nh_->advertise<sensor_msgs::JointState>("/joint_states", 1);
 
@@ -234,9 +262,10 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
     // Set custom callback queue for either input or output callback
     io_handle_.setCallbackQueue(&io_queue_);
-
     io_spinner_ = new ros::AsyncSpinner(1, &io_queue_);
-    io_spinner_->start();    
+    io_spinner_->start();
+    last_dataport_time_ = last_diagnostics_time_ = std::chrono::steady_clock::now();
+    
 }
 
 
@@ -770,12 +799,6 @@ void DynamixelInterfaceController::startBroadcastingJointStates()
     
     broadcast_timer_ = io_handle_.createTimer(ros::Duration(1.0 / publish_rate_), 
             &DynamixelInterfaceController::publishJointStates, this);
-
-    if (diagnostics_rate_ > 0)
-    {
-        diagnostics_timer_ = nh_->createTimer(ros::Duration(1.0 / diagnostics_rate_), 
-                &DynamixelInterfaceController::diagnosticsRateCallback, this);       
-    }
     
 }
 
@@ -867,19 +890,6 @@ void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointSt
 
 }
 
-
-/**
- * TimeEvent callback for handling top level control of IO (for multiple ports).
- * Function spawns and waits on a thread for each 
- */
-void DynamixelInterfaceController::diagnosticsRateCallback(const ros::TimerEvent& event)
-{
-
-    publish_diagnostics_ = true;
-
-}
-
-
 /**
  * TimeEvent callback for handling top level control of IO (for multiple ports).
  * Function spawns and waits on a thread for each 
@@ -892,8 +902,12 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
 
     int num_servos = 0;
     std::vector<std::thread> threads;
+    
     sensor_msgs::JointState read_msg;
     sensor_msgs::JointState reads[dynamixel_ports_.size()];
+
+    dynamixel_interface_controller::DataPort dataport_msg;
+    dynamixel_interface_controller::DataPort dataport_reads[dynamixel_ports_.size()];
 
     std::unique_lock<std::mutex> lock(write_mutex_);
 
@@ -945,6 +959,10 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
         first_write_ = false;
     }
 
+    dataport_msg.header.stamp = read_msg.header.stamp = ros::Time::now();
+
+    
+
     //spawn an IO thread for each additional port
     for (int i = 1; i < dynamixel_ports_.size(); i++)
     {
@@ -952,7 +970,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
         reads[i] = sensor_msgs::JointState();
         
         std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this, 
-                std::ref(dynamixel_ports_[i]), std::ref(reads[i]), write_ready_);
+                std::ref(dynamixel_ports_[i]), std::ref(reads[i]), std::ref(dataport_reads[i]), write_ready_);
 
         threads.push_back(move(readThread));
     }
@@ -978,7 +996,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     }
 
     //perform read
-    multiThreadedRead(dynamixel_ports_[0], reads[0]);
+    multiThreadedRead(dynamixel_ports_[0], reads[0], dataport_reads[0]);
 
 
     //loop and get port information (wait for threads in order if any were created)
@@ -1002,10 +1020,19 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
         read_msg.velocity.insert(read_msg.velocity.end(), reads[i].velocity.begin(), reads[i].velocity.end());
         read_msg.effort.insert(read_msg.effort.end(), reads[i].effort.begin(), reads[i].effort.end());
 
-    }
+        if (pro_read_dataport_)
+        {
+            if (dataport_reads[i].name.size() == 0)
+            {
+                continue;
+            }
+            
+            //append read values to published message
+            dataport_msg.name.insert(dataport_msg.name.end(), dataport_reads[i].name.begin(), dataport_reads[i].name.end());
+            dataport_msg.value.insert(dataport_msg.value.end(), dataport_reads[i].value.begin(), dataport_reads[i].value.end());
+        } 
 
-    //timestamp
-    read_msg.header.stamp = ros::Time::now();
+    }
 
     //reset write flag
     if (write_ready_)
@@ -1025,8 +1052,36 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
         joint_state_publisher_.publish(read_msg);
     }
 
+    //publish external dataport message
+    if ((pro_read_dataport_) && (dataport_msg.name.size() > 0))
+    {
+        dataport_publisher_.publish(dataport_msg);
+        pro_read_dataport_ = false;
+    }
 
-    publish_diagnostics_ = false;
+    if (publish_diagnostics_)
+    {
+        publish_diagnostics_ = false;
+    }
+
+    //timestamp
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    
+    //Control loop rate of dataport reads
+    std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_dataport_time_);
+    if (delta.count() >= (1-(0.5*pro_dataport_read_rate_/publish_rate_)) / (pro_dataport_read_rate_))
+    {
+        pro_read_dataport_ = true;
+        last_dataport_time_ = now;
+    }
+    
+    //Control loop rate of diagnostic reads
+    delta = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_diagnostics_time_);
+    if (delta.count() >= (1-(0.5*diagnostics_rate_/publish_rate_)) / (diagnostics_rate_))
+    {
+        publish_diagnostics_ = true;
+        last_diagnostics_time_ = now;
+    }
 
 }
 
@@ -1036,7 +1091,9 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
  * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
  * @param perform_write boolean indicating whether or not to write latest joint_state to servos
  */
-void DynamixelInterfaceController::multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg, bool perform_write)
+void DynamixelInterfaceController::multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg, 
+                                                    dynamixel_interface_controller::DataPort &dataport_msg, 
+                                                    bool perform_write)
 {
 
     sensor_msgs::JointState thread_write_msg = write_msg_;
@@ -1048,7 +1105,7 @@ void DynamixelInterfaceController::multiThreadedIO(portInfo &port, sensor_msgs::
     }
 
     //perform read
-    multiThreadedRead(port, read_msg);
+    multiThreadedRead(port, read_msg, dataport_msg);
 
 }
 
@@ -1392,13 +1449,13 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
  * @param port_num index used to retrieve port information from port list
  * @param read_msg the msg this ports join data is read into.
  */
-void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg)
+void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg,
+                                                    dynamixel_interface_controller::DataPort &dataport_msg)
 {
 
     bool comm_success;
     std::vector<int> *servo_ids = new std::vector<int>;
     std::map<int, std::vector<int32_t> >  *responses = new std::map<int, std::vector<int32_t> >;
-
 
     //Iterate over all connected servos and add to list
     for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
@@ -1407,7 +1464,8 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
     }
 
     //get state info back from all dynamixels
-    if( port.driver->getBulkStateInfo(servo_ids, responses, mx_effort_use_current_) && !servo_ids->empty() ) {
+    if( port.driver->getBulkStateInfo(servo_ids, responses, mx_effort_use_current_, pro_read_dataport_) 
+        && !servo_ids->empty() ) {
         
         //Iterate over all connected servos and add to list
         for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
@@ -1531,6 +1589,15 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
 
             //put effort in message
             read_msg.effort.push_back(torque);
+
+            if ((port.protocol == "PRO") && (pro_read_dataport_))
+            {
+                //put joint name in message
+                dataport_msg.name.push_back(joint_name);
+
+                //publish dataport value
+                dataport_msg.value.push_back(response[3]);
+            }
         }
 
         responses->clear();
