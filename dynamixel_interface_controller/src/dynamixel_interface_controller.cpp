@@ -1555,7 +1555,7 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
                 }
                 else
                 {
-                    torque = ((double) (response[2]) / info.current_ratio);
+                    torque = ((double) (response[2]) * info.current_ratio);
                 }  
             }
             else
