@@ -2613,6 +2613,7 @@ bool DynamixelInterfaceDriver::setMaxTorque(int servo_id, uint16_t max_torque)
 	uint8_t error;
 	int dxl_comm_result;
 
+	printf("%d\n", max_torque);
 	//Read address and size always depends on servo series
 	if (servo_protocol_ == '1')
 	{

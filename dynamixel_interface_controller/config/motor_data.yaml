@@ -165,7 +165,7 @@
   model_number: 51200
   cpr: 303751 
   gear_reduction: 300.0
-  effort_ratio: 32767
+  effort_ratio: 1395
   current_ratio: 4.028
 
 - name: H54-100-S500

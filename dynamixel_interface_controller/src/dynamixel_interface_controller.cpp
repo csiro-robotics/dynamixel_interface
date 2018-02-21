@@ -727,10 +727,26 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
                 //set torque limit for the motor
                 //ROS_INFO("%f %f %d", info.torque_limit, info.effort_ratio, 
                 //        (int) (info.torque_limit * info.effort_ratio));
+                ROS_INFO("Setting torque limit to %f for %s motor (id %d)", info.torque_limit * info.effort_ratio,
+                    info.joint_name.c_str(), info.id);
+
                 if ( !port.driver->setMaxTorque(info.id, (int) (info.torque_limit * info.effort_ratio)) )
                 {
                     ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), 
                             info.id);
+                }
+                else
+                {
+                    uint16_t torque_set = 0;
+                    if ( !port.driver->getMaxTorque(info.id, &torque_set) )
+                    {
+                        ROS_WARN("Failed to read torque limit for %s motor (id %d)", info.joint_name.c_str(),
+                            info.id);
+                    }
+                    else
+                    {
+                        ROS_INFO(" - Set torque limit to %d", torque_set);
+                    }
                 }
 
                 //angle limits are only relevant in position control mode
