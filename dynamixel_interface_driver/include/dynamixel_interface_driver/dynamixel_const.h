@@ -136,6 +136,7 @@ typedef enum DynamixelControlEnum
     DXL_PRO_REGISTERED_INSTRUCTION = 890,
     DXL_PRO_MOVING = 610,
     DXL_PRO_RETURN_LEVEL = 891,
+    DXL_PRO_HARDWARE_ERROR_STATUS = 892,
 
     /** 
      * XM Series values
