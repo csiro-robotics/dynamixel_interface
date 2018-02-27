@@ -727,25 +727,28 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
                 //set torque limit for the motor
                 //ROS_INFO("%f %f %d", info.torque_limit, info.effort_ratio, 
                 //        (int) (info.torque_limit * info.effort_ratio));
-                ROS_INFO("Setting torque limit to %f for %s motor (id %d)", info.torque_limit * info.effort_ratio,
-                    info.joint_name.c_str(), info.id);
+                //ROS_INFO("Setting torque limit to %f for %s motor (id %d)", info.torque_limit * info.effort_ratio,
+                 //   info.joint_name.c_str(), info.id);
 
-                if ( !port.driver->setMaxTorque(info.id, (int) (info.torque_limit * info.effort_ratio)) )
+                if (port.protocol != "PRO")
                 {
-                    ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), 
-                            info.id);
-                }
-                else
-                {
-                    uint16_t torque_set = 0;
-                    if ( !port.driver->getMaxTorque(info.id, &torque_set) )
+                    if ( !port.driver->setMaxTorque(info.id, (int) (info.torque_limit * info.effort_ratio)) )
                     {
-                        ROS_WARN("Failed to read torque limit for %s motor (id %d)", info.joint_name.c_str(),
-                            info.id);
+                        ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), 
+                                info.id);
                     }
                     else
                     {
-                        ROS_INFO(" - Set torque limit to %d", torque_set);
+                        uint16_t torque_set = 0;
+                        if ( !port.driver->getMaxTorque(info.id, &torque_set) )
+                        {
+                            ROS_WARN("Failed to read torque limit for %s motor (id %d)", info.joint_name.c_str(),
+                                info.id);
+                        }
+                        else
+                        {
+                            ;//ROS_INFO(" - Set torque limit to %d", torque_set);
+                        }
                     }
                 }
 
@@ -925,6 +928,9 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     dynamixel_interface_controller::DataPort dataport_msg;
     dynamixel_interface_controller::DataPort dataport_reads[dynamixel_ports_.size()];
 
+    dynamixel_interface_controller::ServoState status_msg;
+    dynamixel_interface_controller::ServoState status_reads[dynamixel_ports_.size()];
+
     std::unique_lock<std::mutex> lock(write_mutex_);
 
     //enable torque only once we start receiving commands
@@ -958,6 +964,28 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
                         
                         int regVal = (int) ((double) (info.joint_speed) * (60/(2.0 * M_PI)) * info.gear_reduction);
                         dynamixel_ports_[i].driver->setProfileVelocity(info.id, regVal);
+
+                        if (dynamixel_ports_[i].protocol == "PRO")
+                        {
+                            if ( !dynamixel_ports_[i].driver->setTorque(info.id, (int) (info.torque_limit * info.effort_ratio)) )
+                            {
+                                ROS_WARN("Failed to set torque for %s motor (id %d)", info.joint_name.c_str(), 
+                                        info.id);
+                            }        
+                            else
+                            {
+                                int16_t goal_torque;
+                                if ( !dynamixel_ports_[i].driver->getTargetTorque(info.id, &goal_torque))
+                                {
+                                    ROS_WARN("Failed to get goal torque for %s motor (id %d)", info.joint_name.c_str(), 
+                                        info.id);
+                                } 
+                                else
+                                {
+                                    ROS_INFO("SET PRO TORQUE LIMIT TO %d", goal_torque);
+                                }
+                            }                
+                        }
                     } 
 
                 }
@@ -966,6 +994,14 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
                     dynamixel_ports_[i].driver->setOperatingMode(info.id, control_type_);
                 }
                 
+                if ((control_type_ == TORQUE_CONTROL) && (dynamixel_ports_[i].protocol == "PRO"))
+                {
+                    //set pro pid values
+                    if (!dynamixel_ports_[i].driver->setPIDGains(info.id, control_type_, info.p_gain, info.i_gain, info.d_gain))
+                    {
+                        ROS_WARN("Failed to set PID tuning for %s motor (id %d)", info.joint_name.c_str(), info.id);
+                    }
+                }
                 ROS_INFO("Torque enabled on %s joint", it->first.c_str());
                 info.torque_enabled = true;
 
@@ -986,7 +1022,8 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
         reads[i] = sensor_msgs::JointState();
         
         std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this, 
-                std::ref(dynamixel_ports_[i]), std::ref(reads[i]), std::ref(dataport_reads[i]), write_ready_);
+                std::ref(dynamixel_ports_[i]), std::ref(reads[i]), 
+                std::ref(dataport_reads[i]), std::ref(status_reads[i]), write_ready_);
 
         threads.push_back(move(readThread));
     }
@@ -1012,7 +1049,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     }
 
     //perform read
-    multiThreadedRead(dynamixel_ports_[0], reads[0], dataport_reads[0]);
+    multiThreadedRead(dynamixel_ports_[0], reads[0], dataport_reads[0], status_reads[0]);
 
 
     //loop and get port information (wait for threads in order if any were created)
@@ -1036,6 +1073,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
         read_msg.velocity.insert(read_msg.velocity.end(), reads[i].velocity.begin(), reads[i].velocity.end());
         read_msg.effort.insert(read_msg.effort.end(), reads[i].effort.begin(), reads[i].effort.end());
 
+        // get dataport read info if available
         if (pro_read_dataport_)
         {
             if (dataport_reads[i].name.size() == 0)
@@ -1048,6 +1086,36 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
             dataport_msg.value.insert(dataport_msg.value.end(), dataport_reads[i].value.begin(), dataport_reads[i].value.end());
         } 
 
+        //get diagnostics info if available
+        if (publish_diagnostics_)
+        {
+            if(status_reads[i].joint_names.size() == 0)
+            {
+                continue;
+            }
+
+            status_msg.joint_names.insert(status_msg.joint_names.end(), status_reads[i].joint_names.begin(), status_reads[i].joint_names.end());
+            status_msg.voltages.insert(status_msg.voltages.end(), status_reads[i].voltages.begin(), status_reads[i].voltages.end());
+            status_msg.temperatures.insert(status_msg.temperatures.end(), status_reads[i].temperatures.begin(), status_reads[i].temperatures.end());
+            status_msg.error_states.insert(status_msg.error_states.end(), status_reads[i].error_states.begin(), status_reads[i].error_states.end());
+            status_msg.modes.insert(status_msg.modes.end(), status_reads[i].modes.begin(), status_reads[i].modes.end());
+
+            //check error status of each dynamixel and report new errors
+            for (int j = 0; j < status_reads[i].joint_names.size(); j++)
+            {
+                dynamixelInfo info = dynamixel_ports_[i].joints.at(status_reads[i].joint_names[j]);
+                if (status_reads[i].error_states[j] != 0)
+                {
+                    if (info.hardware_status != status_reads[i].error_states[j])
+                    {
+                        ROS_WARN("Dynamixel Error! Joint %s (id %d) has returned with code %d!", 
+                                info.joint_name.c_str(), info.id, status_reads[i].error_states[j]);
+                    }    
+                    info.hardware_status = status_reads[i].error_states[j];
+                    dynamixel_ports_[i].joints.at(status_reads[i].joint_names[j]) = info;
+                }
+            }   
+        }
     }
 
     //reset write flag
@@ -1077,6 +1145,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
 
     if (publish_diagnostics_)
     {
+        diagnostics_publisher_.publish(status_msg);
         publish_diagnostics_ = false;
     }
 
@@ -1109,6 +1178,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
  */
 void DynamixelInterfaceController::multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg, 
                                                     dynamixel_interface_controller::DataPort &dataport_msg, 
+                                                    dynamixel_interface_controller::ServoState &status_msg,
                                                     bool perform_write)
 {
 
@@ -1121,7 +1191,7 @@ void DynamixelInterfaceController::multiThreadedIO(portInfo &port, sensor_msgs::
     }
 
     //perform read
-    multiThreadedRead(port, read_msg, dataport_msg);
+    multiThreadedRead(port, read_msg, dataport_msg, status_msg);
 
 }
 
@@ -1466,7 +1536,8 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
  * @param read_msg the msg this ports join data is read into.
  */
 void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg,
-                                                    dynamixel_interface_controller::DataPort &dataport_msg)
+                                                     dynamixel_interface_controller::DataPort &dataport_msg, 
+                                                     dynamixel_interface_controller::ServoState &status_msg)
 {
 
     bool comm_success;
@@ -1495,6 +1566,7 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
             //ignore joints that failed to read
             if(std::find(servo_ids->begin(), servo_ids->end(), info.id) == servo_ids->end())
             {
+                ROS_INFO("FAILED TO READ DYNAMIXEL %s (id %d)!", joint_name.c_str(), info.id);
                 continue;
             } 
 
@@ -1623,9 +1695,9 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
             if( port.driver->getBulkDiagnosticInfo(servo_ids, responses) )
             {
 
-                dynamixel_interface_controller::ServoState diag_msg;
+                //dynamixel_interface_controller::ServoState diag_msg;
 
-                diag_msg.header.frame_id = port.port_name.c_str();
+                status_msg.header.frame_id = port.port_name.c_str();
 
                 //Iterate over all connected servos and add to list
                 for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
@@ -1646,22 +1718,26 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
                     std::vector<int32_t> response = responses->at(info.id);
 
                     //put effort in message
-                    diag_msg.joint_names.push_back(joint_name.c_str());
+                    status_msg.joint_names.push_back(joint_name.c_str());
 
                     //get voltage
-                    diag_msg.voltages.push_back( (double)(response[0]) / 10);
+                    status_msg.voltages.push_back( (double)(response[0]) / 10);
 
                     //get temperatures
-                    diag_msg.temperatures.push_back( (double)(response[1]));
+                    status_msg.temperatures.push_back( (double)(response[1]));
 
-                    diag_msg.error_states.push_back(response[2]);
+                    status_msg.error_states.push_back(response[2]);
+                    // if (response[2] != 0)
+                    // {
+                    //     ROS_WARN("Dynamixel Error! Joint %s (id %d) has returned with code %d", joint_name, info.id, response[2]);
+                    // }
 
-                    diag_msg.modes.push_back(info.current_mode);
+                    status_msg.modes.push_back(info.current_mode);
 
                 }
 
                 //publish diagnostic info
-                diagnostics_publisher_.publish(diag_msg);
+                //diagnostics_publisher_.publish(diag_msg);
 
             }
         }

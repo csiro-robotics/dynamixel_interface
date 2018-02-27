@@ -268,6 +268,15 @@ public:
      */    
     bool getTargetVelocity(int servo_id, int32_t* target_velocity);
 
+
+    /**
+     * Retrieves the current target_velocity from the dynamixel's ram.
+     * @param servo_id The ID of the servo to retrieve from
+     * @param target_velocity Stores the value returned
+     * @return True on comm success, false otherwise.
+     */    
+    bool getTargetTorque(int servo_id, int16_t* target_torque);
+
     /**
      * Retrieves the current position from the dynamixel's ram.
      * @param servo_id The ID of the servo to retrieve from
@@ -607,6 +616,14 @@ public:
      */
     bool setProfileVelocity(int servo_id, int32_t velocity);
 
+    /**
+     * Sets the profile velocity of the dynamixel. Profile velocity is how fast
+     * the servo should move between positions.
+     * @param servo_id The ID of the servo to write to
+     * @param torque The torque value to write
+     * @return True on comm success, false otherwise.
+     */
+    bool setTorque(int servo_id, int32_t torque);
 
     /** 
      * CAUTION: THIS FUNCTION IS PROVIDED AS IS, WRITE VALUES AND ADDRESSESARE NOT CHECKED FOR SENSIBILITY OR VALIDITIY, 

@@ -934,6 +934,53 @@ bool DynamixelInterfaceDriver::getTargetVelocity(int servo_id, int32_t* target_v
 }
 
 /**
+ * Retrieves the current target_velocity from the dynamixel's ram.
+ * @param servo_id The ID of the servo to retrieve from
+ * @param target_velocity Stores the value returned
+ * @return True on comm success, false otherwise.
+ */    
+bool DynamixelInterfaceDriver::getTargetTorque(int servo_id, int16_t* target_torque)
+{
+
+	uint8_t error;
+	int dxl_comm_result;
+	int16_t data = 0;
+
+	//Read address and size always depends on servo series
+	if (servo_protocol_ == '1')
+	{
+		dxl_comm_result = packetHandlerP1_->read2ByteTxRx(portHandler_, servo_id, DXL_MX_GOAL_TORQUE_L, 
+				(uint16_t*) &data, &error);
+		*target_torque = data;
+	}
+	else if (servo_protocol_ == '2')
+	{
+		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_X_GOAL_CURRENT, 
+				(uint16_t*) target_torque, &error);
+	}
+	else if (servo_protocol_ == 'P')
+	{
+		dxl_comm_result = packetHandlerP2_->read2ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_TORQUE, 
+				(uint16_t*) target_torque, &error);
+	}
+	else
+	{
+		return false;
+	}
+
+	// check return value
+	if (dxl_comm_result == COMM_SUCCESS)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+}
+
+/**
  * Retrieves the current position from the dynamixel's ram.
  * @param servo_id The ID of the servo to retrieve from
  * @param position Stores the value returned
@@ -2781,7 +2828,9 @@ bool DynamixelInterfaceDriver::setPIDGains(int servo_id, uint8_t operating_mode,
 	}
 	else if (servo_protocol_ == 'P')
 	{
-		return false;
+		p_val = (uint16_t) p_gain;
+		i_val = (uint16_t) i_gain;
+		d_val = (uint16_t) d_gain;
 	}
 	else
 	{
@@ -2946,7 +2995,8 @@ bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, uint16_t ga
 	}
 	else if (servo_protocol_ == 'P')
 	{
-		return false;
+		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_PRO_VELOCITY_I_GAIN,  
+				gain, &error);
 	}
 	else
 	{
@@ -2989,7 +3039,8 @@ bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, uint16_t 
 	}
 	else if (servo_protocol_ == 'P')
 	{
-		return false;
+		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_PRO_VELOCITY_P_GAIN,  
+				gain, &error);
 	}
 	else
 	{
@@ -3382,6 +3433,52 @@ bool DynamixelInterfaceDriver::setProfileVelocity(int servo_id, int32_t velocity
 	{
 		dxl_comm_result = packetHandlerP2_->write4ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_VELOCITY, 
 				velocity, &error);
+	}
+	else
+	{
+		return false;
+	}
+
+	// check return value
+	if (dxl_comm_result == COMM_SUCCESS)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+}
+
+/**
+ * Sets the profile velocity of the dynamixel. Profile velocity is how fast
+ * the servo should move between positions.
+ * @param servo_id The ID of the servo to write to
+ * @param velocity The profile velocity value to write
+ * @return True on comm success, false otherwise.
+ */
+bool DynamixelInterfaceDriver::setTorque(int servo_id, int32_t torque)
+{
+
+	uint8_t error;
+	int dxl_comm_result;
+
+	//Read address and size always depends on servo series
+	if (servo_protocol_ == '1')
+	{
+		dxl_comm_result = packetHandlerP1_->write2ByteTxRx(portHandler_, servo_id, DXL_MX_GOAL_TORQUE_L, 
+				(uint16_t) torque, &error);
+	}
+	else if (servo_protocol_ == '2')
+	{
+		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_X_GOAL_CURRENT, 
+				torque, &error);
+	}
+	else if (servo_protocol_ == 'P')
+	{
+		dxl_comm_result = packetHandlerP2_->write2ByteTxRx(portHandler_, servo_id, DXL_PRO_GOAL_TORQUE, 
+				(uint16_t) torque, &error);
 	}
 	else
 	{

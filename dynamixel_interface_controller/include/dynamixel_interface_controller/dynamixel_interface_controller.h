@@ -143,6 +143,18 @@ enum controlMode
     UNKNOWN  = -1
 };
 
+/**
+ * The various hardware status codes that can be returned by the dynamixels
+ */
+enum errorStatus
+{
+    OVERLOAD_ERROR = 0x10,
+    SHOCK_ERROR = 0x08,
+    OVERHEAT_ERROR = 0x04,
+    ENCODER_ERROR = 0x02,
+    VOLTAGE_ERROR = 0x01,
+};
+
 
 /**
  * Struct that describes each servo's place in the system including 
@@ -216,6 +228,8 @@ struct dynamixelInfo
     /** current control mode (position, velocity, torque) */
     controlMode current_mode;
 
+    /** current motor status, used for hardware error reporting */
+    uint8_t hardware_status;
 
 };
 
@@ -320,7 +334,9 @@ private:
      * @param perform_write boolean indicating whether or not to write latest joint_state to servos
      */
     void multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg, 
-                         dynamixel_interface_controller::DataPort &dataport_msg, bool perform_write);
+                         dynamixel_interface_controller::DataPort &dataport_msg, 
+                         dynamixel_interface_controller::ServoState &status_msg,
+                         bool perform_write);
 
     /**
      * Function called in each thread to perform a write on a port
@@ -336,7 +352,8 @@ private:
      * @param read_msg the msg this ports join data is read into.
      */
     void multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg,
-                           dynamixel_interface_controller::DataPort &dataport_msg);
+                           dynamixel_interface_controller::DataPort &dataport_msg, 
+                           dynamixel_interface_controller::ServoState &status_msg);
 
 
     /** Handler for the ROS Node */
