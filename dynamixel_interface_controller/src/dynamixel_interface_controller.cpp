@@ -710,7 +710,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
 
                 //check for valid motor series
                 if ( ((port.protocol == "1.0") && (info.model_number > 320)) 
-                        || ((port.protocol == "2.0") && (info.model_number > 1020))
+                        || ((port.protocol == "2.0") && (info.model_number > 2000))
                         || ((port.protocol == "PRO") && (info.model_number < 35072)) )
                 {
                     ROS_ERROR("Wrong series of dynamixel found, skipping");

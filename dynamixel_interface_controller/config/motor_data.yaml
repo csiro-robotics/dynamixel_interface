@@ -66,6 +66,13 @@
   effort_ratio: 1193
   current_ratio: 2.69
 
+- name: XM540-W270
+  model_number: 1120
+  cpr: 4096
+  gear_reduction: 4.367
+  effort_ratio: 1193
+  current_ratio: 2.69
+
 # ---- XH ---- #
 
 - name: XH430-V210
