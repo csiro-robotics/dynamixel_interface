@@ -147,7 +147,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
         doc[i]["name"] >> spec.name;
         doc[i]["model_number"] >> spec.model_number;
         doc[i]["cpr"]  >> spec.cpr;
-        doc[i]["gear_reduction"]  >> spec.gear_reduction;
+        doc[i]["gear_conversion"]  >> spec.gear_conversion;
         doc[i]["effort_ratio"] >> spec.effort_ratio;
         doc[i]["current_ratio"] >> spec.current_ratio;
 
@@ -687,7 +687,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
                 //set up the lookup tables that we'll use later in the code
                 //to look up how to operate each joint
                 info.cpr = model_number2specs_[info.model_number].cpr;
-                info.gear_reduction = model_number2specs_[info.model_number].gear_reduction;
+                info.gear_conversion = model_number2specs_[info.model_number].gear_conversion;
                 info.model_name = model_number2specs_[info.model_number].name;
                 info.effort_ratio = model_number2specs_[info.model_number].effort_ratio;
                 info.current_ratio = model_number2specs_[info.model_number].current_ratio;
@@ -962,7 +962,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
                     if (control_type_ == POSITION_CONTROL)
                     {
                         
-                        int regVal = (int) ((double) (info.joint_speed) * (60/(2.0 * M_PI)) * info.gear_reduction);
+                        int regVal = (int) ((double) (info.joint_speed) * (60/(2.0 * M_PI)) * info.gear_conversion);
                         dynamixel_ports_[i].driver->setProfileVelocity(info.id, regVal);
 
                         if (dynamixel_ports_[i].protocol == "PRO")
@@ -1326,7 +1326,7 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
             }
 
             //convert to motor encoder value
-            int vel = (int) ((rad_s_vel * (60/(2.0 * M_PI)) * info->gear_reduction));
+            int vel = (int) ((rad_s_vel * (60/(2.0 * M_PI)) * info->gear_conversion));
 
             //Velocity values serve 2 different functions, in velocity control mode their sign
             //defines direction, however in position control mode their absolute value is used
@@ -1611,7 +1611,7 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
             }
         
             //convert to rad/s
-            double rad_s_vel = ((double) raw_vel) * ((2.0 * M_PI) / 60.0) / info.gear_reduction;
+            double rad_s_vel = ((double) raw_vel) * ((2.0 * M_PI) / 60.0) / info.gear_conversion;
 
             //put velocity in message
             read_msg.velocity.push_back(rad_s_vel);
