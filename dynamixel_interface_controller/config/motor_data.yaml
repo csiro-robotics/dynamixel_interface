@@ -103,6 +103,16 @@
   effort_ratio: 1193
   current_ratio: 2.69
 
+  
+# ---- XL ---- #
+
+- name: XL430-W250
+  model_number: 1060
+  cpr: 4096
+  gear_reduction: 4.367
+  effort_ratio: 1193 #?
+  current_ratio: 2.69 #?
+
 # -------------------------- PRO SERIES ---------------------------- #
 
 
@@ -188,3 +198,13 @@
   gear_conversion: 500.0
   effort_ratio: 32767
   current_ratio: 16.113
+
+
+# ---------------------------- AX SERIES ---------------------------- #
+
+- name: AX-18A
+  model_number: 18
+  cpr: 1241 #tentative value
+  gear_conversion: 9.009 #tentative value
+  effort_ratio: #tbc
+  current_ratio: #tbc 
