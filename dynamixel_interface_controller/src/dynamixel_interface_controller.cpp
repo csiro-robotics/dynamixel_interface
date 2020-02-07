@@ -1749,6 +1749,10 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
     }
 
     read_msg.header.stamp = ros::Time::now();
+    //clear memory allocated by new
+    //vector<int>().swap(*servo_ids);
+    //std::map<int,std::vector<int32_t> >().swap(*responses);
+    
 
 }
 
