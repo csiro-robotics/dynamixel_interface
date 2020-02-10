@@ -6,7 +6,7 @@ The two yaml files in this folder allow configuration of your specific robot as 
 - name: XM430-W210			#The name of the dynamixel
   model_number: 1030		#Model no. found in "Control Table of EEPROM Area" in the Robotis e-manual
   cpr: 4096					#Resolution, found in specifications in the Robotis e-manual
-  gear_reduction: 4.367		# 1/(Profile velocity unit value) ie: 1/0.229 = 4.367
+  gear_conversion: 4.367	# 1/(Profile velocity unit value) ie: 1/0.229 = 4.367
   effort_ratio: 1193		#Max range of current limit register
   current_ratio: 2.69		#Unit of present current
 ```
@@ -16,7 +16,7 @@ The two yaml files in this folder allow configuration of your specific robot as 
 - name: XL430-W250			#The name of the dynamixel
   model_number: 1030		#Model no. found in "Control Table of EEPROM Area" in the Robotis e-manual
   cpr: 4096					#Resolution, found in specifications in the Robotis e-manual
-  gear_reduction: 4.367		# 1/(Profile velocity unit value) ie: 1/0.229 = 4.367
+  gear_conversion: 4.367	# 1/(Profile velocity unit value) ie: 1/0.229 = 4.367
   effort_ratio: 1000		#Max range of present load register
   current_ratio: 1.4		#Max current(current at max torque) divided by effort ratio. ie: 1400/1000=1.4
 ```

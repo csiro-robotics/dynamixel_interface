@@ -1,5 +1,5 @@
 <launch>
-	<node name="dynamixel_interface_node" pkg="dynamixel_interface_controller" type="dynamixel_interface_controller_node" output="screen">
+	<node name="dynamixel_interface_node" pkg="dynamixel_interface_controller" type="dynamixel_interface_controller_node" output="screen" >
 		<rosparam command="load" file="$(find dynamixel_interface_controller)/config/controller_config.yaml" />
 	</node>
 </launch>

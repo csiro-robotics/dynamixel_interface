@@ -1541,18 +1541,19 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
 {
 
     bool comm_success;
-    std::vector<int> *servo_ids = new std::vector<int>;
-    std::map<int, std::vector<int32_t> >  *responses = new std::map<int, std::vector<int32_t> >;
+    //std::vector<int> *servo_ids = new std::vector<int>;
+    std::vector<int> servo_ids; // = new std::vector<int>;
+    std::map<int, std::vector<int32_t> >  responses;// = new std::map<int, std::vector<int32_t> >;
 
     //Iterate over all connected servos and add to list
     for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
     {
-        servo_ids->push_back(iter->second.id);
+        servo_ids.push_back(iter->second.id);
     }
 
     //get state info back from all dynamixels
-    if( port.driver->getBulkStateInfo(servo_ids, responses, mx_effort_use_current_, pro_read_dataport_) 
-        && !servo_ids->empty() ) {
+    if( port.driver->getBulkStateInfo(&servo_ids, &responses, mx_effort_use_current_, pro_read_dataport_) 
+        && !servo_ids.empty() ) {
         
         //Iterate over all connected servos and add to list
         for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
@@ -1564,14 +1565,14 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
             dynamixelInfo info = iter->second;
 
             //ignore joints that failed to read
-            if(std::find(servo_ids->begin(), servo_ids->end(), info.id) == servo_ids->end())
+            if(std::find(servo_ids.begin(), servo_ids.end(), info.id) == servo_ids.end())
             {
                 ROS_INFO("FAILED TO READ DYNAMIXEL %s (id %d)!", joint_name.c_str(), info.id);
                 continue;
             } 
 
             //response from dynamixel
-            std::vector<int32_t> response = responses->at(info.id);
+            std::vector<int32_t> response = responses.at(info.id);
             
             //put joint name in message
             read_msg.name.push_back(joint_name);
@@ -1688,11 +1689,11 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
             }
         }
 
-        responses->clear();
+        responses.clear();
 
         if (publish_diagnostics_)
         {
-            if( port.driver->getBulkDiagnosticInfo(servo_ids, responses) )
+            if( port.driver->getBulkDiagnosticInfo(&servo_ids, &responses) )
             {
 
                 //dynamixel_interface_controller::ServoState diag_msg;
@@ -1709,13 +1710,13 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
                     dynamixelInfo info = iter->second;
 
                     //ignore joints that failed to read
-                    if(std::find(servo_ids->begin(), servo_ids->end(), info.id) == servo_ids->end())
+                    if(std::find(servo_ids.begin(), servo_ids.end(), info.id) == servo_ids.end())
                     {
                         continue;
                     } 
 
                     //response from dynamixel
-                    std::vector<int32_t> response = responses->at(info.id);
+                    std::vector<int32_t> response = responses.at(info.id);
 
                     //put effort in message
                     status_msg.joint_names.push_back(joint_name.c_str());
@@ -1748,7 +1749,7 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
         ;//ROS_ERROR("READ FAILURE, UNABLE TO GET JOINT STATES ON PORT %s", port.device.c_str());
     }
 
-    read_msg.header.stamp = ros::Time::now();
+    read_msg.header.stamp = ros::Time::now();    
 
 }
 
