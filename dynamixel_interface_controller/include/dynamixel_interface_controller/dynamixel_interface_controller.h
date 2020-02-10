@@ -120,7 +120,7 @@ struct dynamixelSpec
     int cpr;
 
     /** Gear reduction ratio */
-    double gear_reduction;
+    double gear_conversion;
 
     /** Torque ratio */
     double effort_ratio;
@@ -214,7 +214,7 @@ struct dynamixelInfo
     int cpr;
 
     /** Motor rad/s to register value ratio */ 
-    double gear_reduction; 
+    double gear_conversion; 
 
     /** Motor torque reading to register value ratio */ 
     double effort_ratio; 

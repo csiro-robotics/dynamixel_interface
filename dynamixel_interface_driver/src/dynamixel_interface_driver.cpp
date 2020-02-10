@@ -2822,9 +2822,9 @@ bool DynamixelInterfaceDriver::setPIDGains(int servo_id, uint8_t operating_mode,
 	}
 	else if (servo_protocol_ == '2')
 	{
-		p_val = (uint16_t) (p_gain * 128.0);
-		i_val = (uint16_t) (i_gain * 65536.0);
-		d_val = (uint16_t) (d_gain * 16.0);
+		p_val = (uint16_t) (p_gain * 128.0);		//possible 0-127
+		i_val = (uint16_t) (i_gain * 65536.0);		//by the same logic, 0-0.25
+		d_val = (uint16_t) (d_gain * 16.0);			//0-1024 
 	}
 	else if (servo_protocol_ == 'P')
 	{
