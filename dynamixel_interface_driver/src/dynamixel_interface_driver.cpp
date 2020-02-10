@@ -1295,8 +1295,8 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
 	std::vector<int32_t> response;
 	std::vector<uint8_t> data;
 	bool comm_success = false;
-	std::map<int, std::vector<uint8_t> > *raw; //= new std::map<int, std::vector<uint8_t> >;
-	std::map<int, std::vector<uint8_t> > *raw2; //= new std::map<int, std::vector<uint8_t> >;
+	std::map<int, std::vector<uint8_t> > *raw; 
+	std::map<int, std::vector<uint8_t> > *raw2;
 
 	if (servo_ids->size() == 0)
 	{
@@ -1699,7 +1699,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::vector<int> *servo_ids
 	std::vector<uint8_t> data;
 	uint8_t error;
 	bool bulk_read_success = false;
-	std::map<int, std::vector<uint8_t> > *raw; //= new std::map<int, std::vector<uint8_t> >;
+	std::map<int, std::vector<uint8_t> > *raw; 
 
 	//get original id list
 	std::vector<int> read_ids = *servo_ids;
