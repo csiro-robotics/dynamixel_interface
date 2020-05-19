@@ -73,6 +73,13 @@
   effort_ratio: 1193
   current_ratio: 2.69
 
+- name: XM540-W150
+  model_number: 1130
+  cpr: 4096
+  gear_conversion: 4.367
+  effort_ratio: 1193
+  current_ratio: 2.69
+
 # ---- XH ---- #
 
 - name: XH430-V210
