@@ -1288,7 +1288,7 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint32_t address, uin
  * @return True on comm success, false otherwise
  */
 bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std::map<int,
-    std::vector<int32_t> > *responses, bool mx_read_current, bool pro_read_dataport)
+    std::vector<int32_t> > *responses, bool mx_read_current, bool read_dataport)
 {
 
   std::vector<int32_t> response;
@@ -1449,8 +1449,14 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
   else if (servo_protocol_ == '2')
   {
 
+    int read_len = 10;
+    if (read_dataport == true)
+    {
+      read_len = 28;
+    }
+
     //read data from dynamixels
-    if(use_group_read_ && syncRead(servo_ids, DXL_X_PRESENT_CURRENT, 10, raw) )
+    if(use_group_read_ && syncRead(servo_ids, DXL_X_PRESENT_CURRENT, read_len, raw) )
     {
 
       //DECODE RAW DATA
@@ -1472,6 +1478,13 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
         int16_t temp = MAKEWORD(data[0], data[1]);
         value = temp;
         response.push_back(value);
+
+        //get external dataport value (data[26] - data[27])
+        if (read_dataport)
+        {
+          value = MAKEWORD(data[26], data[27]);
+          response.push_back(value);
+        }
 
         //place responses into return data
         responses->insert(std::pair<int, std::vector<int32_t> >(servo_ids->at(i), response));
@@ -1508,7 +1521,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
       for (int i = 0; i < read_ids.size(); i++)
       {
         //if individual read fails, ignore
-        if(!readRegisters(read_ids.at(i), DXL_X_PRESENT_CURRENT, 10, &data))
+        if(!readRegisters(read_ids.at(i), DXL_X_PRESENT_CURRENT, read_len, &data))
         {
           continue;
         }
@@ -1527,6 +1540,12 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
           int16_t temp = MAKEWORD(data[0], data[1]);
           value = temp;
           response.push_back(value);
+
+          if (read_dataport)
+          {
+            value = MAKEWORD(data[26], data[27]);
+            response.push_back(value);
+          }
 
           //place responses into return data
           responses->insert(std::pair<int, std::vector<int32_t> >(read_ids.at(i), response));
@@ -1547,7 +1566,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
   else if (servo_protocol_ == 'P')
   {
     int read_len = 12;
-    if (pro_read_dataport == true)
+    if (read_dataport == true)
     {
       read_len = 17;
     }
@@ -1577,7 +1596,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
         response.push_back(value);
 
         //get external dataport value (data[13] - data[14])
-        if (pro_read_dataport)
+        if (read_dataport)
         {
           value = MAKEWORD(data[15], data[16]);
           response.push_back(value);
@@ -1643,7 +1662,7 @@ bool DynamixelInterfaceDriver::getBulkStateInfo(std::vector<int> *servo_ids, std
           response.push_back(value);
 
           //get external dataport value
-          if (pro_read_dataport)
+          if (read_dataport)
           {
             value = MAKEWORD(data[15], data[16]);
             response.push_back(value);

@@ -371,7 +371,7 @@ private:
   std::chrono::steady_clock::time_point last_diagnostics_time_;
 
   /** Rate at which the pro external dataport is read */
-  double pro_dataport_read_rate_;
+  double dataport_read_rate_;
 
   /** Indicates to callbacks that the controller is shutting down */
   volatile bool shutting_down_;
@@ -401,7 +401,7 @@ private:
   bool publish_diagnostics_;
 
   /** Indicates if we should read the external dataport on the pro series dynamixel */
-  bool pro_read_dataport_;
+  bool read_dataport_;
   std::chrono::steady_clock::time_point last_dataport_time_;
 
   /** global override parameters */

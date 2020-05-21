@@ -165,7 +165,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   nh_->param<bool>("mx_effort_use_current", mx_effort_use_current_, false);
   nh_->param<bool>("ignore_input_velocity", ignore_input_velocity_, false);
 
-  nh_->param<double>("pro_dataport_rate", pro_dataport_read_rate_, 0.0);
+  nh_->param<double>("dataport_rate", dataport_read_rate_, 0.0);
   nh_->param<double>("diagnostics_rate", diagnostics_rate_, 0.0);
 
   nh_->param<std::string>("control_mode", mode, "Position");
@@ -188,13 +188,13 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     diagnostics_rate_ = 0;
   }
 
-  if (pro_dataport_read_rate_ < 0)
+  if (dataport_read_rate_ < 0)
   {
-    pro_dataport_read_rate_ = 0;
+    dataport_read_rate_ = 0;
   }
-  else if (pro_dataport_read_rate_ > 50)
+  else if (dataport_read_rate_ > 50)
   {
-    pro_dataport_read_rate_ = 50;
+    dataport_read_rate_ = 50;
   }
 
   // Set control mode for this run
@@ -249,7 +249,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     diagnostics_publisher_ = nh_->advertise<dynamixel_interface_controller::ServoState>("/servo_diagnostics", 1);
   }
 
-  if (pro_dataport_read_rate_ > 0)
+  if (dataport_read_rate_ > 0)
   {
     dataport_publisher_  = nh_->advertise<dynamixel_interface_controller::DataPort>("/external_dataport", 1);
   }
@@ -1057,7 +1057,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     read_msg.effort.insert(read_msg.effort.end(), reads[i].effort.begin(), reads[i].effort.end());
 
     // get dataport read info if available
-    if (pro_read_dataport_)
+    if (read_dataport_)
     {
       if (dataport_reads[i].name.size() == 0)
       {
@@ -1120,10 +1120,10 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
   }
 
   //publish external dataport message
-  if ((pro_read_dataport_) && (dataport_msg.name.size() > 0))
+  if ((read_dataport_) && (dataport_msg.name.size() > 0))
   {
     dataport_publisher_.publish(dataport_msg);
-    pro_read_dataport_ = false;
+    read_dataport_ = false;
   }
 
   if (publish_diagnostics_)
@@ -1137,9 +1137,9 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
 
   //Control loop rate of dataport reads
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_dataport_time_);
-  if (delta.count() >= (1-(0.5*pro_dataport_read_rate_/publish_rate_)) / (pro_dataport_read_rate_))
+  if (delta.count() >= (1-(0.5*dataport_read_rate_/publish_rate_)) / (dataport_read_rate_))
   {
-    pro_read_dataport_ = true;
+    read_dataport_ = true;
     last_dataport_time_ = now;
   }
 
@@ -1519,7 +1519,7 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
   }
 
   //get state info back from all dynamixels
-  if( port.driver->getBulkStateInfo(&servo_ids, &responses, mx_effort_use_current_, pro_read_dataport_)
+  if( port.driver->getBulkStateInfo(&servo_ids, &responses, mx_effort_use_current_, read_dataport_)
       && !servo_ids.empty() )
   {
 
@@ -1644,13 +1644,14 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
       //put effort in message
       read_msg.effort.push_back(torque);
 
-      if ((port.protocol == "PRO") && (pro_read_dataport_))
+      if ((read_dataport_) && ((port.protocol == "PRO") || (port.protocol == "2.0")))
       {
         //put joint name in message
         dataport_msg.name.push_back(joint_name);
 
         //publish dataport value
         dataport_msg.value.push_back(response[3]);
+
       }
     }
 
