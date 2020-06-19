@@ -169,7 +169,6 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   nh_->param<double>("diagnostics_rate", diagnostics_rate_, 0.0);
 
   nh_->param<std::string>("control_mode", mode, "Position");
-  nh_->param<bool>("dynamic_mode_switching", dynamic_mode_switching_, false);
 
   nh_->param<double>("global_joint_speed", global_joint_speed_, 5.0);
   nh_->param<double>("global_torque_limit", global_torque_limit_, 1.0);
@@ -1206,8 +1205,7 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
   {
     has_vel = true;
   }
-  if ((joint_commands.effort.size() == joint_commands.name.size()) && ((control_type_ == TORQUE_CONTROL) ||
-      ((control_type_ == POSITION_CONTROL) && dynamic_mode_switching_)) )
+  if ((joint_commands.effort.size() == joint_commands.name.size()) && (control_type_ == TORQUE_CONTROL))
   {
     has_torque = true;
   }
@@ -1219,10 +1217,7 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
   }
 
   //vectors to store the calculated values
-  vector<int> ids, velocities, positions, torques, modes;
-
-  //vector to store params for mode switch (if enabled)
-  vector< vector<int> > mode_switch_data;
+  vector<int> ids, velocities, positions, torques;
 
   //loop and calculate the values for each specified joint
   for (int i = 0; i < joint_commands.name.size(); i++)
@@ -1280,17 +1275,6 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
 
       //push motor encoder value onto list
       positions.push_back(pos);
-
-      //if in torque control and we want to be in position control
-      if ((!has_torque) && (info->current_mode == TORQUE_CONTROL))
-      {
-        //add mode switch data to vector
-        vector<int> temp;
-        temp.push_back(info->id);
-        temp.push_back(0);
-        mode_switch_data.push_back(temp);
-        info->current_mode = POSITION_CONTROL;
-      }
     }
 
     //calculate the velocity register value for the motor
@@ -1384,33 +1368,6 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
       }
 
       torques.push_back(torque);
-
-      //update control mode for motor if relevant
-      if (dynamic_mode_switching_)
-      {
-
-        //if in position control and we want to be in torque control
-        if ((input_torque != 0) && (info->current_mode == POSITION_CONTROL))
-        {
-          //add mode switch data to vector
-          vector<int> temp;
-          temp.push_back(info->id);
-          temp.push_back(1);
-          mode_switch_data.push_back(temp);
-          info->current_mode = TORQUE_CONTROL;
-        }
-
-        //if in torque control and we want to be in position control
-        else if ((input_torque == 0) && (info->current_mode == TORQUE_CONTROL))
-        {
-          //add mode switch data to vector
-          vector<int> temp;
-          temp.push_back(info->id);
-          temp.push_back(0);
-          mode_switch_data.push_back(temp);
-          info->current_mode = POSITION_CONTROL;
-        }
-      }
     }
   }
 
@@ -1419,25 +1376,6 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
 
   if ( control_type_ == POSITION_CONTROL )
   {
-    if (has_torque && dynamic_mode_switching_)
-    {
-      //set the torque values for each motor
-      vector< vector<int> > data;
-      for (int i = 0; i < ids.size(); i++)
-      {
-        vector<int> temp;
-        temp.push_back(ids[i]);
-        temp.push_back(torques[i]);
-        data.push_back(temp);
-      }
-      port.driver->setMultiTorque(data);
-    }
-
-    //update torque control registers for specific motors
-    if (dynamic_mode_switching_)
-    {
-      port.driver->setMultiTorqueControl(mode_switch_data);
-    }
 
     //set the profile velocities if they have been defined
     if ((has_vel) && (!ignore_input_velocity_))

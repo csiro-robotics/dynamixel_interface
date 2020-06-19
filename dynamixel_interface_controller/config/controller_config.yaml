@@ -13,9 +13,6 @@ publish_rate: 100                   # desired rate for joint state updates. actu
 
 control_mode: Position              # control mode, either 'Position', 'Velocity', or 'Torque'
 
-dynamic_mode_switching: false        # enables dynamixe switching between torque and position control when in position
-                                    # control mode (CAUTION: EXPERIMENTAL)
-
 disable_torque_on_shutdown: true    # with this enabled the motors will switch off when the controller closes
 
 echo_joint_commands: true           # debug flag to echo write commands sent to the controller, useful for measuring

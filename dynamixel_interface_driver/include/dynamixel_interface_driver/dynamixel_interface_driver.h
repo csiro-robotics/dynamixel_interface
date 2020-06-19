@@ -438,20 +438,6 @@ public:
    */
   bool setMultiTorque(std::vector<std::vector<int> > value_pairs);
 
-  /**
-   * Set many dynamixels with new torque enabled values in one instruction. @see syncWrite.
-   * @param value_pairs  A vector of tuples, each tuple containing a dynamixel ID and a torque enabled value (1 or 0).
-   * @return True on comm success, false otherwise.
-   */
-  bool setMultiTorqueEnabled(std::vector<std::vector<int> > value_pairs);
-
-  /**
-   * Set many dynamixels with new torque control enable values in one instruction. @see syncWrite.
-   * @param value_pairs  A vector of tuples, each tuple is a value pair containing a dynamixel ID and an enable value
-   * @return True on comm success, false otherwise.
-   */
-  bool setMultiTorqueControl(std::vector<std::vector<int> > value_pairs);
-
 protected:
 
   /**

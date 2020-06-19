@@ -2538,34 +2538,6 @@ bool DynamixelInterfaceDriver::setMultiProfileVelocity(std::vector<std::vector<i
 }
 
 /**
- * Set many dynamixels with new torque enabled values in one instruction. @see syncWrite.
- * @param value_pairs  A vector of tuples, each tuple containing a dynamixel ID and a torque enabled value (1 or 0).
- * @return True on comm success, false otherwise.
- */
-bool DynamixelInterfaceDriver::setMultiTorqueEnabled(std::vector<std::vector<int> > value_pairs)
-{
-
-  if (servo_protocol_ == '1')
-  {
-    return syncWrite(value_pairs, DXL_MX_TORQUE_ENABLE, 1, 1.0);
-  }
-  else if (servo_protocol_ == '2')
-  {
-    return syncWrite(value_pairs, DXL_X_TORQUE_ENABLE, 1, 2.0);
-  }
-  else if (servo_protocol_ == 'P')
-  {
-    return syncWrite(value_pairs, DXL_PRO_TORQUE_ENABLE, 1, 2.0);
-  }
-  else
-  {
-    return false;
-  }
-
-  return false;
-}
-
-/**
  * Set many dynamixels with new torque values in one instruction. @see syncWrite.
  * @param value_pairs  A vector of tuples, each tuple is a value pair containing a dynamixel ID and a torque value.
  * @return True on comm success, false otherwise.
@@ -2584,27 +2556,6 @@ bool DynamixelInterfaceDriver::setMultiTorque(std::vector<std::vector<int> > val
   else if (servo_protocol_ == 'P')
   {
     return syncWrite(value_pairs, DXL_PRO_GOAL_TORQUE, 2, 2.0);
-  }
-  else
-  {
-    return false;
-  }
-
-  return false;
-}
-
-
-/**
- * Set many dynamixels with new torque control enable values in one instruction. @see syncWrite.
- * @param value_pairs  A vector of tuples, each tuple is a value pair containing a dynamixel ID and an enable value
- * @return True on comm success, false otherwise.
- */
-bool DynamixelInterfaceDriver::setMultiTorqueControl(std::vector<std::vector<int> > value_pairs)
-{
-
-  if (servo_protocol_ == '1')
-  {
-    return syncWrite(value_pairs, DXL_MX_TORQUE_CONTROL_ENABLE, 1, 1.0);
   }
   else
   {

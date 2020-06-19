@@ -379,9 +379,6 @@ private:
   /** Indicates if the motors should be turned off when the controller stops */
   bool stop_motors_on_shutdown_;
 
-  /** Indicates whether or not we can switch modes in position control */
-  bool dynamic_mode_switching_;
-
   /** Indicates if we convert raw motor load readings to/from torque for send/receive */
   bool use_torque_as_effort_;
 
