@@ -8,13 +8,15 @@ project(dynamixel_interface_driver)
 find_package(catkin REQUIRED COMPONENTS
   dynamixel_sdk
   roscpp
+  roslib
 )
 
-#######################################
-## Declare ROS messages and services ##
-#######################################
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(yaml-cpp REQUIRED yaml-cpp)
 
-
+if(NOT ${yaml-cpp_VERSION} VERSION_LESS "0.5")
+add_definitions(-DHAVE_NEW_YAMLCPP)
+endif(NOT ${yaml-cpp_VERSION} VERSION_LESS "0.5")
 
 ###################################
 ## catkin specific configuration ##
@@ -39,19 +41,24 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 
-include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${yaml-cpp_INCLUDE_DIRS}
+)
 
 ## Declare a cpp library
 
- add_library(dynamixel_interface_driver
-   src/dynamixel_interface_driver.cpp
+add_library(dynamixel_interface_driver
+  src/dynamixel_interface_driver.cpp
 )
 
 ## Specify libraries to link a library or executable target against
-
- target_link_libraries(dynamixel_interface_driver
-   ${catkin_LIBRARIES}
- )
+target_link_libraries(dynamixel_interface_driver
+  yaml-cpp
+	${catkin_LIBRARIES}
+  ${yaml-cpp_LIBRARIES}
+)
 
 #############
 ## Install ##
@@ -60,9 +67,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 # all install targets should use catkin DESTINATION variables
 # See http://ros.org/doc/groovy/api/catkin/html/adv_user_guide/variables.html
 
-
 ## Mark executables and/or libraries for installation
-
 install(TARGETS dynamixel_interface_driver
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -70,14 +75,9 @@ install(TARGETS dynamixel_interface_driver
 )
 
 ## Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN ".svn" EXCLUDE
+)
 
- install(DIRECTORY include/${PROJECT_NAME}/
-   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-   FILES_MATCHING PATTERN "*.h"
-   PATTERN ".svn" EXCLUDE
- )
-
-
-#############
-## Testing ##
-#############
