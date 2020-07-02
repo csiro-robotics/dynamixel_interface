@@ -156,6 +156,19 @@ public:
   /// @return True if a dynamixel responds, false otherwise.
   bool ping(int servo_id);
 
+  /// Get pointer to model spec data for given model number
+  inline const DynamixelSpec* getModelSpec(uint16_t model_number)
+  {
+    if (model_specs_.find(model_number) == model_specs_.end())
+    {
+      return &model_specs_.at(model_number);
+    }
+    else
+    {
+      return NULL;
+    }
+  }
+
   // ************************************ GETTERS ***************************************** //
 
   /// Retrieves the model number from the dynamixel's eeprom
@@ -412,7 +425,7 @@ private:
 
   uint8_t single_read_fallback_counter_; /// indicates group comm failure fallback interval
 
-  std::unordered_map<uint16_t, DynamixelSpec> model_specs_; /// map of model numbers to motor specifications
+  std::unordered_map<uint16_t, const DynamixelSpec> model_specs_; /// map of model numbers to motor specifications
 
   std::unordered_map<int, std::vector<uint8_t>> raw_read_map_; /// map to store raw reads into
 };

@@ -124,45 +124,14 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   shutting_down_ = false;
   nh_ = new ros::NodeHandle("~");
 
-  //load the file containing model info, we're not using the param server here
-  string path = ros::package::getPath("dynamixel_interface_controller");
-  path += "/config/motor_data.yaml";
-
-  YAML::Node doc;
-
-  #ifdef HAVE_NEW_YAMLCPP
-    doc = YAML::LoadFile(path);
-  #else
-    ifstream fin(path.c_str());
-    YAML::Parser parser(fin);
-    parser.GetNextDocument(doc);
-  #endif
-
-  //read in the dynamixel model information from the motor data file
-  for (int i = 0; i < doc.size(); i++)
-  {
-    dynamixelSpec spec;
-
-    // Load the basic specs of this motor type
-    doc[i]["name"] >> spec.name;
-    doc[i]["model_number"] >> spec.model_number;
-    doc[i]["cpr"]  >> spec.cpr;
-    doc[i]["gear_conversion"]  >> spec.gear_conversion;
-    doc[i]["effort_ratio"] >> spec.effort_ratio;
-    doc[i]["current_ratio"] >> spec.current_ratio;
-
-    model_number2specs_[spec.model_number] = spec;
-  }
-
   //Stores config variables only used in init function
   std::string mode;
 
   //load all the info from the param server, with defaults
   nh_->param<double>("publish_rate", publish_rate_, 50.0);
   nh_->param<bool>("disable_torque_on_shutdown", stop_motors_on_shutdown_, false);
-  nh_->param<bool>("echo_joint_commands", echo_joint_commands_, false);
-  nh_->param<bool>("effort_use_raw", use_torque_as_effort_, false);
-  nh_->param<bool>("mx_effort_use_current", mx_effort_use_current_, false);
+
+
   nh_->param<bool>("ignore_input_velocity", ignore_input_velocity_, false);
 
   nh_->param<double>("dataport_rate", dataport_read_rate_, 0.0);
@@ -172,9 +141,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
   nh_->param<double>("global_joint_speed", global_joint_speed_, 5.0);
   nh_->param<double>("global_torque_limit", global_torque_limit_, 1.0);
-  nh_->param<double>("global_p_gain", global_p_gain_, -1.0);
-  nh_->param<double>("global_i_gain", global_i_gain_, -1.0);
-  nh_->param<double>("global_d_gain", global_d_gain_, -1.0);
+
 
   //clamp read rates to sensible values
   if (publish_rate_ < 0)
@@ -199,15 +166,16 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   // Set control mode for this run
   if (!strncmp(mode.c_str(), "Position", 8))
   {
-    control_type_ = POSITION_CONTROL;
+    control_type_ = dynamixel_interface_driver::DXL_POSITION_CONTROL;
   }
   else if (!strncmp(mode.c_str(), "Velocity", 8))
   {
-    control_type_ = VELOCITY_CONTROL;
+    control_type_ = dynamixel_interface_driver::DXL_VELOCITY_CONTROL;
   }
-  else if (!strncmp(mode.c_str(), "Torque", 8))
+  else
   {
-    control_type_ = TORQUE_CONTROL;
+    ROS_ERROR("Control Mode Not Supported!");
+    ROS_BREAK();
   }
 
   // Initialise write state variables
@@ -235,12 +203,6 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   {
     ROS_ERROR("No port details loaded to param server");
     ROS_BREAK();
-  }
-
-  //advertise the debug topic
-  if (echo_joint_commands_)
-  {
-    debug_publisher_ = nh_->advertise<sensor_msgs::JointState>("/writeDebug", 1);
   }
 
   if (diagnostics_rate_ > 0)
@@ -285,11 +247,10 @@ DynamixelInterfaceController::~DynamixelInterfaceController()
     for (int i = 0; i < dynamixel_ports_.size(); i++)
     {
       //Turn off all the motors
-      for (map<string, dynamixelInfo>::iterator iter = dynamixel_ports_[i].joints.begin();
-          iter != dynamixel_ports_[i].joints.end(); iter++)
+      for (auto& it : dynamixel_ports_[i].joints)
       {
-        dynamixel_ports_[i].driver->setTorqueEnabled(iter->second.id, 0);
-        printf("Torque disabled on %s joint\n", iter->first.c_str());
+        dynamixel_ports_[i].driver->setTorqueEnabled(it.second.id, it.second.model_spec->type, 0);
+        printf("Torque disabled on %s joint\n", it.first.c_str());
       }
     }
   }
@@ -324,7 +285,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
   for (int i = 0; i < ports.size(); i++)
   {
 
-    struct portInfo port;
+    PortInfo port;
 
     bool use_group_read;
     bool use_group_write;
@@ -375,14 +336,14 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     }
 
     //get protocol
-    if (!ports[i]["protocol"].getType() == XmlRpc::XmlRpcValue::TypeString)
+    if (!ports[i]["use_legacy_protocol"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
     {
-      ROS_ERROR("Invalid/Missing protocol type for port %d", i);
+      ROS_ERROR("Invalid/Missing use_legacy_protocol option for port %d", i);
       ROS_BREAK();
     }
     else
     {
-      port.protocol = static_cast<std::string>(ports[i]["protocol"]);
+      port.use_legacy_protocol = static_cast<bool>(ports[i]["use_legacy_protocol"]);
     }
 
     //get group read enabled
@@ -414,7 +375,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     try
     {
       port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate,
-          port.protocol, use_group_read, use_group_write);
+          port.use_legacy_protocol, use_group_read, use_group_write);
     }
     catch (int n)
     {
@@ -460,7 +421,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
  * Parses the information in the yaml file for each servo
  * @param servos: the xml structure to be parsed
  */
-void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, XmlRpc::XmlRpcValue servos)
+void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos)
 {
 
   //number of servos defined
@@ -470,7 +431,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
   for (int i = 0; i < servos.size(); i++)
   {
     //store the loaded information in this struct
-    dynamixelInfo info;
+    DynamixelInfo info;
 
     //check if info exists for specified joint
     if (!servos[i].getType() == XmlRpc::XmlRpcValue::TypeStruct)
@@ -480,7 +441,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
     }
 
     //get joint id
-    if ( (!servos[i].hasMember("id")) || (!servos[i]["id"].getType() == XmlRpc::XmlRpcValue::TypeInt) )
+    if ((!servos[i].hasMember("id")) || (!servos[i]["id"].getType() == XmlRpc::XmlRpcValue::TypeInt))
     {
       ROS_ERROR("Invalid/Missing id for servo index %d", i);
       ROS_BREAK();
@@ -492,8 +453,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
     }
 
     //get joint name
-    if ( (!servos[i].hasMember("joint_name")) ||
-        (!servos[i]["joint_name"].getType() == XmlRpc::XmlRpcValue::TypeString) )
+    if ((!servos[i].hasMember("joint_name")) || (!servos[i]["joint_name"].getType() == XmlRpc::XmlRpcValue::TypeString))
     {
       ROS_ERROR("Invalid/Missing joint name for servo index %d, id: %d", i, info.id);
       ROS_BREAK();
@@ -505,7 +465,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
 
       //check this port and all previous ports for duplicate joint names (not allowed as joints are
       //referred to by name)
-      if ( port.joints.find(info.joint_name) !=  port.joints.end() )
+      if (port.joints.find(info.joint_name) !=  port.joints.end() )
       {
         ROS_ERROR("Cannot have multiple joints with the same name [%s]", info.joint_name.c_str());
         ROS_BREAK();
@@ -514,7 +474,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
       {
         for (int j = 0; j < dynamixel_ports_.size(); j++)
         {
-          if ( dynamixel_ports_[j].joints.find(info.joint_name) !=  dynamixel_ports_[j].joints.end() )
+          if (dynamixel_ports_[j].joints.find(info.joint_name) !=  dynamixel_ports_[j].joints.end())
           {
             ROS_ERROR("Cannot have multiple joints with the same name [%s]", info.joint_name.c_str());
             ROS_BREAK();
@@ -524,7 +484,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
     }
 
     //get joint initial position
-    if ( (!servos[i].hasMember("init")) || (!servos[i]["init"].getType() == XmlRpc::XmlRpcValue::TypeInt) )
+    if ((!servos[i].hasMember("init")) || (!servos[i]["init"].getType() == XmlRpc::XmlRpcValue::TypeInt))
     {
       ROS_WARN("Invalid/Missing initial position for servo index %d, id: %d", i, info.id);
       ROS_BREAK();
@@ -536,7 +496,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
     }
 
     //get joint default min position
-    if ( (!servos[i].hasMember("min")) || (!servos[i]["min"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+    if ((!servos[i].hasMember("min")) || (!servos[i]["min"].getType() == XmlRpc::XmlRpcValue::TypeDouble))
     {
       ROS_WARN("Invalid/Missing min position for servo index %d, id: %d", i, info.id);
       ROS_BREAK();
@@ -547,7 +507,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
     }
 
     //get joint default max position
-    if ( (!servos[i].hasMember("max")) || (servos[i]["max"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+    if ((!servos[i].hasMember("max")) || (servos[i]["max"].getType() == XmlRpc::XmlRpcValue::TypeDouble))
     {
       ROS_WARN("Invalid/Missing max position for servo index %d, id: %d", i, info.id);
       ROS_BREAK();
@@ -558,8 +518,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
     }
 
     //get joint default joint speed (or set to global if none specified)
-    if ( (!servos[i].hasMember("joint_speed")) ||
-        (!servos[i]["joint_speed"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+    if ((!servos[i].hasMember("joint_speed")) || (!servos[i]["joint_speed"].getType() == XmlRpc::XmlRpcValue::TypeDouble))
     {
       info.joint_speed = global_joint_speed_;
     }
@@ -574,8 +533,7 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
 
 
     //get joint torque limit (or set to global if none specified)
-    if ( (!servos[i].hasMember("torque_limit")) ||
-        (!servos[i]["torque_limit"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
+    if ((!servos[i].hasMember("torque_limit")) || (!servos[i]["torque_limit"].getType() == XmlRpc::XmlRpcValue::TypeDouble))
     {
       info.torque_limit = global_torque_limit_;
     }
@@ -585,51 +543,6 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
       if ((info.torque_limit > 1.0) || (info.torque_limit < 0.0))
       {
         info.torque_limit = global_torque_limit_;
-      }
-    }
-
-    //get joint p_gain (or set to global if none specified)
-    if ( (!servos[i].hasMember("p_gain")) ||
-        (!servos[i]["p_gain"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-    {
-      info.p_gain = global_p_gain_;
-    }
-    else
-    {
-      info.p_gain = static_cast<double>(servos[i]["p_gain"]);
-      if (info.p_gain < 0.0)
-      {
-        info.p_gain = global_p_gain_;
-      }
-    }
-
-    //get joint i_gain (or set to global if none specified)
-    if ( (!servos[i].hasMember("i_gain")) ||
-        (!servos[i]["i_gain"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-    {
-        info.i_gain = global_i_gain_;
-    }
-    else
-    {
-      info.i_gain = static_cast<double>(servos[i]["i_gain"]);
-      if (info.i_gain < 0.0)
-      {
-        info.i_gain = global_i_gain_;
-      }
-    }
-
-    //get joint d_gain (or set to global if none specified)
-    if ( (!servos[i].hasMember("d_gain")) ||
-        (!servos[i]["d_gain"].getType() == XmlRpc::XmlRpcValue::TypeDouble) )
-    {
-      info.d_gain = global_d_gain_;
-    }
-    else
-    {
-      info.d_gain = static_cast<double>(servos[i]["d_gain"]);
-      if (info.d_gain < 0.0)
-      {
-        info.d_gain = global_d_gain_;
       }
     }
 
@@ -663,120 +576,66 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
     if (ping_success)
     {
       bool success = true;
-      info.model_number = 0;
+      uint16_t model_number = 0;
       bool t_e;
-      success = port.driver->getModelNumber(info.id, &info.model_number);
+      success = port.driver->getModelNumber(info.id, &model_number);
 
       //If valid motor, setup in operating mode
-      if ((success) || (info.model_number))
+      if ((success) && (model_number))
       {
-
-        if (model_number2specs_.find(info.model_number) == model_number2specs_.end())
+        info.model_spec = port.driver->getModelSpec(model_number);
+        if (info.model_spec == NULL)
         {
           ROS_ERROR("Failed to load model information for dynamixel id %d", info.id);
-          ROS_ERROR("Model Number: %d", info.model_number);
+          ROS_ERROR("Model Number: %d", model_number);
           ROS_ERROR("Info is not in database");
           ROS_BREAK();
         }
 
-        //set up the lookup tables that we'll use later in the code
-        //to look up how to operate each joint
-        info.cpr = model_number2specs_[info.model_number].cpr;
-        info.gear_conversion = model_number2specs_[info.model_number].gear_conversion;
-        info.model_name = model_number2specs_[info.model_number].name;
-        info.effort_ratio = model_number2specs_[info.model_number].effort_ratio;
-        info.current_ratio = model_number2specs_[info.model_number].current_ratio;
         info.torque_enabled = false;
 
         //Display joint info
-        ROS_INFO("Joint Name: %s, ID: %d, Model: %s", info.joint_name.c_str(), info.id,
-                info.model_name.c_str());
+        ROS_INFO("Joint Name: %s, ID: %d, Model: %s", info.joint_name.c_str(), info.id, info.model_spec->name.c_str());
 
         //maintain torque state in motor
-        port.driver->getTorqueEnabled(info.id, &t_e);
-        port.driver->setTorqueEnabled(info.id, 0);
-
-        //check support for operating mode
-        if ((control_type_ == TORQUE_CONTROL) && ((info.model_number == 29) || (info.model_number == 30)))
-        {
-          ROS_ERROR("Torque Control mode not available with MX-28, skipping");
-          continue;
-        }
-
-        //check for valid motor series
-        if ( ((port.protocol == "1.0") && (info.model_number > 320))
-            || ((port.protocol == "2.0") && (info.model_number > 2000))
-            || ((port.protocol == "PRO") && (info.model_number < 35072)) )
-        {
-          ROS_ERROR("Wrong series of dynamixel found, skipping");
-          continue;
-        }
+        port.driver->getTorqueEnabled(info.id, info.model_spec->type, &t_e);
+        port.driver->setTorqueEnabled(info.id, info.model_spec->type, 0);
 
         //set operating mode for the motor
-        if ( !port.driver->setOperatingMode(info.id, control_type_) )
+        if (!port.driver->setOperatingMode(info.id, info.model_spec->type, control_type_))
         {
-          ROS_WARN("Failed to set operating mode for %s motor (id %d)", info.joint_name.c_str(),
-              info.id);
+          ROS_WARN("Failed to set operating mode for %s motor (id %d)", info.joint_name.c_str(), info.id);
+          ROS_BREAK();
         }
 
         //set torque limit for the motor
-        //ROS_INFO("%f %f %d", info.torque_limit, info.effort_ratio,
-        //    (int) (info.torque_limit * info.effort_ratio));
-        //ROS_INFO("Setting torque limit to %f for %s motor (id %d)", info.torque_limit * info.effort_ratio,
-        //   info.joint_name.c_str(), info.id);
-
-        if (port.protocol != "PRO")
+        if (!port.driver->setMaxTorque(info.id, info.model_spec->type, (int) (info.torque_limit * info.model_spec->effort_ratio)))
         {
-          if ( !port.driver->setMaxTorque(info.id, (int) (info.torque_limit * info.effort_ratio)) )
-          {
-            ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(),
-                info.id);
-          }
-          else
-          {
-            uint16_t torque_set = 0;
-            if ( !port.driver->getMaxTorque(info.id, &torque_set) )
-            {
-              ROS_WARN("Failed to read torque limit for %s motor (id %d)", info.joint_name.c_str(),
-                  info.id);
-            }
-            else
-            {
-              ; //ROS_INFO(" - Set torque limit to %d", torque_set);
-            }
-          }
+          ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), info.id);
         }
 
         //angle limits are only relevant in position control mode
-        if (control_type_ == POSITION_CONTROL)
+        if (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL)
         {
           //set angle limits & direction
           if (info.min > info. max)
           {
-            if ( !port.driver->setAngleLimits(info.id, info.max, info.min) )
+            if (!port.driver->setAngleLimits(info.id, info.model_spec->type, info.max, info.min))
             {
-              ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(),
-                  info.id);
+              ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(), info.id);
             }
           }
           else
           {
-            if ( !port.driver->setAngleLimits(info.id, info.min, info.max) )
+            if (!port.driver->setAngleLimits(info.id, info.model_spec->type, info.min, info.max))
             {
-              ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(),
-                  info.id);
+              ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(), info.id);
             }
           }
         }
 
         //preserve torque enable state
-        port.driver->setTorqueEnabled(info.id, t_e);
-
-        //set PID tuning
-        if (!port.driver->setPIDGains(info.id, control_type_, info.p_gain, info.i_gain, info.d_gain))
-        {
-          ROS_WARN("Failed to set PID tuning for %s motor (id %d)", info.joint_name.c_str(), info.id);
-        }
+        port.driver->setTorqueEnabled(info.id, info.model_spec->type, t_e);
 
         //store current control mode
         info.current_mode = control_type_;
@@ -801,8 +660,6 @@ void DynamixelInterfaceController::parseServoInformation(struct portInfo &port, 
 }
 
 
-
-
 /**
  * Start broadcasting JointState messages corresponding to the connected dynamixels
  */
@@ -813,8 +670,6 @@ void DynamixelInterfaceController::startBroadcastingJointStates()
       &DynamixelInterfaceController::publishJointStates, this);
 
 }
-
-
 
 
 /**
@@ -927,78 +782,35 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     for (int i = 0; i < dynamixel_ports_.size(); i++)
     {
       //get every joint on that port
-      std::map<std::string, dynamixelInfo>::iterator it;
-      for(it = dynamixel_ports_[i].joints.begin(); it != dynamixel_ports_[i].joints.end(); it++)
+      for (auto& it : dynamixel_ports_[i].joints)
       {
-
-        dynamixelInfo info = it->second;
-        int32_t priorPos = info.init;
+        int32_t priorPos = it.second.init;
 
         //enable motor torque
-        if (!dynamixel_ports_[i].driver->setTorqueEnabled(info.id, 1))
+        if (!dynamixel_ports_[i].driver->setTorqueEnabled(it.second.id, it.second.model_spec->type, 1))
         {
-          ROS_ERROR("failed to enable torque on motor %d", info.id);
+          ROS_ERROR("failed to enable torque on motor %d", it.second.id);
         }
 
-        if (control_type_ != TORQUE_CONTROL)
+        //if in position control mode we enable the default join movement speed (profile velocity)
+        if (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL)
         {
-
-          dynamixel_ports_[i].driver->setTorqueControlEnabled(info.id, false);
-
-          //if in position control mode we enable the default join movement speed (profile velocity)
-          if (control_type_ == POSITION_CONTROL)
-          {
-
-            int regVal = (int) ((double) (info.joint_speed) * (60/(2.0 * M_PI)) * info.gear_conversion);
-            dynamixel_ports_[i].driver->setProfileVelocity(info.id, regVal);
-
-            if (dynamixel_ports_[i].protocol == "PRO")
-            {
-              if ( !dynamixel_ports_[i].driver->setTorque(info.id, (int) (info.torque_limit * info.effort_ratio)) )
-              {
-                ROS_WARN("Failed to set torque for %s motor (id %d)", info.joint_name.c_str(),
-                    info.id);
-              }
-              else
-              {
-                int16_t goal_torque;
-                if ( !dynamixel_ports_[i].driver->getTargetTorque(info.id, &goal_torque))
-                {
-                  ROS_WARN("Failed to get goal torque for %s motor (id %d)", info.joint_name.c_str(),
-                      info.id);
-                }
-                else
-                {
-                  ROS_INFO("SET PRO TORQUE LIMIT TO %d", goal_torque);
-                }
-              }
-            }
-          }
-        }
-        else if (control_type_ == TORQUE_CONTROL)
-        {
-          dynamixel_ports_[i].driver->setOperatingMode(info.id, control_type_);
+          int regVal = (int) ((double) (it.second.joint_speed) * (60/(2.0 * M_PI)) * it.second.model_spec->gear_conversion);
+          dynamixel_ports_[i].driver->setProfileVelocity(it.second.id, it.second.model_spec->type, regVal);
         }
 
-        if ((control_type_ == TORQUE_CONTROL) && (dynamixel_ports_[i].protocol == "PRO"))
-        {
-          //set pro pid values
-          if (!dynamixel_ports_[i].driver->setPIDGains(info.id, control_type_, info.p_gain, info.i_gain, info.d_gain))
-          {
-            ROS_WARN("Failed to set PID tuning for %s motor (id %d)", info.joint_name.c_str(), info.id);
-          }
-        }
-        ROS_INFO("Torque enabled on %s joint", it->first.c_str());
-        info.torque_enabled = true;
+        ROS_INFO("Torque enabled on %s joint", it.first.c_str());
+        it.second.torque_enabled = true;
       }
     }
+
     first_write_ = false;
   }
 
   dataport_msg.header.stamp = read_msg.header.stamp = ros::Time::now();
 
   //spawn an IO thread for each additional port
-  for (int i = 1; i < dynamixel_ports_.size(); i++)
+  for (int i = 0; i < dynamixel_ports_.size(); i++)
   {
     num_servos = num_servos + dynamixel_ports_[i].joints.size();
     reads[i] = sensor_msgs::JointState();
@@ -1010,38 +822,31 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     threads.push_back(move(readThread));
   }
 
-  //get messages for the first port
-  reads[0] = sensor_msgs::JointState();
+  // //get messages for the first port
+  // reads[0] = sensor_msgs::JointState();
 
-  num_servos = num_servos + dynamixel_ports_[0].joints.size();
+  // num_servos = num_servos + dynamixel_ports_[0].joints.size();
 
-  //keep the write message thread safe
-  sensor_msgs::JointState temp_msg = write_msg_;
+  // //keep the write message thread safe
+  // sensor_msgs::JointState temp_msg = write_msg_;
 
-  //perform the IO on the first port
+  // //perform the IO on the first port
 
-  //perform write
-  if (write_ready_)
-  {
-    if (echo_joint_commands_)
-    {
-      debug_publisher_.publish(temp_msg);
-    }
-    multiThreadedWrite(dynamixel_ports_[0], temp_msg);
-  }
+  // //perform write
+  // if (write_ready_)
+  // {
+  //   multiThreadedWrite(dynamixel_ports_[0], temp_msg);
+  // }
 
-  //perform read
-  multiThreadedRead(dynamixel_ports_[0], reads[0], dataport_reads[0], status_reads[0]);
+  // //perform read
+  // multiThreadedRead(dynamixel_ports_[0], reads[0], dataport_reads[0], status_reads[0]);
 
 
   //loop and get port information (wait for threads in order if any were created)
   for (int i = 0; i < dynamixel_ports_.size(); i++)
   {
 
-    if (i > 0)
-    {
-      threads[i-1].join();
-    }
+    threads[i].join();
 
     if (reads[i].name.size() == 0)
     {
@@ -1085,7 +890,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
       //check error status of each dynamixel and report new errors
       for (int j = 0; j < status_reads[i].joint_names.size(); j++)
       {
-        dynamixelInfo info = dynamixel_ports_[i].joints.at(status_reads[i].joint_names[j]);
+        DynamixelInfo info = dynamixel_ports_[i].joints.at(status_reads[i].joint_names[j]);
         if (status_reads[i].error_states[j] != 0)
         {
           if (info.hardware_status != status_reads[i].error_states[j])
@@ -1158,7 +963,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
  * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
  * @param perform_write boolean indicating whether or not to write latest joint_state to servos
  */
-void DynamixelInterfaceController::multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg,
+void DynamixelInterfaceController::multiThreadedIO(PortInfo &port, sensor_msgs::JointState &read_msg,
                                                     dynamixel_interface_controller::DataPort &dataport_msg,
                                                     dynamixel_interface_controller::ServoState &status_msg,
                                                     bool perform_write)
@@ -1183,9 +988,8 @@ void DynamixelInterfaceController::multiThreadedIO(portInfo &port, sensor_msgs::
  * @param port_num index used to retrieve port information from port list
  * @param joint_commands message cointaining the commands for each joint
  */
-void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msgs::JointState joint_commands)
+void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msgs::JointState joint_commands)
 {
-
   //ignore empty messages
   if (joint_commands.name.size() < 1)
   {
@@ -1193,52 +997,48 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
   }
 
   //booleans used to setup which parameters to write
-  bool has_pos = false, has_vel = false, has_torque = false;
+  bool has_pos = false;
+  bool has_vel = false;
 
   //figure out which values have been specified
-  if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == POSITION_CONTROL))
+  if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL))
   {
     has_pos = true;
   }
-  if ((joint_commands.velocity.size() == joint_commands.name.size()) && ((control_type_ == VELOCITY_CONTROL) ||
-      (control_type_ == POSITION_CONTROL && !ignore_input_velocity_)))
+  if ((joint_commands.velocity.size() == joint_commands.name.size()) && ((control_type_ == dynamixel_interface_driver::DXL_VELOCITY_CONTROL) ||
+      (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL && !ignore_input_velocity_)))
   {
     has_vel = true;
   }
-  if ((joint_commands.effort.size() == joint_commands.name.size()) && (control_type_ == TORQUE_CONTROL))
-  {
-    has_torque = true;
-  }
 
-  if ( (!has_torque) && (!has_pos) && (!has_vel) )
+  if ((!has_pos) && (!has_vel))
   {
     //no valid array sizes for current control mode, ignore
     return;
   }
 
-  //vectors to store the calculated values
-  vector<int> ids, velocities, positions, torques;
+  //write objects
+  std::unordered_map<int, dynamixel_interface_driver::SyncData> velocities, positions;
+
+  //push motor encoder value onto list
+  dynamixel_interface_driver::SyncData write_data;
 
   //loop and calculate the values for each specified joint
   for (int i = 0; i < joint_commands.name.size(); i++)
   {
 
     //lookup the information for that particular joint to be able to control it
-    std::map<std::string, dynamixelInfo>::iterator joint_it;
-    if ((joint_it = port.joints.find(joint_commands.name[i])) == port.joints.end())
+    if (port.joints.find(joint_commands.name[i]) == port.joints.end())
     {
       //Joint not on this port, ignore
       continue;
     }
 
     //Retrieve dynamixel information
-    dynamixelInfo *info = &joint_it->second;
-
-    //prepare data to be sent to the motor
-    ids.push_back(info->id);
+    DynamixelInfo *info = &port.joints[joint_commands.name[i]];
 
     //calculate the position register value for the motor
-    if (has_pos)
+    if ((has_pos) && (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL))
     {
 
       //used to bound positions to limits
@@ -1261,7 +1061,7 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
       }
 
       //convert from radians to motor encoder value
-      int pos = (int)(rad_pos / 2.0 / M_PI * info->cpr + 0.5) + info->init;
+      int pos = (int)(rad_pos / 2.0 / M_PI * info->model_spec->cpr + 0.5) + info->init;
 
       //clamp joint angle to be within safe limit
       if (pos > up_lim)
@@ -1274,7 +1074,20 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
       }
 
       //push motor encoder value onto list
-      positions.push_back(pos);
+      write_data.id = info->id;
+      write_data.type = info->model_spec->type;
+      if (write_data.type <= dynamixel_interface_driver::DXL_LEGACY_MX)
+      {
+        write_data.data.resize(2);
+        *(write_data.data.data()) = (int16_t) pos;
+      }
+      else
+      {
+        write_data.data.resize(4);
+        *(write_data.data.data()) = (int32_t) pos;
+      }
+
+      positions[info->id] = write_data;
     }
 
     //calculate the velocity register value for the motor
@@ -1291,7 +1104,7 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
       }
 
       //convert to motor encoder value
-      int vel = (int) ((rad_s_vel * (60/(2.0 * M_PI)) * info->gear_conversion));
+      int vel = (int) ((rad_s_vel * (60/(2.0 * M_PI)) * info->model_spec->gear_conversion));
 
       //Velocity values serve 2 different functions, in velocity control mode their sign
       //defines direction, however in position control mode their absolute value is used
@@ -1300,9 +1113,9 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
 
       //we also need to take an absolute value as each motor series handles negative inputs
       //differently
-      if ((control_type_ == VELOCITY_CONTROL) && ((rad_s_vel < 0) != (info->min > info->max)))
+      if ((control_type_ == dynamixel_interface_driver::DXL_VELOCITY_CONTROL) && ((rad_s_vel < 0) != (info->min > info->max)))
       {
-        if (port.protocol == "1.0")
+        if (info->model_spec->type <= dynamixel_interface_driver::DXL_LEGACY_MX)
         {
           vel = vel + 1024;
         }
@@ -1312,126 +1125,45 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
         }
       }
 
-      //push motor velocity value onto list
-      velocities.push_back(vel);
-    }
-
-
-    //calculate torque register values for the motor
-    if (has_torque)
-    {
-      //replace the below with proper code when you can figure out the units
-      double input_torque = joint_commands.effort[i];
-
-      int torque = 0;
-
-      //if this flag set, input and outputs are current values (in mA)
-      if (use_torque_as_effort_)
+      //push motor encoder value onto list
+      write_data.id = info->id;
+      write_data.type = info->model_spec->type;
+      if (write_data.type <= dynamixel_interface_driver::DXL_LEGACY_MX)
       {
-        if (info->current_ratio != 0)
-        {
-          torque = (int) (input_torque / info->current_ratio);
-          torque = abs(torque);
-
-          if ((input_torque < 0) != (info->min > info->max))
-          {
-            if (port.protocol == "1.0")
-            {
-              torque = 1024 + torque;
-            }
-            else
-            {
-              torque = -torque;
-            }
-          }
-        }
+        write_data.data.resize(2);
+        *(write_data.data.data()) = (int16_t) vel;
       }
-      else //we output a relative value that is a fraction of max load (legacy support for mx protocol 1.0 registers)
+      else
       {
-        if (info->effort_ratio != 0)
-        {
-          torque = (int) (input_torque * info->effort_ratio);
-          torque = abs(torque);
-
-          if ((input_torque < 0) != (info->min > info->max))
-          {
-            if (port.protocol == "1.0")
-            {
-              torque = 1024 + torque;
-            }
-            else
-            {
-              torque = -torque;
-            }
-          }
-        }
+        write_data.data.resize(4);
+        *(write_data.data.data()) = (int32_t) vel;
       }
 
-      torques.push_back(torque);
+      velocities[info->id] = write_data;
     }
   }
 
   //use the multi-motor write functions to reduce the bandwidth required to command
   //all the motors
-
-  if ( control_type_ == POSITION_CONTROL )
+  if (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL)
   {
-
     //set the profile velocities if they have been defined
     if ((has_vel) && (!ignore_input_velocity_))
     {
-      vector< vector<int> > data;
-      for (int i = 0; i < ids.size(); i++)
-      {
-        vector<int> temp;
-        temp.push_back(ids[i]);
-        temp.push_back(velocities[i]);
-        data.push_back(temp);
-      }
-      port.driver->setMultiProfileVelocity(data);
+      port.driver->setMultiProfileVelocity(velocities);
     }
-
     //send the positions to the motors
     if (has_pos)
     {
-      vector< vector<int> > data;
-      for (int i = 0; i < ids.size(); i++)
-      {
-        vector<int> temp;
-        temp.push_back(ids[i]);
-        temp.push_back(positions[i]);
-        data.push_back(temp);
-      }
-      port.driver->setMultiPosition(data);
+      port.driver->setMultiPosition(positions);
     }
-
   }
-  else if ( control_type_ == VELOCITY_CONTROL && has_vel)
+  else if ((control_type_ == dynamixel_interface_driver::DXL_VELOCITY_CONTROL) && has_vel)
   {
     //set the velocity values for each motor
-    vector< vector<int> > data;
-    for (int i = 0; i < ids.size(); i++)
-    {
-      vector<int> temp;
-      temp.push_back(ids[i]);
-      temp.push_back(velocities[i]);
-      data.push_back(temp);
-    }
-    port.driver->setMultiVelocity(data);
+    port.driver->setMultiVelocity(velocities);
   }
-  else if ( (control_type_ == TORQUE_CONTROL) && has_torque)
-  {
-    //set the torque values for each motor
-    vector< vector<int> > data;
-    for (int i = 0; i < ids.size(); i++)
-    {
-      vector<int> temp;
-      temp.push_back(ids[i]);
-      temp.push_back(torques[i]);
-      data.push_back(temp);
-    }
-    port.driver->setMultiTorque(data);
-  }
+
 }
 
 
@@ -1440,53 +1172,46 @@ void DynamixelInterfaceController::multiThreadedWrite(portInfo &port, sensor_msg
  * @param port_num index used to retrieve port information from port list
  * @param read_msg the msg this ports join data is read into.
  */
-void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg,
+void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs::JointState &read_msg,
                                                      dynamixel_interface_controller::DataPort &dataport_msg,
                                                      dynamixel_interface_controller::ServoState &status_msg)
 {
 
   bool comm_success;
-  //std::vector<int> *servo_ids = new std::vector<int>;
-  std::vector<int> servo_ids; // = new std::vector<int>;
-  std::map<int, std::vector<int32_t> >  responses;// = new std::map<int, std::vector<int32_t> >;
+  std::unordered_map<int, dynamixel_interface_driver::DynamixelState> state_map;
+  std::unordered_map<int, dynamixel_interface_driver::DynamixelDiagnostic> diag_map;
 
   //Iterate over all connected servos and add to list
-  for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
+  for (auto& it : port.joints) //(map<string, DynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
   {
-    servo_ids.push_back(iter->second.id);
+    state_map[it.second.id] = dynamixel_interface_driver::DynamixelState();
+    diag_map[it.second.id] = dynamixel_interface_driver::DynamixelDiagnostic();
   }
 
   //get state info back from all dynamixels
-  if( port.driver->getBulkStateInfo(&servo_ids, &responses, mx_effort_use_current_, read_dataport_)
-      && !servo_ids.empty() )
+  if(port.driver->getBulkState(state_map))
   {
 
     //Iterate over all connected servos and add to list
-    for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
+    for (auto& it : port.joints)
     {
-      //joint name
-      string joint_name = iter->first;
-
-      //info struct
-      dynamixelInfo info = iter->second;
+      // //joint name
+      std::string joint_name = it.first;
 
       //ignore joints that failed to read
-      if(std::find(servo_ids.begin(), servo_ids.end(), info.id) == servo_ids.end())
+      if(!state_map[it.second.id].success)
       {
-        ROS_INFO("FAILED TO READ DYNAMIXEL %s (id %d)!", joint_name.c_str(), info.id);
+        ROS_INFO("FAILED TO READ DYNAMIXEL %s (id %d)!", joint_name.c_str(), it.second.id);
         continue;
       }
-
-      //response from dynamixel
-      std::vector<int32_t> response = responses.at(info.id);
 
       //put joint name in message
       read_msg.name.push_back(joint_name);
 
       //POSITION VALUE
       //get position and convert to radians
-      double rad_pos = (response[0] - info.init) / ((double) (info.cpr)) * 2 * M_PI;
-      if (info.min > info.max)
+      double rad_pos = (state_map[it.second.id].position - it.second.init) / ((double) (it.second.model_spec->cpr)) * 2 * M_PI;
+      if (it.second.min > it.second.max)
       {
         rad_pos = -rad_pos;
       }
@@ -1495,158 +1220,107 @@ void DynamixelInterfaceController::multiThreadedRead(portInfo &port, sensor_msgs
       read_msg.position.push_back(rad_pos);
 
       //VELOCITY VALUE
-      int raw_vel = response[1];
+      int raw_vel = state_map[it.second.id].velocity;
 
       //handle the sign of the value based on the motor series
-      if (port.protocol == "1.0")
+      if (it.second.model_spec->type <= dynamixel_interface_driver::DXL_LEGACY_MX)
       {
-        raw_vel = (response[1] & 0x3FF);
+        raw_vel = (raw_vel & 0x3FF);
 
-        if ((response[1] > 1023) && (info.max > info.min))
+        if ((raw_vel > 1023) && (it.second.max > it.second.min))
         {
           raw_vel = -raw_vel;
         }
-        else if ((response[1] < 1023) && (info.max < info.min))
+        else if ((raw_vel < 1023) && (it.second.max < it.second.min))
         {
           raw_vel = -raw_vel;
         }
       }
-      else if (info.min > info.max)
+      else if (it.second.min > it.second.max)
       {
         raw_vel = -raw_vel;
       }
 
       //convert to rad/s
-      double rad_s_vel = ((double) raw_vel) * ((2.0 * M_PI) / 60.0) / info.gear_conversion;
+      double rad_s_vel = ((double) raw_vel) * ((2.0 * M_PI) / 60.0) / it.second.model_spec->gear_conversion;
 
       //put velocity in message
       read_msg.velocity.push_back(rad_s_vel);
 
       //TORQUE EFFORT VALUE
-      //convert raw value to fraction of max torque
-      int raw_torque = response[2];
-      double torque = 0;
+      double effort = 0;
 
-      if (use_torque_as_effort_)
+      if (it.second.model_spec->type <= dynamixel_interface_driver::DXL_LEGACY_MX)
       {
-        if (port.protocol == "1.0")
+        effort = ((double) (state_map[it.second.id].effort & 0x3FF)) * it.second.model_spec->current_ratio;
+        //check sign
+        if (state_map[it.second.id].effort < 1023)
         {
-          if (mx_effort_use_current_)
-          {
-            torque = (double) (raw_torque - 2048) * info.current_ratio;
-          }
-          else
-          {
-            torque = ((double) (response[2] & 0x3FF)) * info.current_ratio;
-            //check sign
-            if (response[2] < 1023)
-            {
-              torque = 0.0 - torque;
-            }
-          }
-        }
-        else
-        {
-          torque = ((double) (response[2]) * info.current_ratio);
+          effort = 0.0 - effort;
         }
       }
       else
       {
-        if (port.protocol == "1.0")
-        {
-          if (mx_effort_use_current_)
-          {
-            torque = (double) (raw_torque - 2048) / info.effort_ratio;
-          }
-          else
-          {
-            torque = ((double) (response[2] & 0x3FF)) / info.effort_ratio;
-            //check sign
-            if (response[2] < 1023)
-            {
-              torque = 0.0 - torque;
-            }
-          }
-        }
-        else
-        {
-          torque = ((double) (response[2]) / info.effort_ratio);
-        }
+        effort = ((double) (state_map[it.second.id].effort) * it.second.model_spec->current_ratio);
       }
 
-      if (info.min > info.max)
+      if (it.second.min > it.second.max)
       {
-        torque = -torque;
+        effort = -effort;
       }
 
       //put effort in message
-      read_msg.effort.push_back(torque);
-
-      if ((read_dataport_) && ((port.protocol == "PRO") || (port.protocol == "2.0")))
-      {
-        //put joint name in message
-        dataport_msg.name.push_back(joint_name);
-
-        //publish dataport value
-        dataport_msg.value.push_back(response[3]);
-
-      }
+      read_msg.effort.push_back(effort);
     }
-
-    responses.clear();
-
-    if (publish_diagnostics_)
-    {
-      if( port.driver->getBulkDiagnosticInfo(&servo_ids, &responses) )
-      {
-        //dynamixel_interface_controller::ServoState diag_msg;
-        status_msg.header.frame_id = port.port_name.c_str();
-
-        //Iterate over all connected servos and add to list
-        for (map<string, dynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
-        {
-          //joint name
-          string joint_name = iter->first;
-
-          //info struct
-          dynamixelInfo info = iter->second;
-
-          //ignore joints that failed to read
-          if(std::find(servo_ids.begin(), servo_ids.end(), info.id) == servo_ids.end())
-          {
-            continue;
-          }
-
-          //response from dynamixel
-          std::vector<int32_t> response = responses.at(info.id);
-
-          //put effort in message
-          status_msg.joint_names.push_back(joint_name.c_str());
-
-          //get voltage
-          status_msg.voltages.push_back( (double)(response[0]) / 10);
-
-          //get temperatures
-          status_msg.temperatures.push_back( (double)(response[1]));
-
-          status_msg.error_states.push_back(response[2]);
-          // if (response[2] != 0)
-          // {
-          //     ROS_WARN("Dynamixel Error! Joint %s (id %d) has returned with code %d", joint_name, info.id, response[2]);
-          // }
-
-          status_msg.modes.push_back(info.current_mode);
-        }
-        //publish diagnostic info
-        //diagnostics_publisher_.publish(diag_msg);
-      }
-    }
+    read_msg.header.stamp = ros::Time::now();
   }
-  else
+
+  if (read_dataport_)
   {
-    ;//ROS_ERROR("READ FAILURE, UNABLE TO GET JOINT STATES ON PORT %s", port.device.c_str());
+    // //put joint name in message
+    // dataport_msg.name.push_back(joint_name);
+
+    // //publish dataport value
+    // dataport_msg.value.push_back(response[3]);
   }
-  read_msg.header.stamp = ros::Time::now();
+
+  if (publish_diagnostics_)
+  {
+    if( port.driver->getBulkDiagnosticInfo(diag_map) )
+    {
+      //dynamixel_interface_controller::ServoState diag_msg;
+      status_msg.header.frame_id = port.port_name.c_str();
+
+      //Iterate over all connected servos and add to list
+      for (auto& it : port.joints) //(map<string, DynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
+      {
+        //joint name
+        std::string joint_name = it.first;
+
+        //ignore joints that failed to read
+        if (!diag_map[it.second.id].success)
+        {
+          continue;
+        }
+
+        //put effort in message
+        status_msg.joint_names.push_back(joint_name.c_str());
+
+        //get voltage
+        status_msg.voltages.push_back((double) (diag_map[it.second.id].voltage) / 10.0);
+
+        //get temperatures
+        status_msg.temperatures.push_back((double) (diag_map[it.second.id].temperature));
+
+        // status_msg.error_states.push_back(response[2]);
+        // if (response[2] != 0)
+        // {
+        //     ROS_WARN("Dynamixel Error! Joint %s (id %d) has returned with code %d", joint_name, info.id, response[2]);
+        // }
+        status_msg.modes.push_back(it.second.current_mode);
+      }
+    }
+  }
 }
 
 

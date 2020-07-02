@@ -102,142 +102,36 @@
 namespace dynamixel_interface_controller
 {
 
-
-/**
- * Struct that describes the dynamixel motor's static and physical
- * properties
- */
-struct dynamixelSpec
-{
-
-  /** The Model Name */
-  std::string name;
-
-  /** Model number (e.g 29 = MX-28) */
-  uint16_t model_number;
-
-  /** Motor encoder counter per revolution */
-  int cpr;
-
-  /** Gear reduction ratio */
-  double gear_conversion;
-
-  /** Torque ratio */
-  double effort_ratio;
-
-  /** Current ratio */
-  double current_ratio;
-
-};
-
-/**
- * The different control modes available on the dynamixel servos.
- * The values chosen for each type reflect those used on the motors
- * themselves.
- */
-enum controlMode
-{
-  POSITION_CONTROL = 3,
-  VELOCITY_CONTROL = 1,
-  TORQUE_CONTROL = 0,
-  UNKNOWN  = -1
-};
-
-/**
- * The various hardware status codes that can be returned by the dynamixels
- */
-enum errorStatus
-{
-  OVERLOAD_ERROR = 0x10,
-  SHOCK_ERROR = 0x08,
-  OVERHEAT_ERROR = 0x04,
-  ENCODER_ERROR = 0x02,
-  VOLTAGE_ERROR = 0x01,
-};
-
-
 /**
  * Struct that describes each servo's place in the system including
  * which joint it corresponds to.
  */
-struct dynamixelInfo
+typedef struct
 {
 
-  int id; /**< The unique (per port) ID of the motor */
+  int id; /// The unique (per port) ID of the motor
+  std::string joint_name; /// The unique (globally) name of the joint
 
-  /** The unique (globally) name of the joint */
-  std::string joint_name;
+  double joint_speed; /// Motor default joint speed (rad/s)
+  double torque_limit; /// Motor maximum torque limit (%rated max)
 
-  /** Motor default joint speed (rad/s) */
-  double joint_speed;
+  int init; /// Motor initial position (in raw encoder values). This value defines the 0 radian position for the motor
+  int min; /// Motor minimum encoder value. Note that if min > max, the motor direction is reversed
+  int max; /// Motor maximum encoder value. Note that if min > max, the motor direction is reversed
 
-  /** Motor maximum torque limit (%rated max) */
-  double torque_limit;
+  const dynamixel_interface_driver::DynamixelSpec* model_spec; /// Motor model specification including encoder counts and unit conversion factors
 
-  /** Proportional gain value */
-  double p_gain;
+  bool torque_enabled; /// Motor enable flag
+  dynamixel_interface_driver::DynamixelControlMode current_mode; /// control mode (position, velocity, torque)
+  uint8_t hardware_status; /// current motor status, used for hardware error reporting
 
-  /** Integral gain value */
-  double i_gain;
-
-  /** Differential gain value */
-  double d_gain;
-
-  /**
-   * Motor initial position (in raw encoder values).
-   * This value defines the 0 radian position for the motor
-   */
-  int init;
-
-  /**
-   * Motor minimum encoder value.
-   * Note that if min > max, the motor direction is reversed
-   */
-  int min;
-
-  /**
-   * Motor maximum encoder value.
-   * Note that if min > max, the motor direction is reversed
-   */
-  int max;
-
-  /** Motor model name */
-  std::string model_name;
-
-  /** Motor model number */
-  uint16_t model_number;
-
-  /** Motor model info */
-  uint32_t model_info;
-
-  /** Motor encoder Counts Per Revolution */
-  int cpr;
-
-  /** Motor rad/s to register value ratio */
-  double gear_conversion;
-
-  /** Motor torque reading to register value ratio */
-  double effort_ratio;
-
-  /** Motor current reading to register value ratio */
-  double current_ratio;
-
-  /** Motor enable flag */
-  bool torque_enabled;
-
-  /** current control mode (position, velocity, torque) */
-  controlMode current_mode;
-
-  /** current motor status, used for hardware error reporting */
-  uint8_t hardware_status;
-
-};
+} DynamixelInfo;
 
 /**
  * Struct which stores information about each port in use and which
  * joints use that port
  */
-struct portInfo
+typedef struct
 {
 
   /** User defined port name */
@@ -247,15 +141,16 @@ struct portInfo
   std::string device;
   int baudrate;
 
-  /** Which series of motor is on the port */
-  std::string protocol;
+  /** Which protocol is in use */
+  bool use_legacy_protocol;
 
   /** Pointer to the serial driver */
   dynamixel_interface_driver::DynamixelInterfaceDriver *driver;
 
   /** map of joint names to information */
-  std::map<std::string, dynamixelInfo> joints;
-};
+  std::unordered_map<std::string, DynamixelInfo> joints;
+
+} PortInfo;
 
 
 /**
@@ -299,7 +194,7 @@ private:
   * Parses the information in the yaml file for each servo
   * @param servos: the xml structure to be parsed
   */
-  void parseServoInformation(struct portInfo &port, XmlRpc::XmlRpcValue servos);
+  void parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos);
 
 
   /**
@@ -333,7 +228,7 @@ private:
    * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
    * @param perform_write boolean indicating whether or not to write latest joint_state to servos
    */
-  void multiThreadedIO(portInfo &port, sensor_msgs::JointState &read_msg,
+  void multiThreadedIO(PortInfo &port, sensor_msgs::JointState &read_msg,
                         dynamixel_interface_controller::DataPort &dataport_msg,
                         dynamixel_interface_controller::ServoState &status_msg,
                         bool perform_write);
@@ -343,7 +238,7 @@ private:
    * @param port_num index used to retrieve port information from port list
    * @param joint_commands message cointaining the commands for each joint
    */
-  void multiThreadedWrite(portInfo &port, sensor_msgs::JointState joint_commands);
+  void multiThreadedWrite(PortInfo &port, sensor_msgs::JointState joint_commands);
 
 
   /**
@@ -351,7 +246,7 @@ private:
    * @param port_num index used to retrieve port information from port list
    * @param read_msg the msg this ports join data is read into.
    */
-  void multiThreadedRead(portInfo &port, sensor_msgs::JointState &read_msg,
+  void multiThreadedRead(PortInfo &port, sensor_msgs::JointState &read_msg,
                           dynamixel_interface_controller::DataPort &dataport_msg,
                           dynamixel_interface_controller::ServoState &status_msg);
 
@@ -379,18 +274,6 @@ private:
   /** Indicates if the motors should be turned off when the controller stops */
   bool stop_motors_on_shutdown_;
 
-  /** Indicates if we convert raw motor load readings to/from torque for send/receive */
-  bool use_torque_as_effort_;
-
-  /** Indicates if we want to read the current register in place of the load register for
-   * the mx series, this improves torque read accuracy at the cost of a significant decrease
-   * in IO performance
-   */
-  bool mx_effort_use_current_;
-
-  /** Can echo commands sent to the motors (useful for monitoring write values/rates) */
-  bool echo_joint_commands_;
-
   /** can set driver to ignore profile velocity commands in position mode */
   bool ignore_input_velocity_;
 
@@ -404,9 +287,6 @@ private:
   /** global override parameters */
   double global_joint_speed_;
   double global_torque_limit_;
-  double global_p_gain_;
-  double global_i_gain_;
-  double global_d_gain_;
 
   /** Stores the last message received from the write command topic */
   sensor_msgs::JointState write_msg_;
@@ -419,13 +299,10 @@ private:
   bool first_write_;
 
   /** method of control (position/velocity/torque) */
-  controlMode control_type_;
-
-  /** map of model numbers to motor specifications */
-  std::map<uint16_t, dynamixelSpec> model_number2specs_;
+  dynamixel_interface_driver::DynamixelControlMode control_type_;
 
   /** the vector of all ports in use */
-  std::vector<portInfo> dynamixel_ports_;
+  std::vector<PortInfo> dynamixel_ports_;
 
   /** Publishes joint states from reads */
   ros::Publisher joint_state_publisher_;

@@ -178,7 +178,8 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
     spec.effort_ratio = doc[i]["effort_ratio"].as<double>();
     spec.current_ratio = doc[i]["current_ratio"].as<double>();
 
-    model_specs_[spec.model_number] = spec;
+    model_specs_.insert(std::pair<int, const DynamixelSpec>(spec.model_number, spec));
+
   }
 
   // Open port
@@ -956,7 +957,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
       switch (operating_mode)
       {
 
-        case POSITION_CONTROL:
+        case DXL_POSITION_CONTROL:
 
           //Position control, set normal angle limits
           success = setAngleLimits(servo_id, type, 0, 4095); //Master mode, normal roatation
@@ -971,7 +972,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
           }
           break;
 
-        case VELOCITY_CONTROL:
+        case DXL_VELOCITY_CONTROL:
 
           //Velocity control, turn off angle limits
           success = setAngleLimits(servo_id, type, 0, 0); //Master mode, normal roatation
@@ -986,7 +987,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
           }
           break;
 
-        case TORQUE_CONTROL:
+        case DXL_TORQUE_CONTROL:
 
           //Torque control mode, only MX-64 and MX-106
           success = getModelNumber(servo_id, &model_num);
@@ -1006,7 +1007,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
     case DXL_MX:
     case DXL_X:
 
-      if ((operating_mode == TORQUE_CONTROL) || (operating_mode == CURRENT_BASED_POSITION_CONTROL))
+      if ((operating_mode == DXL_TORQUE_CONTROL) || (operating_mode == DXL_CURRENT_BASED_POSITION_CONTROL))
       {
         success = getModelNumber(servo_id, &model_num);
 
@@ -1031,7 +1032,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
 
     case DXL_LEGACY_PRO:
 
-      if (operating_mode != PWM_CONTROL)
+      if (operating_mode != DXL_PWM_CONTROL)
       {
         dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_LEGACY_PRO_OPERATING_MODE,
             operating_mode, &error);
