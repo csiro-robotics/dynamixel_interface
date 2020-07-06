@@ -126,7 +126,7 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
 
   // read in motor data yaml file
   // load the file containing model info, we're not using the param server here
-  std::string path = ros::package::getPath("dynamixel_interface_controller");
+  std::string path = ros::package::getPath("dynamixel_interface_driver");
   path += "/config/motor_data.yaml";
   YAML::Node doc = YAML::LoadFile(path);
 
@@ -178,6 +178,7 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
     spec.effort_ratio = doc[i]["effort_ratio"].as<double>();
     spec.current_ratio = doc[i]["current_ratio"].as<double>();
 
+    ROS_INFO("Model: %s, No: %d, Type: %s", spec.name.c_str(), spec.model_number, type.c_str());
     model_specs_.insert(std::pair<int, const DynamixelSpec>(spec.model_number, spec));
 
   }
@@ -457,7 +458,6 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
     return false;
   }
 
-
   // check types match
   for (auto& it : state_map)
   {
@@ -499,6 +499,7 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
 
         }
       }
+
       for (auto& it : state_map) // decode responses
       {
         if (it.second.success)
@@ -530,7 +531,6 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
           {
             it.second.success = false;
           }
-
         }
       }
       for (auto& it : state_map) // decode responses

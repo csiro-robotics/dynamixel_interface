@@ -157,9 +157,9 @@ public:
   bool ping(int servo_id);
 
   /// Get pointer to model spec data for given model number
-  inline const DynamixelSpec* getModelSpec(uint16_t model_number)
+  inline const DynamixelSpec* getModelSpec(uint model_number)
   {
-    if (model_specs_.find(model_number) == model_specs_.end())
+    if (model_specs_.find(model_number) != model_specs_.end())
     {
       return &model_specs_.at(model_number);
     }

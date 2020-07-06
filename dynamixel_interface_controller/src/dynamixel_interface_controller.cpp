@@ -810,7 +810,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
   dataport_msg.header.stamp = read_msg.header.stamp = ros::Time::now();
 
   //spawn an IO thread for each additional port
-  for (int i = 0; i < dynamixel_ports_.size(); i++)
+  for (int i = 1; i < dynamixel_ports_.size(); i++)
   {
     num_servos = num_servos + dynamixel_ports_[i].joints.size();
     reads[i] = sensor_msgs::JointState();
@@ -822,31 +822,34 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     threads.push_back(move(readThread));
   }
 
-  // //get messages for the first port
-  // reads[0] = sensor_msgs::JointState();
+  //get messages for the first port
+  reads[0] = sensor_msgs::JointState();
 
-  // num_servos = num_servos + dynamixel_ports_[0].joints.size();
+  num_servos = num_servos + dynamixel_ports_[0].joints.size();
 
-  // //keep the write message thread safe
-  // sensor_msgs::JointState temp_msg = write_msg_;
+  //keep the write message thread safe
+  sensor_msgs::JointState temp_msg = write_msg_;
 
-  // //perform the IO on the first port
+  //perform the IO on the first port
 
-  // //perform write
-  // if (write_ready_)
-  // {
-  //   multiThreadedWrite(dynamixel_ports_[0], temp_msg);
-  // }
+  //perform write
+  if (write_ready_)
+  {
+    multiThreadedWrite(dynamixel_ports_[0], temp_msg);
+  }
 
-  // //perform read
-  // multiThreadedRead(dynamixel_ports_[0], reads[0], dataport_reads[0], status_reads[0]);
+  //perform read
+  multiThreadedRead(dynamixel_ports_[0], reads[0], dataport_reads[0], status_reads[0]);
 
 
   //loop and get port information (wait for threads in order if any were created)
   for (int i = 0; i < dynamixel_ports_.size(); i++)
   {
 
-    threads[i].join();
+    if (i > 0)
+    {
+      threads[i-1].join();
+    }
 
     if (reads[i].name.size() == 0)
     {
@@ -1061,33 +1064,27 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       }
 
       //convert from radians to motor encoder value
-      int pos = (int)(rad_pos / 2.0 / M_PI * info->model_spec->cpr + 0.5) + info->init;
+      double pos = (rad_pos / 2.0 / M_PI * info->model_spec->cpr + 0.5) + info->init;
 
       //clamp joint angle to be within safe limit
-      if (pos > up_lim)
+      if ((pos <= up_lim) && (pos >= dn_lim))
       {
-        pos = up_lim;
-      }
-      else if (pos < dn_lim)
-      {
-        pos = dn_lim;
-      }
+        //push motor encoder value onto list
+        write_data.id = info->id;
+        write_data.type = info->model_spec->type;
+        if (write_data.type <= dynamixel_interface_driver::DXL_LEGACY_MX)
+        {
+          write_data.data.resize(2);
+          *((uint16_t*) write_data.data.data()) = (uint16_t) pos;
+        }
+        else
+        {
+          write_data.data.resize(4);
+          *((uint32_t*) write_data.data.data()) = (uint32_t) pos;
+        }
 
-      //push motor encoder value onto list
-      write_data.id = info->id;
-      write_data.type = info->model_spec->type;
-      if (write_data.type <= dynamixel_interface_driver::DXL_LEGACY_MX)
-      {
-        write_data.data.resize(2);
-        *(write_data.data.data()) = (int16_t) pos;
+        positions[info->id] = write_data;
       }
-      else
-      {
-        write_data.data.resize(4);
-        *(write_data.data.data()) = (int32_t) pos;
-      }
-
-      positions[info->id] = write_data;
     }
 
     //calculate the velocity register value for the motor
@@ -1131,15 +1128,16 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       if (write_data.type <= dynamixel_interface_driver::DXL_LEGACY_MX)
       {
         write_data.data.resize(2);
-        *(write_data.data.data()) = (int16_t) vel;
+        *((uint16_t*) write_data.data.data()) = (uint16_t) vel;
       }
       else
       {
         write_data.data.resize(4);
-        *(write_data.data.data()) = (int32_t) vel;
+        *((int32_t*) write_data.data.data()) = (int32_t) vel;
       }
 
       velocities[info->id] = write_data;
+
     }
   }
 
@@ -1185,6 +1183,8 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
   for (auto& it : port.joints) //(map<string, DynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
   {
     state_map[it.second.id] = dynamixel_interface_driver::DynamixelState();
+    state_map[it.second.id].id = it.second.id;
+    state_map[it.second.id].type = it.second.model_spec->type;
     diag_map[it.second.id] = dynamixel_interface_driver::DynamixelDiagnostic();
   }
 
