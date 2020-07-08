@@ -1,5 +1,2 @@
-Header header
-
-string[] name
-
-uint16[] value
+string name
+uint16[] port_values

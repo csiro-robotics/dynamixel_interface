@@ -103,6 +103,7 @@ typedef struct
   std::string name;         /// The Model Name
   uint16_t model_number;    /// Model number (e.g 29 = MX-28)
   DynamixelSeriesType type; /// Model type (e.g MX, AX, Pro)
+  bool has_dataport;        /// If this model has data ports
   int cpr;                  /// Motor encoder counts per revolution
   double gear_conversion;   /// Gear reduction ratio
   double effort_ratio;      /// Torque ratio
@@ -131,6 +132,11 @@ typedef struct _DynamixelDiagnostic : SyncData
   int32_t voltage;
   int32_t temperature;
 } DynamixelDiagnostic;
+
+typedef struct _DynamixelDataport : SyncData
+{
+  std::array<uint16_t, 4> port_values;
+} DynamixelDataport;
 
 /// Provides the handling of the low level communications between the
 /// dynamixels and the controller
@@ -215,7 +221,12 @@ public:
   bool getBulkState(std::unordered_map<int, DynamixelState> &state_map);
 
   /// Bulk Reads the voltage and temperature in one instruction, behaves the same as getBulkState()
-  /// @param diag_map map of servo ids to diag_data to read into
+  /// @param data_map map of servo ids to dataport objects to read into
+  /// @return True on comm success, false otherwise
+  bool getBulkDataportInfo(std::unordered_map<int, DynamixelDataport> &data_map);
+
+  /// Bulk Reads the voltage and temperature in one instruction, behaves the same as getBulkState()
+  /// @param diag_map map of servo ids to diagnostics objects to read into
   /// @return True on comm success, false otherwise
   bool getBulkDiagnosticInfo(std::unordered_map<int, DynamixelDiagnostic> &diag_map);
 

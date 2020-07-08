@@ -5,15 +5,15 @@
 
 # # --------------------------------------------------------------------------- # #
 # GLOBAL OPERATION PARAMETERS
-publish_rate: 100                 # desired rate for joint state updates. actual rate may be less depending on number
+loop_rate: 100                 # desired rate for joint state updates. actual rate may be less depending on number
                                   # of dynamixels connected and port baud rate.
-control_mode: Velocity            # control mode, either 'Position', 'Velocity', or 'Torque'
+control_mode: position            # control mode, either 'position', 'velocity', or 'effort'
 disable_torque_on_shutdown: true  # with this enabled the motors will switch off when the controller closes
 echo_joint_commands: true         # debug flag to echo write commands sent to the controller, useful for measuring
                                   # write rates
 ignore_input_velocity: false      # ignore input velocity commands in position mode (no profile velocity)
-diagnostics_rate: 0               # rate to publish diagnostic information
-dataport_rate: 0                  # rate to read from dynamixel external dataports
+diagnostics_rate: 1               # rate to publish diagnostic information
+dataport_rate: 1                  # rate to read from dynamixel external dataports
 
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for
 # the servo below
@@ -29,8 +29,8 @@ ports:
     device: /dev/ttyUSB0       # serial device this port will communicate on
     baudrate: 3000000          # baudrate in use (see dynamixel_driver.h for valid values)
     use_legacy_protocol: false # motor protocol in use, must be "1.0", "2.0", or "PRO"
-    group_read_enabled: false   # specify whether to use group comms (MUCH faster) for reading/writing (for more
-    group_write_enabled: false  # info refer to the bulk/sync read/write in the dynamixel communications protocols)
+    group_read_enabled: true   # specify whether to use group comms (MUCH faster) for reading/writing (for more
+    group_write_enabled: true  # info refer to the bulk/sync read/write in the dynamixel communications protocols)
     servos:
 
         # SERVO LIST FOR THIS PORT

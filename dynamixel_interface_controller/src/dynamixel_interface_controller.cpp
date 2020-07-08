@@ -87,22 +87,8 @@
 #include <thread>
 #include <mutex>
 
-
 #define _USE_MATH_DEFINES
 #include <math.h>
-
-
-#include "yaml-cpp/yaml.h"
-
-#ifdef HAVE_NEW_YAMLCPP
-// The >> operator disappeared in yaml-cpp 0.5, so this function is
-// added to provide support for code written under the yaml-cpp 0.3 API.
-template<typename T>
-void operator >> (const YAML::Node& node, T& i)
-{
-  i = node.as<T>();
-}
-#endif
 
 #include <ros/package.h>
 #include <ros/spinner.h>
@@ -111,14 +97,11 @@ void operator >> (const YAML::Node& node, T& i)
 #include <dynamixel_interface_controller/dynamixel_interface_controller.h>
 #include <dynamixel_interface_driver/dynamixel_interface_driver.h>
 
-using namespace dynamixel_interface_controller;
-using namespace std;
+namespace dynamixel_interface_controller
+{
 
-
-/**
- * Constructor, loads the motor configuration information from the specified yaml file and intialises
- * The motor states.
- */
+/// Constructor, loads the motor configuration information from the specified yaml file and intialises
+/// The motor states.
 DynamixelInterfaceController::DynamixelInterfaceController()
 {
   shutting_down_ = false;
@@ -128,13 +111,13 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   std::string mode;
 
   //load all the info from the param server, with defaults
-  nh_->param<double>("publish_rate", publish_rate_, 50.0);
+  nh_->param<double>("loop_rate", loop_rate_, 50.0);
   nh_->param<bool>("disable_torque_on_shutdown", stop_motors_on_shutdown_, false);
 
 
   nh_->param<bool>("ignore_input_velocity", ignore_input_velocity_, false);
 
-  nh_->param<double>("dataport_rate", dataport_read_rate_, 0.0);
+  nh_->param<double>("dataport_rate", dataport_rate_, 0.0);
   nh_->param<double>("diagnostics_rate", diagnostics_rate_, 0.0);
 
   nh_->param<std::string>("control_mode", mode, "Position");
@@ -144,33 +127,56 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
 
   //clamp read rates to sensible values
-  if (publish_rate_ < 0)
+  if (loop_rate_ <= 0)
   {
-    publish_rate_ = 0;
+    ROS_ERROR("Loop rate must be > 0!");
+    ROS_BREAK();
   }
 
   if (diagnostics_rate_ < 0)
   {
     diagnostics_rate_ = 0;
   }
+  else if (diagnostics_rate_ > loop_rate_)
+  {
+    ROS_WARN("Clamping diagnostics rate to loop rate.");
+    diagnostics_rate_ = loop_rate_;
+  }
+  else
+  {
+    diagnostics_iters_ = std::round(loop_rate_ / diagnostics_rate_);
+    diagnostics_counter_ = 0;
+  }
 
-  if (dataport_read_rate_ < 0)
+  // num iters to read from
+  if (dataport_rate_ < 0)
   {
-    dataport_read_rate_ = 0;
+    dataport_rate_ = 0;
   }
-  else if (dataport_read_rate_ > 50)
+  else if (dataport_rate_ > loop_rate_)
   {
-    dataport_read_rate_ = 50;
+    ROS_WARN("Clamping dataport rate to loop rate.");
+    dataport_rate_ = loop_rate_;
   }
+  else
+  {
+    dataport_iters_ = std::round(loop_rate_ / dataport_rate_);
+    dataport_counter_ = 0;
+  }
+
 
   // Set control mode for this run
-  if (!strncmp(mode.c_str(), "Position", 8))
+  if (mode == "position")
   {
     control_type_ = dynamixel_interface_driver::DXL_POSITION_CONTROL;
   }
-  else if (!strncmp(mode.c_str(), "Velocity", 8))
+  else if (mode == "velocity")
   {
     control_type_ = dynamixel_interface_driver::DXL_VELOCITY_CONTROL;
+  }
+  else if (mode == "effort")
+  {
+    control_type_ = dynamixel_interface_driver::DXL_TORQUE_CONTROL;
   }
   else
   {
@@ -207,12 +213,12 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
   if (diagnostics_rate_ > 0)
   {
-    diagnostics_publisher_ = nh_->advertise<dynamixel_interface_controller::ServoState>("/servo_diagnostics", 1);
+    diagnostics_publisher_ = nh_->advertise<dynamixel_interface_controller::ServoDiags>("/servo_diagnostics", 1);
   }
 
-  if (dataport_read_rate_ > 0)
+  if (dataport_rate_ > 0)
   {
-    dataport_publisher_  = nh_->advertise<dynamixel_interface_controller::DataPort>("/external_dataport", 1);
+    dataport_publisher_  = nh_->advertise<dynamixel_interface_controller::DataPorts>("/external_dataports", 1);
   }
 
   //advertise the joint state input and output topics
@@ -220,26 +226,16 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
   joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_states",
         1, &DynamixelInterfaceController::jointStateCallback, this, ros::TransportHints().tcpNoDelay());
-
-  // Set custom callback queue for either input or output callback
-  io_handle_.setCallbackQueue(&io_queue_);
-  io_spinner_ = new ros::AsyncSpinner(1, &io_queue_);
-  io_spinner_->start();
-  last_dataport_time_ = last_diagnostics_time_ = std::chrono::steady_clock::now();
-
 }
 
 
-/**
- * Destructor, deletes the objects holding the serial ports and disables the motors if required
- */
+/// Destructor, deletes the objects holding the serial ports and disables the motors if required
 DynamixelInterfaceController::~DynamixelInterfaceController()
 {
 
   ROS_INFO("shutting_down_ dynamixel_interface_controller");
 
   shutting_down_ = false;
-  io_spinner_->stop();
   delete nh_;
 
   if (stop_motors_on_shutdown_)
@@ -263,11 +259,8 @@ DynamixelInterfaceController::~DynamixelInterfaceController()
 }
 
 
-
-/**
- * Parses the information in the yaml file for each port
- * @param ports: the xml structure to be parsed
- */
+/// Parses the information in the yaml file for each port
+/// @param[in] ports the xml structure to be parsed
 void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue ports)
 {
 
@@ -415,12 +408,9 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
 }
 
 
-
-
-/**
- * Parses the information in the yaml file for each servo
- * @param servos: the xml structure to be parsed
- */
+/// Parses the information in the yaml file for each servo
+/// @param[in] port the port object to parse the servo info into
+/// @param[in] servos the xml structure to be parsed
 void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos)
 {
 
@@ -597,6 +587,20 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
         //Display joint info
         ROS_INFO("Joint Name: %s, ID: %d, Model: %s", info.joint_name.c_str(), info.id, info.model_spec->name.c_str());
 
+        //Only support effort control on newer spec dynamixels
+        if (control_type_ == dynamixel_interface_driver::DXL_TORQUE_CONTROL)
+        {
+          switch (info.model_spec->type)
+          {
+            case dynamixel_interface_driver::DXL_AX:
+            case dynamixel_interface_driver::DXL_RX:
+            case dynamixel_interface_driver::DXL_LEGACY_MX:
+            case dynamixel_interface_driver::DXL_LEGACY_PRO:
+              ROS_ERROR("Effort Control not supported for legacy series dynamixels!");
+              ROS_BREAK();
+          }
+        }
+
         //maintain torque state in motor
         port.driver->getTorqueEnabled(info.id, info.model_spec->type, &t_e);
         port.driver->setTorqueEnabled(info.id, info.model_spec->type, 0);
@@ -660,24 +664,9 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
 }
 
 
-/**
- * Start broadcasting JointState messages corresponding to the connected dynamixels
- */
-void DynamixelInterfaceController::startBroadcastingJointStates()
-{
-
-  broadcast_timer_ = io_handle_.createTimer(ros::Duration(1.0 / publish_rate_),
-      &DynamixelInterfaceController::publishJointStates, this);
-
-}
-
-
-/**
- * Callback for recieving a command from the /desired_joint_state topic.
- * The function atomically updates the class member variable containing the latest message and sets
- * a flag indicating a new message has been received
- * @param joint_commands the command received from the topic
- */
+/// Callback for recieving a command from the /desired_joint_state topic. The function atomically updates the class
+/// member variable containing the latest message and sets a flag indicating a new message has been received
+/// @param[in] joint_commands the command received from the topic
 void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointState::ConstPtr &joint_commands)
 {
 
@@ -747,15 +736,11 @@ void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointSt
     }
   }
   write_ready_ = true;
-  lock.unlock();
-
 }
 
-/**
- * TimeEvent callback for handling top level control of IO (for multiple ports).
- * Function spawns and waits on a thread for each
- */
-void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& event)
+
+/// main loop for performing IO
+void DynamixelInterfaceController::loop(void)
 {
   //don't access the driver after its been cleaned up
   if (shutting_down_)
@@ -767,11 +752,11 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
   sensor_msgs::JointState read_msg;
   sensor_msgs::JointState reads[dynamixel_ports_.size()];
 
-  dynamixel_interface_controller::DataPort dataport_msg;
-  dynamixel_interface_controller::DataPort dataport_reads[dynamixel_ports_.size()];
+  dynamixel_interface_controller::DataPorts dataports_msg;
+  dynamixel_interface_controller::DataPorts dataports_reads[dynamixel_ports_.size()];
 
-  dynamixel_interface_controller::ServoState status_msg;
-  dynamixel_interface_controller::ServoState status_reads[dynamixel_ports_.size()];
+  dynamixel_interface_controller::ServoDiags diags_msg;
+  dynamixel_interface_controller::ServoDiags diags_reads[dynamixel_ports_.size()];
 
   std::unique_lock<std::mutex> lock(write_mutex_);
 
@@ -807,7 +792,27 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     first_write_ = false;
   }
 
-  dataport_msg.header.stamp = read_msg.header.stamp = ros::Time::now();
+  //Control loop rate of dataport reads
+  if (dataport_rate_ > 0)
+  {
+    dataport_counter_++;
+    if (dataport_counter_ >= dataport_iters_)
+    {
+      read_dataport_ = true;
+      dataport_counter_ = 0;
+    }
+  }
+
+  //Control loop rate of diagnostic reads
+  if (diagnostics_rate_ > 0)
+  {
+    diagnostics_counter_++;
+    if (diagnostics_counter_ >= diagnostics_iters_)
+    {
+      read_diagnostics_ = true;
+      diagnostics_counter_ = 0;
+    }
+  }
 
   //spawn an IO thread for each additional port
   for (int i = 1; i < dynamixel_ports_.size(); i++)
@@ -817,7 +822,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
 
     std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this,
         std::ref(dynamixel_ports_[i]), std::ref(reads[i]),
-        std::ref(dataport_reads[i]), std::ref(status_reads[i]), write_ready_);
+        std::ref(dataports_reads[i]), std::ref(diags_reads[i]), write_ready_);
 
     threads.push_back(move(readThread));
   }
@@ -839,7 +844,7 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
   }
 
   //perform read
-  multiThreadedRead(dynamixel_ports_[0], reads[0], dataport_reads[0], status_reads[0]);
+  multiThreadedRead(dynamixel_ports_[0], reads[0], dataports_reads[0], diags_reads[0]);
 
 
   //loop and get port information (wait for threads in order if any were created)
@@ -866,44 +871,19 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
     // get dataport read info if available
     if (read_dataport_)
     {
-      if (dataport_reads[i].name.size() == 0)
+      if (dataports_reads[i].states.size() > 0)
       {
-        continue;
+        //append read values to published message
+        dataports_msg.states.insert(dataports_msg.states.end(), dataports_reads[i].states.begin(), dataports_reads[i].states.end());
       }
-
-      //append read values to published message
-      dataport_msg.name.insert(dataport_msg.name.end(), dataport_reads[i].name.begin(), dataport_reads[i].name.end());
-      dataport_msg.value.insert(dataport_msg.value.end(), dataport_reads[i].value.begin(), dataport_reads[i].value.end());
     }
 
     //get diagnostics info if available
-    if (publish_diagnostics_)
+    if (read_diagnostics_)
     {
-      if(status_reads[i].joint_names.size() == 0)
+      if(diags_reads[i].diagnostics.size() > 0)
       {
-        continue;
-      }
-
-      status_msg.joint_names.insert(status_msg.joint_names.end(), status_reads[i].joint_names.begin(), status_reads[i].joint_names.end());
-      status_msg.voltages.insert(status_msg.voltages.end(), status_reads[i].voltages.begin(), status_reads[i].voltages.end());
-      status_msg.temperatures.insert(status_msg.temperatures.end(), status_reads[i].temperatures.begin(), status_reads[i].temperatures.end());
-      status_msg.error_states.insert(status_msg.error_states.end(), status_reads[i].error_states.begin(), status_reads[i].error_states.end());
-      status_msg.modes.insert(status_msg.modes.end(), status_reads[i].modes.begin(), status_reads[i].modes.end());
-
-      //check error status of each dynamixel and report new errors
-      for (int j = 0; j < status_reads[i].joint_names.size(); j++)
-      {
-        DynamixelInfo info = dynamixel_ports_[i].joints.at(status_reads[i].joint_names[j]);
-        if (status_reads[i].error_states[j] != 0)
-        {
-          if (info.hardware_status != status_reads[i].error_states[j])
-          {
-            ROS_WARN("Dynamixel Error! Joint %s (id %d) has returned with code %d!",
-                info.joint_name.c_str(), info.id, status_reads[i].error_states[j]);
-          }
-          info.hardware_status = status_reads[i].error_states[j];
-          dynamixel_ports_[i].joints.at(status_reads[i].joint_names[j]) = info;
-        }
+        diags_msg.diagnostics.insert(diags_msg.diagnostics.end(), diags_reads[i].diagnostics.begin(), diags_reads[i].diagnostics.end());
       }
     }
   }
@@ -927,48 +907,29 @@ void DynamixelInterfaceController::publishJointStates(const ros::TimerEvent& eve
   }
 
   //publish external dataport message
-  if ((read_dataport_) && (dataport_msg.name.size() > 0))
+  if ((read_dataport_) && (dataports_msg.states.size() > 0))
   {
-    dataport_publisher_.publish(dataport_msg);
+    dataport_publisher_.publish(dataports_msg);
     read_dataport_ = false;
   }
 
-  if (publish_diagnostics_)
+  if (read_diagnostics_ && (diags_msg.diagnostics.size() > 0))
   {
-    diagnostics_publisher_.publish(status_msg);
-    publish_diagnostics_ = false;
-  }
-
-  //timestamp
-  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-
-  //Control loop rate of dataport reads
-  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_dataport_time_);
-  if (delta.count() >= (1-(0.5*dataport_read_rate_/publish_rate_)) / (dataport_read_rate_))
-  {
-    read_dataport_ = true;
-    last_dataport_time_ = now;
-  }
-
-  //Control loop rate of diagnostic reads
-  delta = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_diagnostics_time_);
-  if (delta.count() >= (1-(0.5*diagnostics_rate_/publish_rate_)) / (diagnostics_rate_))
-  {
-    publish_diagnostics_ = true;
-    last_diagnostics_time_ = now;
+    diagnostics_publisher_.publish(diags_msg);
+    read_diagnostics_ = false;
   }
 
 }
 
-/**
- * Top level control function for each port's IO thread.
- * @param port_num index used to retrieve port information from port list
- * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
- * @param perform_write boolean indicating whether or not to write latest joint_state to servos
- */
+/// Top level control function for each port's IO thread.
+/// @param[in] port the port for this thread to perform IO on
+/// @param[out] read_msg the JointState this threads joint data is read into
+/// @param[out] dataport_msg the DataPorts msg this thread reads dataport data into
+/// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
+/// @param[in] perform_write whether we are writing data this iteration
 void DynamixelInterfaceController::multiThreadedIO(PortInfo &port, sensor_msgs::JointState &read_msg,
-                                                    dynamixel_interface_controller::DataPort &dataport_msg,
-                                                    dynamixel_interface_controller::ServoState &status_msg,
+                                                    dynamixel_interface_controller::DataPorts &dataport_msg,
+                                                    dynamixel_interface_controller::ServoDiags &diags_msg,
                                                     bool perform_write)
 {
 
@@ -981,16 +942,14 @@ void DynamixelInterfaceController::multiThreadedIO(PortInfo &port, sensor_msgs::
   }
 
   //perform read
-  multiThreadedRead(port, read_msg, dataport_msg, status_msg);
+  multiThreadedRead(port, read_msg, dataport_msg, diags_msg);
 
 }
 
 
-/**
- * Function called in each thread to perform a write on a port
- * @param port_num index used to retrieve port information from port list
- * @param joint_commands message cointaining the commands for each joint
- */
+/// Function called in each thread to perform a write on a port
+/// @param[in] port_num index used to retrieve port information from port list
+/// @param[in] joint_commands message cointaining the commands for each joint
 void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msgs::JointState joint_commands)
 {
   //ignore empty messages
@@ -1002,6 +961,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
   //booleans used to setup which parameters to write
   bool has_pos = false;
   bool has_vel = false;
+  bool has_eff = false;
 
   //figure out which values have been specified
   if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL))
@@ -1013,15 +973,19 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
   {
     has_vel = true;
   }
+  if ((joint_commands.velocity.size() == joint_commands.name.size()) && (control_type_ == dynamixel_interface_driver::DXL_TORQUE_CONTROL))
+  {
+    has_eff = true;
+  }
 
-  if ((!has_pos) && (!has_vel))
+  if ((!has_pos) && (!has_vel) && (!has_eff))
   {
     //no valid array sizes for current control mode, ignore
     return;
   }
 
   //write objects
-  std::unordered_map<int, dynamixel_interface_driver::SyncData> velocities, positions;
+  std::unordered_map<int, dynamixel_interface_driver::SyncData> velocities, positions, efforts;
 
   //push motor encoder value onto list
   dynamixel_interface_driver::SyncData write_data;
@@ -1043,7 +1007,6 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
     //calculate the position register value for the motor
     if ((has_pos) && (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL))
     {
-
       //used to bound positions to limits
       int up_lim, dn_lim;
 
@@ -1090,7 +1053,6 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
     //calculate the velocity register value for the motor
     if (has_vel)
     {
-
       //get rad/s value from message
       double rad_s_vel = joint_commands.velocity[i];
 
@@ -1137,7 +1099,34 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       }
 
       velocities[info->id] = write_data;
+    }
 
+    if (has_eff)
+    {
+      //replace the below with proper code when you can figure out the units
+      double input_effort = joint_commands.effort[i];
+
+      int16_t effort = 0;
+
+      //if this flag set, input and outputs are current values (in A)
+      if (info->model_spec->current_ratio != 0)
+      {
+        effort = (input_effort * 1000 / info->model_spec->current_ratio);
+        effort = abs(effort);
+
+        if ((input_effort < 0) != (info->min > info->max))
+        {
+          effort = -effort;
+        }
+      }
+
+      //push motor encoder value onto list
+      write_data.id = info->id;
+      write_data.type = info->model_spec->type;
+      write_data.data.resize(2);
+      *((int16_t*) write_data.data.data()) = effort;
+
+      efforts[info->id] = write_data;
     }
   }
 
@@ -1161,23 +1150,30 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
     //set the velocity values for each motor
     port.driver->setMultiVelocity(velocities);
   }
+  else if ((control_type_ == dynamixel_interface_driver::DXL_TORQUE_CONTROL) && has_eff)
+  {
+    //set the effort values for each motor
+    port.driver->setMultiTorque(efforts);
+
+  }
 
 }
 
 
-/**
- * Function in thread to perform read on a port.
- * @param port_num index used to retrieve port information from port list
- * @param read_msg the msg this ports join data is read into.
- */
+/// Function in thread to perform read on a port.
+/// @param[in] port the port for this thread to perform IO on
+/// @param[out] read_msg the JointState this threads joint data is read into
+/// @param[out] dataport_msg the DataPorts msg this thread reads dataport data into
+/// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
 void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs::JointState &read_msg,
-                                                     dynamixel_interface_controller::DataPort &dataport_msg,
-                                                     dynamixel_interface_controller::ServoState &status_msg)
+                                                     dynamixel_interface_controller::DataPorts &dataport_msg,
+                                                     dynamixel_interface_controller::ServoDiags &diags_msg)
 {
 
   bool comm_success;
   std::unordered_map<int, dynamixel_interface_driver::DynamixelState> state_map;
   std::unordered_map<int, dynamixel_interface_driver::DynamixelDiagnostic> diag_map;
+  std::unordered_map<int, dynamixel_interface_driver::DynamixelDataport> data_map;
 
   //Iterate over all connected servos and add to list
   for (auto& it : port.joints) //(map<string, DynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
@@ -1186,6 +1182,12 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
     state_map[it.second.id].id = it.second.id;
     state_map[it.second.id].type = it.second.model_spec->type;
     diag_map[it.second.id] = dynamixel_interface_driver::DynamixelDiagnostic();
+    diag_map[it.second.id].id = it.second.id;
+    diag_map[it.second.id].type = it.second.model_spec->type;
+    data_map[it.second.id] = dynamixel_interface_driver::DynamixelDataport();
+    data_map[it.second.id].id = it.second.id;
+    data_map[it.second.id].type = it.second.model_spec->type;
+
   }
 
   //get state info back from all dynamixels
@@ -1277,25 +1279,48 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
 
   if (read_dataport_)
   {
-    // //put joint name in message
-    // dataport_msg.name.push_back(joint_name);
+    if( port.driver->getBulkDataportInfo(data_map) )
+    {
 
-    // //publish dataport value
-    // dataport_msg.value.push_back(response[3]);
+      //dynamixel_interface_controller::ServoState diag_msg;
+      dataport_msg.header.frame_id = port.port_name.c_str();
+
+      //Iterate over all connected servos and add to list
+      for (auto& it : port.joints)
+      {
+        dynamixel_interface_controller::DataPort msg;
+
+        //ignore joints that failed to read
+        if (!data_map[it.second.id].success)
+        {
+          continue;
+        }
+
+        //get data
+        msg.name = it.first;
+        msg.port_values.push_back(data_map[it.second.id].port_values[0]);
+        msg.port_values.push_back(data_map[it.second.id].port_values[1]);
+        msg.port_values.push_back(data_map[it.second.id].port_values[2]);
+        msg.port_values.push_back(data_map[it.second.id].port_values[3]);
+
+        //push msg into array
+        dataport_msg.states.push_back(msg);
+      }
+    }
   }
 
-  if (publish_diagnostics_)
+  if (read_diagnostics_)
   {
     if( port.driver->getBulkDiagnosticInfo(diag_map) )
     {
+
       //dynamixel_interface_controller::ServoState diag_msg;
-      status_msg.header.frame_id = port.port_name.c_str();
+      diags_msg.header.frame_id = port.port_name.c_str();
 
       //Iterate over all connected servos and add to list
-      for (auto& it : port.joints) //(map<string, DynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
+      for (auto& it : port.joints)
       {
-        //joint name
-        std::string joint_name = it.first;
+        dynamixel_interface_controller::ServoDiag msg;
 
         //ignore joints that failed to read
         if (!diag_map[it.second.id].success)
@@ -1303,46 +1328,40 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
           continue;
         }
 
-        //put effort in message
-        status_msg.joint_names.push_back(joint_name.c_str());
+        //get name
+        msg.name = it.first;
+        msg.id = it.second.id;
+        msg.model_name = it.second.model_spec->name;
 
         //get voltage
-        status_msg.voltages.push_back((double) (diag_map[it.second.id].voltage) / 10.0);
+        msg.voltage = diag_map[it.second.id].voltage / 10.0;
 
         //get temperatures
-        status_msg.temperatures.push_back((double) (diag_map[it.second.id].temperature));
+        msg.temperature = (double) diag_map[it.second.id].temperature;
 
-        // status_msg.error_states.push_back(response[2]);
-        // if (response[2] != 0)
-        // {
-        //     ROS_WARN("Dynamixel Error! Joint %s (id %d) has returned with code %d", joint_name, info.id, response[2]);
-        // }
-        status_msg.modes.push_back(it.second.current_mode);
+        //push msg into array
+        diags_msg.diagnostics.push_back(msg);
       }
     }
   }
 }
 
+}
 
-
-/** Main loop. intialises controller and starts timer and ROS callback handling */
+/// Main loop. intialises controller and starts timer and ROS callback handling
 int main(int argc, char **argv)
 {
 
   ros::init(argc, argv, "dynamixel_interface_controller");
 
-  DynamixelInterfaceController controller;
+  dynamixel_interface_controller::DynamixelInterfaceController controller;
 
-  //Initialize Timer callback and the async spinner for write commands, this starts the IO.
-  controller.startBroadcastingJointStates();
+  ros::Rate loop_rate(controller.getLoopRate());
 
-//   ros::MultiThreadedSpinner spinner(2); // Use 2 threads
-//   spinner.spin(); // spin() will not return until the node has been shutdown
-
-  //Use a single threaded spinner for the global queue to service the joint states callback, (this callback will be
-  //primarily rate limited by the motors)
-  ros::spin();
-
+  while(ros::ok())
+  {
+    controller.loop();
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
 }
-
-

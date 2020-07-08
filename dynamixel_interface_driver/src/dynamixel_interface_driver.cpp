@@ -469,6 +469,7 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
     {
       return false;
     }
+    it.second.success = false;
     read_map[it.first] = static_cast<SyncData*>(&it.second);
     i++;
   }
@@ -619,7 +620,155 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
 
 
 /// Bulk Reads the voltage and temperature in one instruction, behaves the same as getBulkState()
-/// @param diag_map map of servo ids to diag_data to read into
+/// @param data_map map of servo ids to dataport objects to read into
+/// @return True on comm success, false otherwise
+bool DynamixelInterfaceDriver::getBulkDataportInfo(std::unordered_map<int, DynamixelDataport> &data_map)
+{
+  DynamixelSeriesType type;
+  bool success = false;
+  std::unordered_map<int, SyncData*> read_map;
+  uint i = 0;
+
+  // base case, nothing to read
+  if (data_map.size() == 0)
+  {
+    return false;
+  }
+
+  // check types match
+  for (auto& it : data_map)
+  {
+    if (i == 0)
+    {
+      type = it.second.type;
+    }
+    else if ((i > 0) && (type != it.second.type))
+    {
+      return false;
+    }
+    it.second.success = false;
+    read_map[it.first] = static_cast<SyncData*>(&it.second);
+    i++;
+  }
+
+  // perform bulk read depending on type
+  switch(type)
+  {
+    case DXL_X:
+      // read data
+      if(use_group_read_)
+      {
+        syncRead(read_map, DXL_STANDARD_DATAPORT_1, 6);
+      }
+      else
+      {
+        for (auto& it : data_map)
+        {
+          if(readRegisters(it.first, DXL_STANDARD_DATAPORT_1, 6, &it.second.data)) // individual reads
+          {
+            it.second.success = true;
+          }
+          else
+          {
+            it.second.success = false;
+          }
+
+        }
+      }
+      for (auto& it : data_map) // decode responses
+      {
+        if (it.second.success)
+        {
+          it.second.port_values[0] = *((uint16_t*) &it.second.data[0]);
+          it.second.port_values[1] = *((uint16_t*) &it.second.data[2]);
+          it.second.port_values[2] = *((uint16_t*) &it.second.data[4]);
+          it.second.port_values[4] = 0;
+          success = true;
+        }
+      }
+
+      return success;
+
+    // NEW PRO SERIES
+    case DXL_P:
+      // read data
+      if(use_group_read_)
+      {
+        syncRead(read_map, DXL_P_DATAPORT_1, 8); // bulk method
+      }
+      else
+      {
+        for (auto& it : data_map)
+        {
+          if(readRegisters(it.first, DXL_P_DATAPORT_1, 8, &it.second.data)) // individual reads
+          {
+            it.second.success = true;
+          }
+          else
+          {
+            it.second.success = false;
+          }
+
+        }
+      }
+      for (auto& it : data_map) // decode responses
+      {
+        if (it.second.success)
+        {
+          it.second.port_values[0] = *((uint16_t*) &it.second.data[0]);
+          it.second.port_values[1] = *((uint16_t*) &it.second.data[2]);
+          it.second.port_values[2] = *((uint16_t*) &it.second.data[4]);
+          it.second.port_values[3] = *((uint16_t*) &it.second.data[6]);
+          success = true;
+        }
+      }
+      return success;
+
+    // OLD PRO SERIES
+    case DXL_LEGACY_PRO:
+      // read data
+      if(use_group_read_)
+      {
+        syncRead(read_map, DXL_LEGACY_PRO_DATAPORT_1, 8); // bulk method
+      }
+      else
+      {
+        for (auto& it : data_map)
+        {
+          if(readRegisters(it.first, DXL_LEGACY_PRO_DATAPORT_1, 8, &it.second.data)) // individual reads
+          {
+            it.second.success = true;
+          }
+          else
+          {
+            it.second.success = false;
+          }
+
+        }
+      }
+      for (auto& it : data_map) // decode responses
+      {
+        if (it.second.success)
+        {
+          it.second.port_values[0] = *((uint16_t*) &it.second.data[0]);
+          it.second.port_values[1] = *((uint16_t*) &it.second.data[2]);
+          it.second.port_values[2] = *((uint16_t*) &it.second.data[4]);
+          it.second.port_values[3] = *((uint16_t*) &it.second.data[6]);
+          success = true;
+        }
+      }
+      return success;
+
+    default:
+      return false;
+  }
+
+  return false;
+
+}
+
+/// Bulk Reads the voltage and temperature in one instruction, behaves the same as getBulkState()
+/// @param diag_map map of servo ids to diagnostics objects to read into
 /// @return True on comm success, false otherwise
 bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, DynamixelDiagnostic> &diag_map)
 {
@@ -645,6 +794,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
     {
       return false;
     }
+    it.second.success = false;
     read_map[it.first] = static_cast<SyncData*>(&it.second);
     i++;
   }
@@ -682,6 +832,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
         {
           it.second.voltage = it.second.data[0];
           it.second.temperature = it.second.data[1];
+          success = true;
         }
       }
       return success;
@@ -692,7 +843,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
       // read data
       if(use_group_read_)
       {
-        syncRead(read_map, DXL_STANDARD_PRESENT_INPUT_VOLTAGE, 3); // bulk method
+        syncRead(read_map, DXL_STANDARD_PRESENT_INPUT_VOLTAGE, 3);
       }
       else
       {
@@ -715,8 +866,10 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
         {
           it.second.voltage = *((uint16_t*) &it.second.data[0]);
           it.second.temperature = it.second.data[2];
+          success = true;
         }
       }
+
       return success;
 
     // NEW PRO SERIES
@@ -747,6 +900,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
         {
           it.second.voltage = *((uint16_t*) &it.second.data[0]);
           it.second.temperature = it.second.data[2];
+          success = true;
         }
       }
       return success;
@@ -779,6 +933,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
         {
           it.second.voltage = *((uint16_t*) &it.second.data[0]);
           it.second.temperature = it.second.data[2];
+          success = true;
         }
       }
       return success;

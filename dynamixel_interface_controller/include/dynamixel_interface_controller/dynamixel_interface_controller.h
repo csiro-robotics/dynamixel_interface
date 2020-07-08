@@ -72,8 +72,7 @@
  * ___________________________________________________________________
  */
 
-
- /**
+/**
  * @file   dynamixel_interface_controller.h
  * @author Tom Molnar (Tom.Molnar@data61.csiro.au), Brian Axelrod
  * @date   January, 2017
@@ -84,28 +83,30 @@
 #define DYNAMIXEL_INTERFACE_CONTROLLER_H_
 
 #include <string>
-#include <map>
 #include <mutex>
+#include <map>
+
 #include <XmlRpcValue.h>
+
 #include <ros/ros.h>
 #include <ros/spinner.h>
 #include <ros/callback_queue.h>
 #include <sensor_msgs/JointState.h>
 
-#include "dynamixel_interface_controller/DataPort.h"
-#include "dynamixel_interface_controller/ServoState.h"
-#include "dynamixel_interface_controller/ServoMode.h"
-
 #include <dynamixel_interface_driver/dynamixel_interface_driver.h>
+
+#include "dynamixel_interface_controller/DataPort.h"
+#include "dynamixel_interface_controller/DataPorts.h"
+#include "dynamixel_interface_controller/ServoDiag.h"
+#include "dynamixel_interface_controller/ServoDiags.h"
+
+
 
 
 namespace dynamixel_interface_controller
 {
 
-/**
- * Struct that describes each servo's place in the system including
- * which joint it corresponds to.
- */
+/// Struct that describes each servo's place in the system including which joint it corresponds to.
 typedef struct
 {
 
@@ -127,201 +128,131 @@ typedef struct
 
 } DynamixelInfo;
 
-/**
- * Struct which stores information about each port in use and which
- * joints use that port
- */
+
+/// Struct which stores information about each port in use and which joints use that port
 typedef struct
 {
+  std::string port_name; /// User defined port name
 
-  /** User defined port name */
-  std::string port_name;
+  std::string device; /// Serial device name
+  int baudrate; /// Serial baud rate
 
-  /** Serial Configuration */
-  std::string device;
-  int baudrate;
+  bool use_legacy_protocol; /// boolean indicating if legacy protocol (for older series dynamixels) is in use
 
-  /** Which protocol is in use */
-  bool use_legacy_protocol;
+  dynamixel_interface_driver::DynamixelInterfaceDriver *driver; /// The driver object
 
-  /** Pointer to the serial driver */
-  dynamixel_interface_driver::DynamixelInterfaceDriver *driver;
-
-  /** map of joint names to information */
-  std::unordered_map<std::string, DynamixelInfo> joints;
+  std::unordered_map<std::string, DynamixelInfo> joints; /// map of joint information by name
 
 } PortInfo;
 
 
-/**
- * This class forms a ROS Node that provides an interface with the dynamixel series of servos.
- * The controller functions on a timer based callback for updating the motor states. Commands are
- * Continuously sent to the motor and updated via callback once new messages are published to the command
- * Topic. This class also provides a threaded interface for controlling multiple sets of dynamixels simultaneously
- * and synchronously through different serial ports. This allows robots with many motors to reduce the overall IO
- * time required for control.
- */
+/// This class forms a ROS Node that provides an interface with the dynamixel series of servos.
+/// The controller functions on a timer based callback for updating the motor states. Commands are
+/// Continuously sent to the motor and updated via callback once new messages are published to the command
+/// Topic. This class also provides a threaded interface for controlling multiple sets of dynamixels simultaneously
+/// and synchronously through different serial ports. This allows robots with many motors to reduce the overall IO
+/// time required for control.
 class DynamixelInterfaceController
 {
 public:
 
-  /**
-   * Constructor, loads the motor configuration information from the specified yaml file and intialises
-   * The motor states.
-   */
+  /// Constructor, loads the motor configuration information from the specified yaml file and intialises
+  /// The motor states.
   DynamixelInterfaceController();
 
-  /**
-   * Destructor, deletes the objects holding the serial ports and disables the motors if required
-   */
+  /// Destructor, deletes the objects holding the serial ports and disables the motors if required
   ~DynamixelInterfaceController();
 
+  /// Gets the target loop rate for the controller
+  /// @returns the target loop rate for the controller (Hz)
+  inline double getLoopRate(void) {return loop_rate_;};
 
-  /**
-   * Start broadcasting JointState messages corresponding to the connected dynamixels
-   */
-  void startBroadcastingJointStates();
+  /// main loop for performing IO
+  void loop(void);
 
 private:
 
-  /**
-  * Parses the information in the yaml file for each port
-  * @param ports: the xml structure to be parsed
-  */
+  /// Parses the information in the yaml file for each port
+  /// @param[in] ports the xml structure to be parsed
   void parsePortInformation(XmlRpc::XmlRpcValue ports);
 
-  /**
-  * Parses the information in the yaml file for each servo
-  * @param servos: the xml structure to be parsed
-  */
+  /// Parses the information in the yaml file for each servo
+  /// @param[in] port the port object to parse the servo info into
+  /// @param[in] servos the xml structure to be parsed
   void parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos);
 
-
-  /**
-   * Callback for setting diagnostic publishing flags
-   */
-  void diagnosticsRateCallback(const ros::TimerEvent& event);
-
-  /**
-  * TimeEvent callback for handling pro external dataport read rate
-  */
-  void dataportRateCallback(const ros::TimerEvent& event);
-
-  /**
-   * Callback for recieving a command from the /desired_joint_state topic.
-   * The function atomically updates the class member variable containing the latest message and sets
-   * a flag indicating a new message has been received
-   * @param joint_commands the command received from the topic
-   */
+  /// Callback for recieving a command from the /desired_joint_state topic. The function atomically updates the class
+  /// member variable containing the latest message and sets a flag indicating a new message has been received
+  /// @param[in] joint_commands the command received from the topic
   void jointStateCallback(const sensor_msgs::JointState::ConstPtr &joint_commands);
 
-  /**
-   * TimeEvent callback for handling top level control of IO (for multiple ports).
-   * Function spawns and waits on a thread for each additional port defined. In cases where no additional ports are
-   *
-   */
-  void publishJointStates(const ros::TimerEvent& event);
-
-  /**
-   * Top level control function for each port's IO thread.
-   * @param port_num index used to retrieve port information from port list
-   * @param read_msg the msg this threads join data is read into, this is then combined by the top level function.
-   * @param perform_write boolean indicating whether or not to write latest joint_state to servos
-   */
+  /// Top level control function for each port's IO thread.
+  /// @param[in] port the port for this thread to perform IO on
+  /// @param[out] read_msg the JointState this threads joint data is read into
+  /// @param[out] dataport_msg the DataPorts msg this thread reads dataport data into
+  /// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
+  /// @param[in] perform_write whether we are writing data this iteration
   void multiThreadedIO(PortInfo &port, sensor_msgs::JointState &read_msg,
-                        dynamixel_interface_controller::DataPort &dataport_msg,
-                        dynamixel_interface_controller::ServoState &status_msg,
+                        dynamixel_interface_controller::DataPorts &dataport_msg,
+                        dynamixel_interface_controller::ServoDiags &status_msg,
                         bool perform_write);
 
-  /**
-   * Function called in each thread to perform a write on a port
-   * @param port_num index used to retrieve port information from port list
-   * @param joint_commands message cointaining the commands for each joint
-   */
+  /// Function called in each thread to perform a write on a port
+  /// @param[in] port_num index used to retrieve port information from port list
+  /// @param[in] joint_commands message cointaining the commands for each joint
   void multiThreadedWrite(PortInfo &port, sensor_msgs::JointState joint_commands);
 
-
-  /**
-   * Function in thread to perform read on a port.
-   * @param port_num index used to retrieve port information from port list
-   * @param read_msg the msg this ports join data is read into.
-   */
+  /// Function in thread to perform read on a port.
+  /// @param[in] port the port for this thread to perform IO on
+  /// @param[out] read_msg the JointState this threads joint data is read into
+  /// @param[out] dataport_msg the DataPorts msg this thread reads dataport data into
+  /// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
   void multiThreadedRead(PortInfo &port, sensor_msgs::JointState &read_msg,
-                          dynamixel_interface_controller::DataPort &dataport_msg,
-                          dynamixel_interface_controller::ServoState &status_msg);
+                          dynamixel_interface_controller::DataPorts &dataports_msg,
+                          dynamixel_interface_controller::ServoDiags &diags_msg);
 
+  ros::NodeHandle *nh_; /// Handler for the ROS Node
 
-  /** Handler for the ROS Node */
-  ros::NodeHandle *nh_;
+  double loop_rate_; /// Desired loop rate (joint states are published at this rate)
 
-  ros::CallbackQueue io_queue_;
-  ros::NodeHandle io_handle_;
-  ros::AsyncSpinner *io_spinner_;
+  double diagnostics_rate_;      /// Desired rate at which servo diagnostic information is published
+  bool read_diagnostics_;        /// Bool for telling threads to read diagnostics data
+  uint diagnostics_counter_ = 0; /// Counter for tracking diagnostics rate
+  uint diagnostics_iters_ = 0;   /// publish when diagnostic_counter_ == this
 
-  /** Rate at which joint state information is published */
-  double publish_rate_;
+  volatile bool shutting_down_; /// Indicates to callbacks that the controller is shutting down
 
-  /** Rate at which servo diagnostic information is published */
-  double diagnostics_rate_;
-  std::chrono::steady_clock::time_point last_diagnostics_time_;
+  bool stop_motors_on_shutdown_; /// Indicates if the motors should be turned off when the controller stops
 
-  /** Rate at which the pro external dataport is read */
-  double dataport_read_rate_;
+  bool ignore_input_velocity_; /// can set driver to ignore profile velocity commands in position mode
 
-  /** Indicates to callbacks that the controller is shutting down */
-  volatile bool shutting_down_;
+  double dataport_rate_;      /// Rate at which the pro external dataport is read
+  bool read_dataport_;        /// Bool for telling threads to read dataport data
+  uint dataport_counter_ = 0; /// counter for tracking dataport rate
+  uint dataport_iters_ = 0;   /// publish when dataport_counter_ == this
 
-  /** Indicates if the motors should be turned off when the controller stops */
-  bool stop_motors_on_shutdown_;
+  double global_joint_speed_;  /// global joint speed limit
+  double global_torque_limit_; /// global joint torque limit
 
-  /** can set driver to ignore profile velocity commands in position mode */
-  bool ignore_input_velocity_;
+  sensor_msgs::JointState write_msg_; /// Stores the last message received from the write command topic
 
-  /** Indicates if we should get diagnostic info (voltage and temperature) */
-  bool publish_diagnostics_;
+  std::mutex write_mutex_; /// Mutex for write_msg, as there are potentially multiple threads
 
-  /** Indicates if we should read the external dataport on the pro series dynamixel */
-  bool read_dataport_;
-  std::chrono::steady_clock::time_point last_dataport_time_;
+  bool write_ready_; /// Booleans indicating if we have received commands
+  bool first_write_; /// Indicate if write has occured
 
-  /** global override parameters */
-  double global_joint_speed_;
-  double global_torque_limit_;
+  dynamixel_interface_driver::DynamixelControlMode control_type_; /// method of control (position/velocity/torque)
 
-  /** Stores the last message received from the write command topic */
-  sensor_msgs::JointState write_msg_;
+  std::vector<PortInfo> dynamixel_ports_; /// method of control (position/velocity/torque)
 
-  /** Mutex for write_msg, as there are potentially multiple threads */
-  std::mutex write_mutex_;
+  ros::Publisher joint_state_publisher_;   /// Publishes joint states from reads
+  ros::Publisher diagnostics_publisher_;   /// Publishes joint states from reads
+  ros::Subscriber joint_state_subscriber_; /// Gets joint states for writes
+  ros::Publisher dataport_publisher_;      /// Publishes the data from the external ports on dynamixel_pros
 
-  /** Booleans indicating if we have received commands */
-  bool write_ready_;
-  bool first_write_;
+  ros::Timer broadcast_timer_; /// Timer that controls the rate of the IO callback
 
-  /** method of control (position/velocity/torque) */
-  dynamixel_interface_driver::DynamixelControlMode control_type_;
-
-  /** the vector of all ports in use */
-  std::vector<PortInfo> dynamixel_ports_;
-
-  /** Publishes joint states from reads */
-  ros::Publisher joint_state_publisher_;
-
-  /** Publishes joint states from reads */
-  ros::Publisher diagnostics_publisher_;
-
-  /** Gets joint states for writes */
-  ros::Subscriber joint_state_subscriber_;
-
-  /** Publishes the data from the external ports on dynamixel_pros */
-  ros::Publisher dataport_publisher_;
-
-  /** Timer that controls the rate of the IO callback */
-  ros::Timer broadcast_timer_;
-
-  /** Debug message publisher */
-  ros::Publisher debug_publisher_;
-
+  ros::Publisher debug_publisher_; /// Debug message publisher
 };
 
 }
