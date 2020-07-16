@@ -5,19 +5,13 @@
 
 # # --------------------------------------------------------------------------- # #
 # GLOBAL OPERATION PARAMETERS
-publish_rate: 100                 # desired rate for joint state updates. actual rate may be less depending on number
+loop_rate: 100                    # desired rate for joint state updates. actual rate may be less depending on number
                                   # of dynamixels connected and port baud rate.
-control_mode: Position            # control mode, either 'Position', 'Velocity', or 'Torque'
+control_mode: position            # control mode, either 'position', 'velocity', or 'effort'
 disable_torque_on_shutdown: true  # with this enabled the motors will switch off when the controller closes
-echo_joint_commands: true         # debug flag to echo write commands sent to the controller, useful for measuring
-                                  # write rates
-effort_use_raw: true              # when sending and receiving joint states, report effort as raw current (mA) or
-                                  # fraction of max load (0-1)
-mx_effort_use_current: true       # Use the current register instead of the load register on the mx series (IO
-                                  # performance hit but much more accurate for reading effort)
 ignore_input_velocity: false      # ignore input velocity commands in position mode (no profile velocity)
-diagnostics_rate: 0               # rate to publish diagnostic information
-dataport_rate: 0                  # rate to read from dynamixel pro external dataport 1
+diagnostics_rate: 1               # rate to publish diagnostic information
+dataport_rate: 1                  # rate to read from dynamixel external dataports
 
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for
 # the servo below
