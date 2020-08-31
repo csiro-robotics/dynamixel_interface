@@ -24,39 +24,49 @@
 # All the above can be obtained from the datasheet for the motor, found at https://emanual.robotis.com/
 # --------------------------- MX SERIES (1.0) ---------------------------- #
 
+- name: MX12-W
+  model_number: 360
+  series: LM
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 10.425
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
 - name: MX28
   model_number: 29
   series: LM
   encoder_cpr: 4096
-  velocity_radps_to_reg: 83.766
-  effort_reg_max: 1023
-  effort_reg_to_mA: 4.5
+  velocity_radps_to_reg: 86.812
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
 
 - name: MX64
   model_number: 310
   series: LM
   encoder_cpr: 4096
-  velocity_radps_to_reg: 83.766
-  effort_reg_max: 1023
-  effort_reg_to_mA: 4.5
+  velocity_radps_to_reg: 86.812
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
 
 - name: MX106
   model_number: 320
   series: LM
   encoder_cpr: 4096
-  velocity_radps_to_reg: 83.766
-  effort_reg_max: 1023
-  effort_reg_to_mA: 4.5
+  velocity_radps_to_reg: 86.812
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
 
 # ------------------------ MX SERIES (2.0) ------------------------- #
+
+
 
 - name: MX28-(2.0)
   model_number: 30
   series: M
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
-  effort_reg_max: 2047
-  effort_reg_to_mA: 3.36
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
 
 - name: MX64-(2.0)
   model_number: 311
@@ -75,6 +85,50 @@
   effort_reg_to_mA: 3.36
 
 # ---------------------------- X SERIES ---------------------------- #
+
+# ---- XL ---- #
+
+- name: XL430-W250
+  model_number: 1060
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: 2XL430-W250
+  model_number: 1090
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+# ---- XC ---- #
+
+- name: XC430-W150
+  model_number: 1070
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: XC430-W240
+  model_number: 1080
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: 2XC430-W250
+  model_number: 1160
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
 
 # ---- XM ---- #
 
@@ -107,7 +161,7 @@
   series: X
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
-  effort_reg_max: 1193
+  effort_reg_max: 2047
   effort_reg_to_mA: 2.69
 
 # ---- XH ---- #
@@ -133,7 +187,7 @@
   series: X
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
-  effort_reg_max: 1193
+  effort_reg_max: 648
   effort_reg_to_mA: 2.69
 
 - name: XH430-W350
@@ -141,22 +195,162 @@
   series: X
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
-  effort_reg_max: 1193
+  effort_reg_max: 648
   effort_reg_to_mA: 2.69
 
-
-# ---- XL ---- #
-
-- name: XL430-W250
-  model_number: 1060
+- name: XH540-W150
+  model_number: 1110
   series: X
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
-  effort_reg_max: 1000
-  effort_reg_to_mA: 1.4
+  effort_reg_max: 2047
+  effort_reg_to_mA: 2.69
 
-# -------------------------- PRO SERIES ---------------------------- #
+- name: XH540-W270
+  model_number: 1100
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 2047
+  effort_reg_to_mA: 2.69
 
+- name: XH540-V150
+  model_number: 1150
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 2047
+  effort_reg_to_mA: 2.69
+
+- name: XH540-V270
+  model_number: 1140
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 2047
+  effort_reg_to_mA: 2.69
+
+# ---- XW ---- #
+
+- name: XW540-T140
+  model_number: 1180
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 2047
+  effort_reg_to_mA: 2.69
+
+- name: XW540-T260
+  model_number: 1180
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 2047
+  effort_reg_to_mA: 2.69
+
+# -------------------------- P SERIES ---------------------------- #
+
+# ---- M ---- #
+
+- name: PM42-010-S260
+  model_number: 2100
+  series: P
+  encoder_cpr: 526374
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 1461
+  effort_reg_to_mA: 1
+
+- name: PM54-040-S250
+  model_number: 2110
+  series: P
+  encoder_cpr: 502834
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 4470
+  effort_reg_to_mA: 1
+
+- name: PM54-060-S250
+  model_number: 2110
+  series: P
+  encoder_cpr: 502834
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 7980
+  effort_reg_to_mA: 1
+
+# ---- H ---- #
+
+- name: PH54-100-S500
+  model_number: 2010
+  series: P
+  encoder_cpr: 1003846
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 15900
+  effort_reg_to_mA: 1
+
+- name: PH54-200-S500
+  model_number: 2020
+  series: P
+  encoder_cpr: 1003846
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 22740
+  effort_reg_to_mA: 1
+
+
+# -------------------------- Legacy (discontinued) PRO+ SERIES ---------------------------- #
+
+# ---- M ---- #
+
+- name: M42-010-S260A
+  model_number: 43289
+  series: P
+  encoder_cpr: 526374
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 1461
+  effort_reg_to_mA: 1
+
+- name: M54-040-S250A
+  model_number: 46097
+  series: P
+  encoder_cpr: 502834
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 4470
+  effort_reg_to_mA: 1
+
+- name: M54-060-S250A
+  model_number: 46353
+  series: P
+  encoder_cpr: 502834
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 7980
+  effort_reg_to_mA: 1
+
+# ---- H ---- #
+
+- name: H42-20-S300A
+  model_number: 51201
+  series: P
+  encoder_cpr: 607500
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 4500
+  effort_reg_to_mA: 1
+
+- name: H54-100-S500A
+  model_number: 53769
+  series: P
+  encoder_cpr: 1003846
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 15900
+  effort_reg_to_mA: 1
+
+- name: H54-200-S500A
+  model_number: 54025
+  series: P
+  encoder_cpr: 1003846
+  velocity_radps_to_reg: 954.930
+  effort_reg_max: 22740
+  effort_reg_to_mA: 1
+
+
+# -------------------------- Legacy (discontinued) PRO SERIES ---------------------------- #
 
  # ---- L ---- #
 
@@ -255,20 +449,107 @@
 
 # ---------------------------- AX SERIES ---------------------------- #
 
-- name: AX-18A
-  model_number: 18
-  series: A
-  encoder_cpr: 1023
-  encoder_range_deg: 300
-  velocity_radps_to_reg: 86.023
-  effort_reg_max: 1023
-  effort_reg_to_mA: 1.0
-
 - name: AX-12A
   model_number: 12
   series: A
   encoder_cpr: 1023
   encoder_range_deg: 300
   velocity_radps_to_reg: 86.023
-  effort_reg_max: 1023
-  effort_reg_to_mA: 1.0
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: AX-12W
+  model_number: 300
+  series: A
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: AX-18A
+  model_number: 18
+  series: A
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+# ---------------------------- RX SERIES ---------------------------- #
+
+- name: RX-10
+  model_number: 10
+  series: R
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: RX-24F
+  model_number: 24
+  series: R
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: RX-28
+  model_number: 28
+  series: R
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: RX-64
+  model_number: 28
+  series: 64
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+# ---------------------------- DX SERIES ---------------------------- #
+
+- name: DX-113
+  model_number: 113
+  series: D
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: DX-116
+  model_number: 116
+  series: D
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+- name: DX-117
+  model_number: 117
+  series: D
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
+
+# ---------------------------- EX SERIES ---------------------------- #
+
+- name: EX-106+
+  model_number: 107
+  series: E
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1000
+  effort_reg_to_mA: 0.001
