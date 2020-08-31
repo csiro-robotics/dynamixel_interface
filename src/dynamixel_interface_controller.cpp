@@ -258,7 +258,6 @@ DynamixelInterfaceController::~DynamixelInterfaceController()
   }
 }
 
-
 /// Parses the information in the yaml file for each port
 /// @param[in] ports the xml structure to be parsed
 void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue ports)
@@ -406,7 +405,6 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     }
   }
 }
-
 
 /// Parses the information in the yaml file for each servo
 /// @param[in] port the port object to parse the servo info into
@@ -665,7 +663,6 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
   }
 }
 
-
 /// Callback for recieving a command from the /desired_joint_state topic. The function atomically updates the class
 /// member variable containing the latest message and sets a flag indicating a new message has been received
 /// @param[in] joint_commands the command received from the topic
@@ -740,8 +737,8 @@ void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointSt
   write_ready_ = true;
 }
 
-
-/// main loop for performing IO
+/// main loop for performing IO, handles the creation and joining of IO threads for each port, so that IO for multiple
+/// usb devices can be threaded.
 void DynamixelInterfaceController::loop(void)
 {
   //don't access the driver after its been cleaned up

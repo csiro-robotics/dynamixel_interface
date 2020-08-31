@@ -83,7 +83,6 @@
 #include <ros/package.h>
 #include <dynamixel_interface/dynamixel_interface_driver.h>
 
-
 namespace dynamixel_interface
 {
 
@@ -327,6 +326,7 @@ bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, DynamixelSeriesType ty
 
 /// Retrieves the torque enabled value from the dynamixel's ram.
 /// @param[in] servo_id The ID of the servo to retrieve from
+/// @param[in] type the type of the servo to read from
 /// @param[out] torque_enabled Stores the status of torque enable
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, DynamixelSeriesType type, bool *torque_enabled)
@@ -377,8 +377,9 @@ bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, DynamixelSeriesTyp
 }
 
 /// Retrieves the current target_velocity from the dynamixel's ram.
-/// @param servo_id The ID of the servo to retrieve from
-/// @param target_velocity Stores the value returned
+/// @param[in] servo_id The ID of the servo to retrieve from
+/// @param[in] type the type of the servo to read from
+/// @param[out] target_velocity Stores the value returned
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::getTargetTorque(int servo_id, DynamixelSeriesType type, int16_t* target_torque)
 {
@@ -427,10 +428,10 @@ bool DynamixelInterfaceDriver::getTargetTorque(int servo_id, DynamixelSeriesType
 
 /// Retrieves arbitrary register readings from the Dynamixel, can be used in cases where provided getters are
 /// insufficient or to read multiple contiguous values at once.
-/// @param servo_id The ID of the servo to retrieve from
-/// @param address The address value in the control table the dynamixel will start reading from
-/// @param length The number of bytes to read consecutively from the control table
-/// @param response Array to store the raw dynamixel response.
+/// @param[in] servo_id The ID of the servo to retrieve from
+/// @param[in] address The address value in the control table the dynamixel will start reading from
+/// @param[in] length The number of bytes to read consecutively from the control table
+/// @param[out] response Array to store the raw dynamixel response.
 bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint16_t address, uint16_t length,
     std::vector<uint8_t> *response)
 {
@@ -461,7 +462,7 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint16_t address, uin
 /// the function will fall back on reading each motor individually. Optionally, the group comms can be disabled on
 /// initialisation of the driver (by setting use_group_read to false) in which case the function will always read
 /// from each dynamixel individually.
-/// @param state_map map of servo ids to state data to read into
+/// @param[in] state_map map of servo ids to state data to read into
 /// @return True on comm success, false otherwise
 bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelState> &state_map)
 {
@@ -636,9 +637,8 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
   return false;
 }
 
-
 /// Bulk Reads the voltage and temperature in one instruction, behaves the same as getBulkState()
-/// @param data_map map of servo ids to dataport objects to read into
+/// @param[in] data_map map of servo ids to dataport objects to read into
 /// @return True on comm success, false otherwise
 bool DynamixelInterfaceDriver::getBulkDataportInfo(std::unordered_map<int, DynamixelDataport> &data_map)
 {
@@ -786,7 +786,7 @@ bool DynamixelInterfaceDriver::getBulkDataportInfo(std::unordered_map<int, Dynam
 }
 
 /// Bulk Reads the voltage and temperature in one instruction, behaves the same as getBulkState()
-/// @param diag_map map of servo ids to diagnostics objects to read into
+/// @param[in] diag_map map of servo ids to diagnostics objects to read into
 /// @return True on comm success, false otherwise
 bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, DynamixelDiagnostic> &diag_map)
 {
@@ -966,16 +966,15 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
 
 }
 
-
 // ********************** Protected Read Methods *********************** //
 
 /// Performs the bulk read for each protocol. A bulk read is a broadcast instruction on a bus that commands a list
 /// of dynamixels to respond in order with a read of a specified address and length (which can be different for each
 /// dynamixel). This protocol can be used to read many parameters from many dynamixels on a bus in just one
 /// instruction.
-/// @param read_data Pointer to a map of SyncData objects, containing ids and vectors to read into
-/// @param address The address value in the control table the dynamixels will start reading from
-/// @param length The number of bytes to read consecutively from the control table
+/// @param[in] read_data Pointer to a map of SyncData objects, containing ids and vectors to read into
+/// @param[in] address The address value in the control table the dynamixels will start reading from
+/// @param[in] length The number of bytes to read consecutively from the control table
 /// @returns true if at least one dynamixel was successfully read
 bool DynamixelInterfaceDriver::bulkRead(std::unordered_map<int, SyncData*> &read_data, uint16_t address, uint16_t length)
 {
@@ -1037,9 +1036,9 @@ bool DynamixelInterfaceDriver::bulkRead(std::unordered_map<int, SyncData*> &read
 /// Performs the sync read for each protocol. A sync read is a broadcast instruction on a bus that commands a list
 /// of dynamixels to respond in order with a read of a specified address and length. This protocol can be used to read
 /// many parameters from many dynamixels on a bus in just one instruction.
-/// @param read_data Pointer to a map of SyncData objects, containing ids and vectors to read into
-/// @param address The address value in the control table the dynamixels will start reading from
-/// @param length The number of bytes to read consecutively from the control table
+/// @param[in] read_data Pointer to a map of SyncData objects, containing ids and vectors to read into
+/// @param[in] address The address value in the control table the dynamixels will start reading from
+/// @param[in] length The number of bytes to read consecutively from the control table
 /// @returns true if at least one dynamixel was successfully read
 bool DynamixelInterfaceDriver::syncRead(std::unordered_map<int, SyncData*> &read_data, uint16_t address, uint16_t length)
 {
@@ -1101,7 +1100,6 @@ bool DynamixelInterfaceDriver::syncRead(std::unordered_map<int, SyncData*> &read
   }
 }
 
-
 // **************************** SETTERS ******************************** //
 
 /// Sets the Operating mode of the Dynamixel. The three possible control modes are: Position, Velocity or Torque.
@@ -1109,8 +1107,9 @@ bool DynamixelInterfaceDriver::syncRead(std::unordered_map<int, SyncData*> &read
 /// that can be used to changed the control type. For AX, RX and MX series, the method of control is defined by the
 /// values in the angle limit registers and the torque_control_enable register. Note torque control is not available on
 /// the MX-28 models.
-/// @param servo_id The ID of the servo to write to
-/// @param operating_mode The method of control
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] operating_mode The method of control
 /// @return True on comm success and valid operating mode, false otherwise.
 bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesType type, DynamixelControlMode operating_mode)
 {
@@ -1232,11 +1231,11 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
   }
 }
 
-
 /// Sets the minimum and maximum angle limits for the dynamixel
-/// @param servo_id The ID of the servo to write to
-/// @param min_angle the minimum angle limit (in encoder values)
-/// @param max_angle the maximum angle limit (in encoder values)
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] min_angle the minimum angle limit (in encoder values)
+/// @param[in] max_angle the maximum angle limit (in encoder values)
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setAngleLimits(int servo_id, DynamixelSeriesType type, int32_t min_angle, int32_t max_angle)
 {
@@ -1253,8 +1252,9 @@ bool DynamixelInterfaceDriver::setAngleLimits(int servo_id, DynamixelSeriesType 
 }
 
 /// Sets the minimum angle limit for the dynamixel
-/// @param servo_id The ID of the servo to write to
-/// @param angle The minimum angle limit (in encoder values)
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] angle The minimum angle limit (in encoder values)
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMinAngleLimit(int servo_id, DynamixelSeriesType type, int32_t angle)
 {
@@ -1304,8 +1304,9 @@ bool DynamixelInterfaceDriver::setMinAngleLimit(int servo_id, DynamixelSeriesTyp
 }
 
 /// Sets the maximum angle limit for the dynamixel
-/// @param servo_id The ID of the servo to write to
-/// @param angle The maximum angle limit (in encoder values)
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] angle The maximum angle limit (in encoder values)
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMaxAngleLimit(int servo_id, DynamixelSeriesType type, int32_t angle)
 {
@@ -1355,8 +1356,9 @@ bool DynamixelInterfaceDriver::setMaxAngleLimit(int servo_id, DynamixelSeriesTyp
 }
 
 /// Sets the maximum torque limit for the dynamixel
-/// @param servo_id The ID of the servo to write to
-/// @param max_torque the maximum torque limit
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] max_torque the maximum torque limit
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMaxTorque(int servo_id, DynamixelSeriesType type, uint16_t max_torque)
 {
@@ -1413,8 +1415,9 @@ bool DynamixelInterfaceDriver::setMaxTorque(int servo_id, DynamixelSeriesType ty
 }
 
 /// Sets the torque enable register of the dynamixel. This value defines the on/off state of the servo.
-/// @param servo_id The ID of the servo to write to
-/// @param on The state of the servo (true = on, false = off).
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] on The state of the servo (true = on, false = off).
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setTorqueEnabled(int servo_id, DynamixelSeriesType type, bool on)
 {
@@ -1466,7 +1469,9 @@ bool DynamixelInterfaceDriver::setTorqueEnabled(int servo_id, DynamixelSeriesTyp
 
 /// Sets the torque control enable register of the dynamixel mx series. can be used to dynamically
 /// switch between position and torque control modes.
-/// @param on The torque control state of the servo (true = on, false = off).
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] on The torque control state of the servo (true = on, false = off).
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setTorqueControlEnabled(int servo_id, DynamixelSeriesType type, bool on)
 {
@@ -1487,8 +1492,6 @@ bool DynamixelInterfaceDriver::setTorqueControlEnabled(int servo_id, DynamixelSe
     return false;
   }
 
-
-
   // check return value
   if (dxl_comm_result == COMM_SUCCESS)
   {
@@ -1501,13 +1504,12 @@ bool DynamixelInterfaceDriver::setTorqueControlEnabled(int servo_id, DynamixelSe
 
 }
 
-
 /// Sets the position PID values for the dynamixels
-/// @param servo_id The ID of the servo to write to
-/// @param operating_mode The operating mode to set gains for. @see setOperatingMode
-/// @param p_gain The proportional gain value to write
-/// @param i_gain The integral gain value to write
-/// @param d_gain The derivative gain value to write
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] p_gain The proportional gain value to write
+/// @param[in] i_gain The integral gain value to write
+/// @param[in] d_gain The derivative gain value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setPositionPIDGains(int servo_id, DynamixelSeriesType type, double p_gain, double i_gain, double d_gain)
 {
@@ -1572,8 +1574,9 @@ bool DynamixelInterfaceDriver::setPositionPIDGains(int servo_id, DynamixelSeries
 }
 
 /// Sets the proportional gain value for the position control mode if available. @see setPIDGains
-/// @param servo_id The ID of the servo to write to
-/// @param gain The proportional gain value to write
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] gain The proportional gain value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, DynamixelSeriesType type, uint16_t gain)
 {
@@ -1625,8 +1628,9 @@ bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, Dynamix
 }
 
 /// Sets the integral gain value for the position control mode if available. @see setPIDGains
-/// @param servo_id The ID of the servo to write to
-/// @param gain The integral gain value to write
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] gain The integral gain value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, DynamixelSeriesType type, uint16_t gain)
 {
@@ -1675,8 +1679,9 @@ bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, DynamixelSe
 }
 
 /// Sets the derivative gain value for the position control mode if available. @see setPIDGains
-/// @param servo_id The ID of the servo to write to
-/// @param gain The derivative gain value to write
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] gain The derivative gain value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, DynamixelSeriesType type, uint16_t gain)
 {
@@ -1724,13 +1729,12 @@ bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, Dynamixel
   }
 }
 
-
 /// Sets the velocity PID values for the dynamixels
-/// @param servo_id The ID of the servo to write to
-/// @param operating_mode The operating mode to set gains for. @see setOperatingMode
-/// @param p_gain The proportional gain value to write
-/// @param i_gain The integral gain value to write
-/// @param d_gain The derivative gain value to write
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] p_gain The proportional gain value to write
+/// @param[in] i_gain The integral gain value to write
+/// @param[in] d_gain The derivative gain value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setVelocityPIDGains(int servo_id, DynamixelSeriesType type, double p_gain, double i_gain)
 {
@@ -1779,8 +1783,9 @@ bool DynamixelInterfaceDriver::setVelocityPIDGains(int servo_id, DynamixelSeries
 }
 
 /// Sets the proportional gain value for the velocity control mode if available. @see setPIDGains
-/// @param servo_id The ID of the servo to write to
-/// @param gain The proportional gain value to write
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] gain The proportional gain value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setVelocityProportionalGain(int servo_id, DynamixelSeriesType type, uint16_t gain)
 {
@@ -1826,8 +1831,9 @@ bool DynamixelInterfaceDriver::setVelocityProportionalGain(int servo_id, Dynamix
 }
 
 /// Sets the integral gain value for the velocity control mode if available. @see setPIDGains
-/// @param servo_id The ID of the servo to write to
-/// @param gain The integral gain value to write
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] gain The integral gain value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setVelocityIntegralGain(int servo_id, DynamixelSeriesType type, uint16_t gain)
 {
@@ -1872,8 +1878,9 @@ bool DynamixelInterfaceDriver::setVelocityIntegralGain(int servo_id, DynamixelSe
 }
 
 /// Sets the profile velocity of the dynamixel. Profile velocity is how fast the servo should move between positions.
-/// @param servo_id The ID of the servo to write to
-/// @param velocity The profile velocity value to write
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] velocity The profile velocity value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setProfileVelocity(int servo_id, DynamixelSeriesType type, int32_t velocity)
 {
@@ -1922,8 +1929,9 @@ bool DynamixelInterfaceDriver::setProfileVelocity(int servo_id, DynamixelSeriesT
 }
 
 /// Sets the torque value of the dynamixel.
-/// @param servo_id The ID of the servo to write to
-/// @param torque The torque value to write
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] type the type of the servo to read from
+/// @param[in] torque The torque value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setTorque(int servo_id, DynamixelSeriesType type, int16_t torque)
 {
@@ -1975,10 +1983,10 @@ bool DynamixelInterfaceDriver::setTorque(int servo_id, DynamixelSeriesType type,
 
 /// Writes arbitrary register values to the Dynamixel, can be used in cases where provided setters are insufficient
 /// or to write multiple contiguous values at once.
-/// @param servo_id The ID of the servo to write to
-/// @param address The address value in the control table the dynamixel will start writing to
-/// @param length The number of bytes to write consecutively to the control table
-/// @param data Array containing the value to be written.
+/// @param[in] servo_id The ID of the servo to write to
+/// @param[in] address The address value in the control table the dynamixel will start writing to
+/// @param[in] length The number of bytes to write consecutively to the control table
+/// @param[in] data Array containing the value to be written.
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::writeRegisters(int servo_id, uint16_t address, uint16_t length, uint8_t *data)
 {
@@ -2004,7 +2012,7 @@ bool DynamixelInterfaceDriver::writeRegisters(int servo_id, uint16_t address, ui
 // *********************** SYNC_WRITE METHODS *************************** //
 
 /// Set many dynamixels with new position values in one instruction. @see syncWrite.
-/// @param position_data  map of ids to syncdata objects containing position data
+/// @param[in] position_data map of ids to syncdata objects containing position data
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMultiPosition(std::unordered_map<int, SyncData> &position_data)
 {
@@ -2048,8 +2056,8 @@ bool DynamixelInterfaceDriver::setMultiPosition(std::unordered_map<int, SyncData
   return false;
 }
 
-/// Set many dynamixels with new velocity values in one instruction. @see syncWrite.
-/// @param velocity_data  map of ids to syncdata objects containing velocity data
+/// Set many dynamixels with new position values in one instruction. @see syncWrite.
+/// @param[in] velocity_data map of ids to syncdata objects containing velocity data
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMultiVelocity(std::unordered_map<int, SyncData> &velocity_data)
 {
@@ -2094,7 +2102,7 @@ bool DynamixelInterfaceDriver::setMultiVelocity(std::unordered_map<int, SyncData
 }
 
 /// Set many dynamixels with new profile velocity values in one instruction. @see syncWrite.
-/// @param velocity_data  map of ids to syncdata objects containing velocity data
+/// @param[in] velocity_data map of ids to syncdata objects containing profile velocity data
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMultiProfileVelocity(std::unordered_map<int, SyncData> &velocity_data)
 {
@@ -2139,7 +2147,7 @@ bool DynamixelInterfaceDriver::setMultiProfileVelocity(std::unordered_map<int, S
 }
 
 /// Set many dynamixels with new torque values in one instruction. @see syncWrite.
-/// @param torque_data map of ids to syncdata objects containing torque data
+/// @param[in] torque_data map of ids to syncdata objects containing torque data
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMultiTorque(std::unordered_map<int, SyncData> &torque_data)
 {
@@ -2190,9 +2198,9 @@ bool DynamixelInterfaceDriver::setMultiTorque(std::unordered_map<int, SyncData> 
 /// of dynamixels to write a value into a specified address (the value written can be different for each dynamixel
 /// but the address is universal). This can be used to update a parameter (say goal position) for many dynamixels,
 /// each with a unique value, all in one instruction.
-/// @param write_data Pointer to a map of SyncData objects, containing ids and vectors to write from.
-/// @param address The address value in the control table the dynamixels will write to
-/// @param length The number of bytes to write
+/// @param[in] write_data Pointer to a map of SyncData objects, containing ids and vectors to write from.
+/// @param[in] address The address value in the control table the dynamixels will write to
+/// @param[in] length The number of bytes to write
 /// @returns true on successful write, false otherwise
 bool DynamixelInterfaceDriver::syncWrite(std::unordered_map<int, SyncData> &write_data, uint16_t address, uint16_t length)
 {

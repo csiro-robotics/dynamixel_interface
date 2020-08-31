@@ -100,9 +100,6 @@
 #include "dynamixel_interface/ServoDiag.h"
 #include "dynamixel_interface/ServoDiags.h"
 
-
-
-
 namespace dynamixel_interface
 {
 
@@ -128,7 +125,6 @@ typedef struct
 
 } DynamixelInfo;
 
-
 /// Struct which stores information about each port in use and which joints use that port
 typedef struct
 {
@@ -144,7 +140,6 @@ typedef struct
   std::unordered_map<std::string, DynamixelInfo> joints; /// map of joint information by name
 
 } PortInfo;
-
 
 /// This class forms a ROS Node that provides an interface with the dynamixel series of servos.
 /// The controller functions on a timer based callback for updating the motor states. Commands are
