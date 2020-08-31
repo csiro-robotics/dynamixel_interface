@@ -1,5 +1,5 @@
 /* CSIRO Open Source Software License Agreement (variation of the BSD / MIT License)
- * Copyright (c) 2017, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
+ * Copyright (c) 2020, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  * All rights reserved. CSIRO is willing to grant you a license to the dynamixel_actuator ROS packages on the following
  * terms, except where otherwise indicated for third party material. Redistribution and use of this software in source
  * and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -42,7 +42,7 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  *
- * dynamixel_interface_driver and dynamixel_interface_controller packages are forked from projects authored by Brian
+ * dynamixel_interface is forked from projects authored by Brian
  * Axelrod (on behalf of Willow Garage):
  *
  * https://github.com/baxelrod/dynamixel_pro_controller
@@ -81,10 +81,10 @@
 
 #include "yaml-cpp/yaml.h"
 #include <ros/package.h>
-#include <dynamixel_interface_driver/dynamixel_interface_driver.h>
+#include <dynamixel_interface/dynamixel_interface_driver.h>
 
 
-namespace dynamixel_interface_driver
+namespace dynamixel_interface
 {
 
 /// Constructor. Initialises port and packet handling objects and sets the
@@ -517,7 +517,7 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
         {
           it.second.position = *(reinterpret_cast<int16_t*>(&it.second.data[0]));
           it.second.velocity = *(reinterpret_cast<int16_t*>(&it.second.data[2]));
-          it.second.effort = *(reinterpret_cast<int16_t*>(&it.second.data[]));
+          it.second.effort = *(reinterpret_cast<int16_t*>(&it.second.data[4]));
           success = true;
         }
       }

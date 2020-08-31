@@ -1,5 +1,5 @@
 /* CSIRO Open Source Software License Agreement (variation of the BSD / MIT License)
- * Copyright (c) 2017, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
+ * Copyright (c) 2020, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  * All rights reserved. CSIRO is willing to grant you a license to the dynamixel_actuator ROS packages on the following
  * terms, except where otherwise indicated for third party material. Redistribution and use of this software in source
  * and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -42,7 +42,7 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  *
- * dynamixel_interface_driver and dynamixel_interface_controller packages are forked from projects authored by Brian
+ * dynamixel_interface is forked from projects authored by Brian
  * Axelrod (on behalf of Willow Garage):
  *
  * https://github.com/baxelrod/dynamixel_pro_controller
@@ -93,17 +93,17 @@
 #include <ros/callback_queue.h>
 #include <sensor_msgs/JointState.h>
 
-#include <dynamixel_interface_driver/dynamixel_interface_driver.h>
+#include <dynamixel_interface/dynamixel_interface_driver.h>
 
-#include "dynamixel_interface_controller/DataPort.h"
-#include "dynamixel_interface_controller/DataPorts.h"
-#include "dynamixel_interface_controller/ServoDiag.h"
-#include "dynamixel_interface_controller/ServoDiags.h"
-
-
+#include "dynamixel_interface/DataPort.h"
+#include "dynamixel_interface/DataPorts.h"
+#include "dynamixel_interface/ServoDiag.h"
+#include "dynamixel_interface/ServoDiags.h"
 
 
-namespace dynamixel_interface_controller
+
+
+namespace dynamixel_interface
 {
 
 /// Struct that describes each servo's place in the system including which joint it corresponds to.
@@ -120,10 +120,10 @@ typedef struct
   int min; /// Motor minimum encoder value. Note that if min > max, the motor direction is reversed
   int max; /// Motor maximum encoder value. Note that if min > max, the motor direction is reversed
 
-  const dynamixel_interface_driver::DynamixelSpec* model_spec; /// Motor model specification including encoder counts and unit conversion factors
+  const DynamixelSpec* model_spec; /// Motor model specification including encoder counts and unit conversion factors
 
   bool torque_enabled; /// Motor enable flag
-  dynamixel_interface_driver::DynamixelControlMode current_mode; /// control mode (position, velocity, torque)
+  DynamixelControlMode current_mode; /// control mode (position, velocity, torque)
   uint8_t hardware_status; /// current motor status, used for hardware error reporting
 
 } DynamixelInfo;
@@ -139,7 +139,7 @@ typedef struct
 
   bool use_legacy_protocol; /// boolean indicating if legacy protocol (for older series dynamixels) is in use
 
-  dynamixel_interface_driver::DynamixelInterfaceDriver *driver; /// The driver object
+  DynamixelInterfaceDriver *driver; /// The driver object
 
   std::unordered_map<std::string, DynamixelInfo> joints; /// map of joint information by name
 
@@ -193,8 +193,8 @@ private:
   /// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
   /// @param[in] perform_write whether we are writing data this iteration
   void multiThreadedIO(PortInfo &port, sensor_msgs::JointState &read_msg,
-                        dynamixel_interface_controller::DataPorts &dataport_msg,
-                        dynamixel_interface_controller::ServoDiags &status_msg,
+                        dynamixel_interface::DataPorts &dataport_msg,
+                        dynamixel_interface::ServoDiags &status_msg,
                         bool perform_write);
 
   /// Function called in each thread to perform a write on a port
@@ -208,8 +208,8 @@ private:
   /// @param[out] dataport_msg the DataPorts msg this thread reads dataport data into
   /// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
   void multiThreadedRead(PortInfo &port, sensor_msgs::JointState &read_msg,
-                          dynamixel_interface_controller::DataPorts &dataports_msg,
-                          dynamixel_interface_controller::ServoDiags &diags_msg);
+                          dynamixel_interface::DataPorts &dataports_msg,
+                          dynamixel_interface::ServoDiags &diags_msg);
 
   ros::NodeHandle *nh_; /// Handler for the ROS Node
 
@@ -241,7 +241,7 @@ private:
   bool write_ready_; /// Booleans indicating if we have received commands
   bool first_write_; /// Indicate if write has occured
 
-  dynamixel_interface_driver::DynamixelControlMode control_type_; /// method of control (position/velocity/torque)
+  DynamixelControlMode control_type_; /// method of control (position/velocity/torque)
 
   std::vector<PortInfo> dynamixel_ports_; /// method of control (position/velocity/torque)
 

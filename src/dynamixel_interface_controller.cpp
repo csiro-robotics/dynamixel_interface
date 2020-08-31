@@ -1,5 +1,5 @@
 /* CSIRO Open Source Software License Agreement (variation of the BSD / MIT License)
- * Copyright (c) 2017, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
+ * Copyright (c) 2020, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  * All rights reserved. CSIRO is willing to grant you a license to the dynamixel_actuator ROS packages on the following
  * terms, except where otherwise indicated for third party material. Redistribution and use of this software in source
  * and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -42,7 +42,7 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  *
- * dynamixel_interface_driver and dynamixel_interface_controller packages are forked from projects authored by Brian
+ * dynamixel_interface is forked from projects authored by Brian
  * Axelrod (on behalf of Willow Garage):
  *
  * https://github.com/baxelrod/dynamixel_pro_controller
@@ -94,10 +94,9 @@
 #include <ros/spinner.h>
 #include <ros/callback_queue.h>
 #include <ros/transport_hints.h>
-#include <dynamixel_interface_controller/dynamixel_interface_controller.h>
-#include <dynamixel_interface_driver/dynamixel_interface_driver.h>
+#include <dynamixel_interface/dynamixel_interface_controller.h>
 
-namespace dynamixel_interface_controller
+namespace dynamixel_interface
 {
 
 /// Constructor, loads the motor configuration information from the specified yaml file and intialises
@@ -169,15 +168,15 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   // Set control mode for this run
   if (mode == "position")
   {
-    control_type_ = dynamixel_interface_driver::DXL_POSITION_CONTROL;
+    control_type_ = DXL_POSITION_CONTROL;
   }
   else if (mode == "velocity")
   {
-    control_type_ = dynamixel_interface_driver::DXL_VELOCITY_CONTROL;
+    control_type_ = DXL_VELOCITY_CONTROL;
   }
   else if (mode == "effort")
   {
-    control_type_ = dynamixel_interface_driver::DXL_TORQUE_CONTROL;
+    control_type_ = DXL_TORQUE_CONTROL;
   }
   else
   {
@@ -214,12 +213,12 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
   if (diagnostics_rate_ > 0)
   {
-    diagnostics_publisher_ = nh_->advertise<dynamixel_interface_controller::ServoDiags>("servo_diagnostics", 1);
+    diagnostics_publisher_ = nh_->advertise<dynamixel_interface::ServoDiags>("servo_diagnostics", 1);
   }
 
   if (dataport_rate_ > 0)
   {
-    dataport_publisher_  = nh_->advertise<dynamixel_interface_controller::DataPorts>("external_dataports", 1);
+    dataport_publisher_  = nh_->advertise<dynamixel_interface::DataPorts>("external_dataports", 1);
   }
 
   //advertise the joint state input and output topics
@@ -368,7 +367,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     //Attempt to start driver
     try
     {
-      port.driver = new dynamixel_interface_driver::DynamixelInterfaceDriver(port.device, port.baudrate,
+      port.driver = new DynamixelInterfaceDriver(port.device, port.baudrate,
           port.use_legacy_protocol, use_group_read, use_group_write);
     }
     catch (int n)
@@ -589,14 +588,14 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
         ROS_INFO("Joint Name: %s, ID: %d, Model: %s", info.joint_name.c_str(), info.id, info.model_spec->name.c_str());
 
         //Only support effort control on newer spec dynamixels
-        if (control_type_ == dynamixel_interface_driver::DXL_TORQUE_CONTROL)
+        if (control_type_ == DXL_TORQUE_CONTROL)
         {
           switch (info.model_spec->type)
           {
-            case dynamixel_interface_driver::DXL_AX:
-            case dynamixel_interface_driver::DXL_RX:
-            case dynamixel_interface_driver::DXL_LEGACY_MX:
-            case dynamixel_interface_driver::DXL_LEGACY_PRO:
+            case DXL_AX:
+            case DXL_RX:
+            case DXL_LEGACY_MX:
+            case DXL_LEGACY_PRO:
               ROS_ERROR("Effort Control not supported for legacy series dynamixels!");
               ROS_BREAK();
           }
@@ -620,7 +619,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
         }
 
         //angle limits are only relevant in position control mode
-        if (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL)
+        if (control_type_ == DXL_POSITION_CONTROL)
         {
           //set angle limits & direction
           if (info.min > info. max)
@@ -753,11 +752,11 @@ void DynamixelInterfaceController::loop(void)
   sensor_msgs::JointState read_msg;
   sensor_msgs::JointState reads[dynamixel_ports_.size()];
 
-  dynamixel_interface_controller::DataPorts dataports_msg;
-  dynamixel_interface_controller::DataPorts dataports_reads[dynamixel_ports_.size()];
+  dynamixel_interface::DataPorts dataports_msg;
+  dynamixel_interface::DataPorts dataports_reads[dynamixel_ports_.size()];
 
-  dynamixel_interface_controller::ServoDiags diags_msg;
-  dynamixel_interface_controller::ServoDiags diags_reads[dynamixel_ports_.size()];
+  dynamixel_interface::ServoDiags diags_msg;
+  dynamixel_interface::ServoDiags diags_reads[dynamixel_ports_.size()];
 
   std::unique_lock<std::mutex> lock(write_mutex_);
 
@@ -779,7 +778,7 @@ void DynamixelInterfaceController::loop(void)
         }
 
         //if in position control mode we enable the default join movement speed (profile velocity)
-        if (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL)
+        if (control_type_ == DXL_POSITION_CONTROL)
         {
           int regVal = static_cast<int>((static_cast<double>(it.second.joint_speed) * it.second.model_spec->velocity_radps_to_reg));
           dynamixel_ports_[i].driver->setProfileVelocity(it.second.id, it.second.model_spec->type, regVal);
@@ -929,8 +928,8 @@ void DynamixelInterfaceController::loop(void)
 /// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
 /// @param[in] perform_write whether we are writing data this iteration
 void DynamixelInterfaceController::multiThreadedIO(PortInfo &port, sensor_msgs::JointState &read_msg,
-                                                    dynamixel_interface_controller::DataPorts &dataport_msg,
-                                                    dynamixel_interface_controller::ServoDiags &diags_msg,
+                                                    dynamixel_interface::DataPorts &dataport_msg,
+                                                    dynamixel_interface::ServoDiags &diags_msg,
                                                     bool perform_write)
 {
 
@@ -965,16 +964,16 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
   bool has_eff = false;
 
   //figure out which values have been specified
-  if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL))
+  if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == DXL_POSITION_CONTROL))
   {
     has_pos = true;
   }
-  if ((joint_commands.velocity.size() == joint_commands.name.size()) && ((control_type_ == dynamixel_interface_driver::DXL_VELOCITY_CONTROL) ||
-      (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL && !ignore_input_velocity_)))
+  if ((joint_commands.velocity.size() == joint_commands.name.size()) && ((control_type_ == DXL_VELOCITY_CONTROL) ||
+      (control_type_ == DXL_POSITION_CONTROL && !ignore_input_velocity_)))
   {
     has_vel = true;
   }
-  if ((joint_commands.velocity.size() == joint_commands.name.size()) && (control_type_ == dynamixel_interface_driver::DXL_TORQUE_CONTROL))
+  if ((joint_commands.velocity.size() == joint_commands.name.size()) && (control_type_ == DXL_TORQUE_CONTROL))
   {
     has_eff = true;
   }
@@ -986,10 +985,10 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
   }
 
   //write objects
-  std::unordered_map<int, dynamixel_interface_driver::SyncData> velocities, positions, efforts;
+  std::unordered_map<int, SyncData> velocities, positions, efforts;
 
   //push motor encoder value onto list
-  dynamixel_interface_driver::SyncData write_data;
+  SyncData write_data;
 
   //loop and calculate the values for each specified joint
   for (int i = 0; i < joint_commands.name.size(); i++)
@@ -1006,7 +1005,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
     DynamixelInfo *info = &port.joints[joint_commands.name[i]];
 
     //calculate the position register value for the motor
-    if ((has_pos) && (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL))
+    if ((has_pos) && (control_type_ == DXL_POSITION_CONTROL))
     {
       //used to bound positions to limits
       int up_lim, dn_lim;
@@ -1036,7 +1035,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
         //push motor encoder value onto list
         write_data.id = info->id;
         write_data.type = info->model_spec->type;
-        if (write_data.type <= dynamixel_interface_driver::DXL_LEGACY_MX)
+        if (write_data.type <= DXL_LEGACY_MX)
         {
           write_data.data.resize(2);
           *(reinterpret_cast<uint16_t*>(write_data.data.data())) = static_cast<uint16_t>(pos);
@@ -1073,9 +1072,9 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
 
       //we also need to take an absolute value as each motor series handles negative inputs
       //differently
-      if ((control_type_ == dynamixel_interface_driver::DXL_VELOCITY_CONTROL) && ((rad_s_vel < 0) != (info->min > info->max)))
+      if ((control_type_ == DXL_VELOCITY_CONTROL) && ((rad_s_vel < 0) != (info->min > info->max)))
       {
-        if (info->model_spec->type <= dynamixel_interface_driver::DXL_LEGACY_MX)
+        if (info->model_spec->type <= DXL_LEGACY_MX)
         {
           vel = vel + 1024;
         }
@@ -1088,7 +1087,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       //push motor encoder value onto list
       write_data.id = info->id;
       write_data.type = info->model_spec->type;
-      if (write_data.type <= dynamixel_interface_driver::DXL_LEGACY_MX)
+      if (write_data.type <= DXL_LEGACY_MX)
       {
         write_data.data.resize(2);
         *(reinterpret_cast<uint16_t*>(write_data.data.data())) = static_cast<uint16_t>(vel);
@@ -1133,7 +1132,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
 
   //use the multi-motor write functions to reduce the bandwidth required to command
   //all the motors
-  if (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL)
+  if (control_type_ == DXL_POSITION_CONTROL)
   {
     //set the profile velocities if they have been defined
     if ((has_vel) && (!ignore_input_velocity_))
@@ -1146,12 +1145,12 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       port.driver->setMultiPosition(positions);
     }
   }
-  else if ((control_type_ == dynamixel_interface_driver::DXL_VELOCITY_CONTROL) && has_vel)
+  else if ((control_type_ == DXL_VELOCITY_CONTROL) && has_vel)
   {
     //set the velocity values for each motor
     port.driver->setMultiVelocity(velocities);
   }
-  else if ((control_type_ == dynamixel_interface_driver::DXL_TORQUE_CONTROL) && has_eff)
+  else if ((control_type_ == DXL_TORQUE_CONTROL) && has_eff)
   {
     //set the effort values for each motor
     port.driver->setMultiTorque(efforts);
@@ -1167,25 +1166,25 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
 /// @param[out] dataport_msg the DataPorts msg this thread reads dataport data into
 /// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
 void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs::JointState &read_msg,
-                                                     dynamixel_interface_controller::DataPorts &dataport_msg,
-                                                     dynamixel_interface_controller::ServoDiags &diags_msg)
+                                                     dynamixel_interface::DataPorts &dataport_msg,
+                                                     dynamixel_interface::ServoDiags &diags_msg)
 {
 
   bool comm_success;
-  std::unordered_map<int, dynamixel_interface_driver::DynamixelState> state_map;
-  std::unordered_map<int, dynamixel_interface_driver::DynamixelDiagnostic> diag_map;
-  std::unordered_map<int, dynamixel_interface_driver::DynamixelDataport> data_map;
+  std::unordered_map<int, DynamixelState> state_map;
+  std::unordered_map<int, DynamixelDiagnostic> diag_map;
+  std::unordered_map<int, DynamixelDataport> data_map;
 
   //Iterate over all connected servos and add to list
   for (auto& it : port.joints) //(map<string, DynamixelInfo>::iterator iter = port.joints.begin(); iter != port.joints.end(); iter++)
   {
-    state_map[it.second.id] = dynamixel_interface_driver::DynamixelState();
+    state_map[it.second.id] = DynamixelState();
     state_map[it.second.id].id = it.second.id;
     state_map[it.second.id].type = it.second.model_spec->type;
-    diag_map[it.second.id] = dynamixel_interface_driver::DynamixelDiagnostic();
+    diag_map[it.second.id] = DynamixelDiagnostic();
     diag_map[it.second.id].id = it.second.id;
     diag_map[it.second.id].type = it.second.model_spec->type;
-    data_map[it.second.id] = dynamixel_interface_driver::DynamixelDataport();
+    data_map[it.second.id] = DynamixelDataport();
     data_map[it.second.id].id = it.second.id;
     data_map[it.second.id].type = it.second.model_spec->type;
 
@@ -1226,7 +1225,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
       int raw_vel = state_map[it.second.id].velocity;
 
       //handle the sign of the value based on the motor series
-      if (it.second.model_spec->type <= dynamixel_interface_driver::DXL_LEGACY_MX)
+      if (it.second.model_spec->type <= DXL_LEGACY_MX)
       {
         raw_vel = (raw_vel & 0x3FF);
 
@@ -1253,7 +1252,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
       //TORQUE EFFORT VALUE
       double effort = 0;
 
-      if (it.second.model_spec->type <= dynamixel_interface_driver::DXL_LEGACY_MX)
+      if (it.second.model_spec->type <= DXL_LEGACY_MX)
       {
         effort = static_cast<double>(state_map[it.second.id].effort & 0x3FF) * it.second.model_spec->effort_reg_to_mA;
         //check sign
@@ -1283,13 +1282,13 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
     if( port.driver->getBulkDataportInfo(data_map) )
     {
 
-      //dynamixel_interface_controller::ServoState diag_msg;
+      //dynamixel_interface::ServoState diag_msg;
       dataport_msg.header.frame_id = port.port_name.c_str();
 
       //Iterate over all connected servos and add to list
       for (auto& it : port.joints)
       {
-        dynamixel_interface_controller::DataPort msg;
+        dynamixel_interface::DataPort msg;
 
         //ignore joints that failed to read
         if (!data_map[it.second.id].success)
@@ -1315,13 +1314,13 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
     if( port.driver->getBulkDiagnosticInfo(diag_map) )
     {
 
-      //dynamixel_interface_controller::ServoState diag_msg;
+      //dynamixel_interface::ServoState diag_msg;
       diags_msg.header.frame_id = port.port_name.c_str();
 
       //Iterate over all connected servos and add to list
       for (auto& it : port.joints)
       {
-        dynamixel_interface_controller::ServoDiag msg;
+        dynamixel_interface::ServoDiag msg;
 
         //ignore joints that failed to read
         if (!diag_map[it.second.id].success)
@@ -1355,7 +1354,7 @@ int main(int argc, char **argv)
 
   ros::init(argc, argv, "dynamixel_interface_controller");
 
-  dynamixel_interface_controller::DynamixelInterfaceController controller;
+  dynamixel_interface::DynamixelInterfaceController controller;
 
   ros::Rate loop_rate(controller.getLoopRate());
 

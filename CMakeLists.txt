@@ -1,5 +1,14 @@
+# Copyright (c) 2020
+# Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+# ABN 41 687 119 230
+#
+# Author: Tom Molnar
 cmake_minimum_required(VERSION 2.8.3)
-project(dynamixel_interface_controller)
+project(dynamixel_interface)
+
+# C++ standards setup.
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 ################################################################################
 # Packages
@@ -10,7 +19,6 @@ project(dynamixel_interface_controller)
 ## is used, also find other catkin packages
 
 find_package(catkin REQUIRED COMPONENTS
-  dynamixel_interface_driver
   dynamixel_sdk
   roscpp
   roslib
@@ -19,19 +27,11 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
-## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
-
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(yaml-cpp REQUIRED yaml-cpp)
-
-# There's no version hint in the yaml-cpp headers, so get the version number
-# from pkg-config.
-
 if(NOT ${yaml-cpp_VERSION} VERSION_LESS "0.5")
 add_definitions(-DHAVE_NEW_YAMLCPP)
 endif(NOT ${yaml-cpp_VERSION} VERSION_LESS "0.5")
-
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -51,12 +51,6 @@ generate_messages(
    sensor_msgs
 )
 
-################################################
-## Declare ROS dynamic reconfigure parameters ##
-################################################
-
-
-
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -68,35 +62,38 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
-
 catkin_package(
    INCLUDE_DIRS include
 #  LIBRARIES dynamixel_interface_controller
-   CATKIN_DEPENDS roscpp sensor_msgs message_runtime
+   CATKIN_DEPENDS roscpp roslib sensor_msgs std_msgs dynamixel_sdk message_runtime
 #  DEPENDS system_lib
 )
 
 ###########
 ## Build ##
 ###########
-add_definitions(-g -O0)
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
-
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${yaml-cpp_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS}
 )
 
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
-add_executable(dynamixel_interface_controller_node src/dynamixel_interface_controller.cpp)
+add_library(dynamixel_interface_driver src/dynamixel_interface_driver.cpp)
+add_dependencies(dynamixel_interface_driver ${dynamixel_interface_EXPORTED_TARGETS})
+target_link_libraries(
+  dynamixel_interface_driver
+  yaml-cpp
+	${catkin_LIBRARIES}
+  ${yaml-cpp_LIBRARIES}
+)
 
-add_dependencies(dynamixel_interface_controller_node ${dynamixel_interface_controller_EXPORTED_TARGETS} dynamixel_interface_controller_generate_messages_cpp)
-
+add_executable(dynamixel_interface_controller_node src/dynamixel_interface_controller.cpp src/dynamixel_interface_driver.cpp)
+add_dependencies(dynamixel_interface_controller_node ${dynamixel_interface_EXPORTED_TARGETS} dynamixel_interface_generate_messages_cpp)
 target_link_libraries(
   dynamixel_interface_controller_node
   yaml-cpp
@@ -104,14 +101,26 @@ target_link_libraries(
   ${yaml-cpp_LIBRARIES}
 )
 
+
 #############
 ## Install ##
 #############
 
+## Mark executables and/or libraries for installation
+install(TARGETS dynamixel_interface_driver dynamixel_interface_controller_node
+   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
+# install launch and config info for running
+install(DIRECTORY launch config
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
 
-#############
-## Testing ##
-#############
-
-
+## Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN ".svn" EXCLUDE
+)

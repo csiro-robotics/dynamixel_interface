@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>dynamixel_interface</name>
+  <version>0.1.0</version>
+  <description>A controller for commanding the dynamixel series of servos. Provides abstraction of the synchronous reading and writing of many dynamixels across multiple serial ports to two ros topics. The controller can read and publish synchronously from multiple serial ports through different instances of dynamixel_interface_driver. The controller can run in either position, velocity or torque control modes and is easily configured with an external yaml file.</description>
+
+  <maintainer email="Thomas.Molnar@data61.csiro.au">Tom Molnar</maintainer>
+
+  <license>CSIRO Open Source Software License Agreement (variation of the BSD / MIT License)</license>
+
+  <!-- This package is based on the dynamixel_pro_controller v0.8.4 package written by Brian Axelrod -->
+  <author>Tom Molnar</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>message_generation</depend>
+  <depend>message_runtime</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>dynamixel_interface_driver</depend>
+  <depend>dynamixel_sdk</depend>
+  <depend>roscpp</depend>
+  <depend>roslib</depend>
+  <depend>yaml-cpp</depend>
+
+  <export>
+  </export>
+</package>
+
+

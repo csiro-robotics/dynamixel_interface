@@ -1,5 +1,5 @@
 /* CSIRO Open Source Software License Agreement (variation of the BSD / MIT License)
- * Copyright (c) 2017, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
+ * Copyright (c) 2020, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  * All rights reserved. CSIRO is willing to grant you a license to the dynamixel_actuator ROS packages on the following
  * terms, except where otherwise indicated for third party material. Redistribution and use of this software in source
  * and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -42,7 +42,7 @@
  * separate files distributed with the Software.
  * ___________________________________________________________________
  *
- * dynamixel_interface_driver and dynamixel_interface_controller packages are forked from projects authored by Brian
+ * dynamixel_interface is forked from projects authored by Brian
  * Axelrod (on behalf of Willow Garage):
  *
  * https://github.com/baxelrod/dynamixel_pro_controller
@@ -89,7 +89,7 @@
 #include <string>
 
 
-namespace dynamixel_interface_driver
+namespace dynamixel_interface
 {
 
 /// Dynamixel types

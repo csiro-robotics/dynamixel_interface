@@ -1,1 +1,0 @@
-This driver provides an abstraction of communications with dynamixel servos on a single port. Used by dynamixel_controller.
