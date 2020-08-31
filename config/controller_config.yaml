@@ -29,30 +29,30 @@ ports:
     use_legacy_protocol: false # wether to use new 2.0 protocol (false) or legacy 1.0 protocol (true)
     group_read_enabled: true   # specify whether to use group comms for reading
     group_write_enabled: true  # specify whether to use group comms for writing
-
     servos:
+      # SERVO LIST FOR THIS PORT
+      - id: 1                   # (ID set in servo eeprom, must be unique on this port)
+        joint_name: joint_1     # (MUST BE UNIQUE ACROSS ALL PORTS)
+        #
+        # The three values below are mandatory, they define the orientation and zeroing of the dynamixel:
+        #
+        init: 2048              # initial (0 rad) servo position (in raw encoder count)
+        min: 0                  # minimum servo position (in raw encoder count)
+        max: 4095               # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
+        #
+        # The below arguments are all optional and override the global values:
+        #
+        joint_speed: 5.0        # maximum joint speed (rad/s) (in position or velocity control)
+        torque_limit: 1.0       # maximum motor torque for all modes, given as a fraction of rated max (0-1)
 
-        # SERVO LIST FOR THIS PORT
-        - id: 10              # (ID set in servo eeprom, must be unique on this port)
-          joint_name: joint_1 # (MUST BE UNIQUE ACROSS ALL PORTS)
-          #
-          # The three values below are mandatory, they define the orientation and zeroing of the dynamixel:
-          #
-          init: 512           # initial (0 rad) servo position (in raw encoder count)
-          min: 1023           # minimum servo position (in raw encoder count)
-          max: 0              # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
-          #
-          # The below arguments are optional and override the global values:
-          #
-          joint_speed: 2.0    # maximum joint speed (rad/s) (in position or velocity control)
-          torque_limit: 0.5   # maximum motor torque for all modes, given as a fraction of rated max (0-1)
-
-        - id: 2
-          joint_name: joint_2
-          init: 2048
-          min: 0
-          max: 4095
-          # This servo doesn't have any optional values defined, the global defaults will be used
+      - id: 2
+        joint_name: joint_2
+        init: 2048
+        min: 0
+        max: 4095
+        #
+        # This servo doesn't have any optional values defined, the global defaults will be used
+        #
 
   # more ports can be defined in the same manner as above, each port can even have a different baudrate and protcol
   - name: Port_2
@@ -62,17 +62,16 @@ ports:
     group_read_enabled: true
     group_write_enabled: true
     servos:
+      - id: 1               # id only needs to be unique for each port and so id 1 can be reused here
+        joint_name: joint_3 # name DOES have to be unique though, so we continue the naming scheme
+        init: 1000
+        min: 1000
+        max: 3000
 
-        - id: 1               # id only needs to be unique for each port and so id 1 can be reused here
-          joint_name: joint_3 # name DOES have to be unique though, so we continue the naming scheme
-          init: 1000
-          min: 1000
-          max: 3000
-
-        - id: 2
-          joint_name: joint_4
-          init: 2048
-          min: 0
-          max: 4095
+      - id: 2
+        joint_name: joint_4
+        init: 2048
+        min: 0
+        max: 4095
 
 # --------------------------------------------------------------------------- # #

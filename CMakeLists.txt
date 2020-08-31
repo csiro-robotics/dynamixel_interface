@@ -114,7 +114,7 @@ install(TARGETS dynamixel_interface_driver dynamixel_interface_controller_node
 )
 
 # install launch and config info for running
-install(DIRECTORY launch config
+install(DIRECTORY launch config scripts
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 

@@ -162,7 +162,8 @@ public:
   /// @returns the target loop rate for the controller (Hz)
   inline double getLoopRate(void) {return loop_rate_;};
 
-  /// main loop for performing IO
+  /// main loop for performing IO, handles the creation and joining of IO threads for each port, so that IO for multiple
+  /// usb devices can be threaded.
   void loop(void);
 
 private:
