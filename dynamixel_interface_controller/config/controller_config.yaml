@@ -9,8 +9,6 @@ loop_rate: 100                 # desired rate for joint state updates. actual ra
                                   # of dynamixels connected and port baud rate.
 control_mode: position            # control mode, either 'position', 'velocity', or 'effort'
 disable_torque_on_shutdown: true  # with this enabled the motors will switch off when the controller closes
-echo_joint_commands: true         # debug flag to echo write commands sent to the controller, useful for measuring
-                                  # write rates
 ignore_input_velocity: false      # ignore input velocity commands in position mode (no profile velocity)
 diagnostics_rate: 1               # rate to publish diagnostic information
 dataport_rate: 1                  # rate to read from dynamixel external dataports

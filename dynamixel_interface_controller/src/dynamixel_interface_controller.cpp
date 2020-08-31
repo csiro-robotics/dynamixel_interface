@@ -105,25 +105,26 @@ namespace dynamixel_interface_controller
 DynamixelInterfaceController::DynamixelInterfaceController()
 {
   shutting_down_ = false;
-  nh_ = new ros::NodeHandle("~");
+  nh_ = new ros::NodeHandle();
 
   //Stores config variables only used in init function
   std::string mode;
+  std::string node_name = ros::this_node::getName();
 
   //load all the info from the param server, with defaults
-  nh_->param<double>("loop_rate", loop_rate_, 50.0);
-  nh_->param<bool>("disable_torque_on_shutdown", stop_motors_on_shutdown_, false);
+  ros::param::param<double>("~loop_rate", loop_rate_, 50.0);
+  ros::param::param<bool>("~disable_torque_on_shutdown", stop_motors_on_shutdown_, false);
 
 
-  nh_->param<bool>("ignore_input_velocity", ignore_input_velocity_, false);
+  ros::param::param<bool>("~ignore_input_velocity", ignore_input_velocity_, false);
 
-  nh_->param<double>("dataport_rate", dataport_rate_, 0.0);
-  nh_->param<double>("diagnostics_rate", diagnostics_rate_, 0.0);
+  ros::param::param<double>("~dataport_rate", dataport_rate_, 0.0);
+  ros::param::param<double>("~diagnostics_rate", diagnostics_rate_, 0.0);
 
-  nh_->param<std::string>("control_mode", mode, "Position");
+  ros::param::param<std::string>("~control_mode", mode, "Position");
 
-  nh_->param<double>("global_joint_speed", global_joint_speed_, 5.0);
-  nh_->param<double>("global_torque_limit", global_torque_limit_, 1.0);
+  ros::param::param<double>("~global_joint_speed", global_joint_speed_, 5.0);
+  ros::param::param<double>("~global_torque_limit", global_torque_limit_, 1.0);
 
 
   //clamp read rates to sensible values
@@ -189,12 +190,12 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   first_write_ = true;
 
   //Attempt to parse information for each device (port)
-  if (nh_->hasParam("ports"))
+  if (ros::param::has("~ports"))
   {
 
     //PARSE ARRAY OF PORT INFORMATION
     XmlRpc::XmlRpcValue ports;
-    nh_->getParam("ports", ports);
+    ros::param::get("~ports", ports);
     parsePortInformation(ports);
 
     //shutdown if no valid ports
@@ -213,18 +214,18 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
   if (diagnostics_rate_ > 0)
   {
-    diagnostics_publisher_ = nh_->advertise<dynamixel_interface_controller::ServoDiags>("/servo_diagnostics", 1);
+    diagnostics_publisher_ = nh_->advertise<dynamixel_interface_controller::ServoDiags>("servo_diagnostics", 1);
   }
 
   if (dataport_rate_ > 0)
   {
-    dataport_publisher_  = nh_->advertise<dynamixel_interface_controller::DataPorts>("/external_dataports", 1);
+    dataport_publisher_  = nh_->advertise<dynamixel_interface_controller::DataPorts>("external_dataports", 1);
   }
 
   //advertise the joint state input and output topics
-  joint_state_publisher_  = nh_->advertise<sensor_msgs::JointState>("/joint_states", 1);
+  joint_state_publisher_  = nh_->advertise<sensor_msgs::JointState>("joint_states", 1);
 
-  joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("/desired_joint_states",
+  joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("desired_joint_states",
         1, &DynamixelInterfaceController::jointStateCallback, this, ros::TransportHints().tcpNoDelay());
 }
 
