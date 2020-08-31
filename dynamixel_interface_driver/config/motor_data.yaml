@@ -1,58 +1,78 @@
 # This file contains servo parameters specific to each model, used to convert
 # input positions, velocities and torques into servo register values.
-# These values should NOT need to be edited.
+# These values should NOT need to be edited once they are added.
 
-# --------------------------- MX SERIES ---------------------------- #
+# To add a new model of dynamixel to the driver, insert an entry in the list below with the following information:
+# - name: The model name
+# - model_number: The unique model number for this dynamixel
+# - series: The series of dynamixel this model belongs to, the possible values are:
+#    - AX: The AX series (discontinued)
+#    - RX: The RX series (discontinued)
+#    - LM: The old, 1.0 protocol MX series, prior to firmware version 47
+#    - M: The current, 2.0 protocol compliant MX series
+#    - X: The X series dynamixels, not including the xl-320 (not supported)
+#    - LP: The older, legacy pro series of dynamixel (everything before the pro+)
+#    - P: The newer, dynamixel pro+ (also now just called dynamixel P)
+# - encoder_cpr: The position encoder counts per revolution
+# - encoder_range: (optional) This parameter is only for dynamixels whose output range of motion is less than a full
+#                  revolution, e.g on the AX and RX series, the encoder range of 0-1023 is mapped to a 300 degree range
+# - velocity_radps_to_reg: The conversion factor for converting velocity in radians/sec to register values
+# - effort_reg_max: The max value possible in the effort/current register, this is usually the maximum possible value of
+#                   the max_torque/current_limit/effort_limit register
+# - effort_reg_to_mA: The conversion factor for converting from register values to current in mA
+# - has_dataports: (optional) Specify if the model has external dataports
+# All the above can be obtained from the datasheet for the motor, found at https://emanual.robotis.com/
+# --------------------------- MX SERIES (1.0) ---------------------------- #
 
 - name: MX28
   model_number: 29
-  type: LM
-  cpr: 4096
-  gear_conversion: 8.772
-  effort_ratio: 1023
-  current_ratio: 4.5
+  series: LM
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 83.766
+  effort_reg_max: 1023
+  effort_reg_to_mA: 4.5
 
 - name: MX64
   model_number: 310
-  type: LM
-  cpr: 4096
-  gear_conversion: 8.772
-  effort_ratio: 1023
-  current_ratio: 4.5
+  series: LM
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 83.766
+  effort_reg_max: 1023
+  effort_reg_to_mA: 4.5
 
 - name: MX106
   model_number: 320
-  type: LM
-  cpr: 4096
-  gear_conversion: 8.772
-  effort_ratio: 1023
-  current_ratio: 4.5
+  series: LM
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 83.766
+  effort_reg_max: 1023
+  effort_reg_to_mA: 4.5
 
 # ------------------------ MX SERIES (2.0) ------------------------- #
 
 - name: MX28-(2.0)
   model_number: 30
-  type: M
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 2047
-  current_ratio: 3.36
+  series: M
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 2047
+  effort_reg_to_mA: 3.36
 
 - name: MX64-(2.0)
   model_number: 311
-  type: M
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 2047
-  current_ratio: 3.36
+  series: M
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 2047
+  effort_reg_to_mA: 3.36
 
 - name: MX106-(2.0)
   model_number: 321
-  type: M
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 2047
-  current_ratio: 3.36
+  series: M
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 2047
+  effort_reg_to_mA: 3.36
 
 # ---------------------------- X SERIES ---------------------------- #
 
@@ -60,80 +80,80 @@
 
 - name: XM430-W210
   model_number: 1030
-  type: X
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 1193
-  current_ratio: 2.69
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1193
+  effort_reg_to_mA: 2.69
 
 - name: XM430-W350
   model_number: 1020
-  type: X
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 1193
-  current_ratio: 2.69
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1193
+  effort_reg_to_mA: 2.69
 
 - name: XM540-W270
   model_number: 1120
-  type: X
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 1193
-  current_ratio: 2.69
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1193
+  effort_reg_to_mA: 2.69
 
 - name: XM540-W150
   model_number: 1130
-  type: X
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 1193
-  current_ratio: 2.69
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1193
+  effort_reg_to_mA: 2.69
 
 # ---- XH ---- #
 
 - name: XH430-V210
   model_number: 1050
-  type: X
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 689
-  current_ratio: 1.34
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 689
+  effort_reg_to_mA: 1.34
 
 - name: XH430-V350
   model_number: 1040
-  type: X
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 689
-  current_ratio: 1.34
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 689
+  effort_reg_to_mA: 1.34
 
 - name: XH430-W210
   model_number: 1010
-  type: X
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 1193
-  current_ratio: 2.69
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1193
+  effort_reg_to_mA: 2.69
 
 - name: XH430-W350
   model_number: 1000
-  type: X
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 1193
-  current_ratio: 2.69
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1193
+  effort_reg_to_mA: 2.69
 
 
 # ---- XL ---- #
 
 - name: XL430-W250
   model_number: 1060
-  type: X
-  cpr: 4096
-  gear_conversion: 4.367
-  effort_ratio: 1000
-  current_ratio: 1.4
+  series: X
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 41.700
+  effort_reg_max: 1000
+  effort_reg_to_mA: 1.4
 
 # -------------------------- PRO SERIES ---------------------------- #
 
@@ -142,111 +162,113 @@
 
 - name: L42-10-S300
   model_number: 35072
-  type: LP
-  cpr: 4096
-  gear_conversion: 300
-  effort_ratio: 1023
-  current_ratio: 4.028
+  series: LP
+  encoder_cpr: 4096
+  velocity_radps_to_reg: 300
+  effort_reg_max: 1023
+  effort_reg_to_mA: 4.028
 
 - name: L54-30-S400
   model_number: 37928
-  type: LP
-  cpr: 288393
-  gear_conversion: 400
-  effort_ratio: 32767
-  current_ratio: 16.113
+  series: LP
+  encoder_cpr: 288393
+  velocity_radps_to_reg: 3824.966
+  effort_reg_max: 32767
+  effort_reg_to_mA: 16.113
 
 - name: L54-50-S290
   model_number: 38176
-  type: LP
-  cpr: 207692
-  gear_conversion: 290
-  effort_ratio: 32767
-  current_ratio: 16.113
+  series: LP
+  encoder_cpr: 207692
+  velocity_radps_to_reg: 2754.602
+  effort_reg_max: 32767
+  effort_reg_to_mA: 16.113
 
 - name: L54-30-S500
   model_number: 37896
-  type: LP
-  cpr: 361385
-  gear_conversion: 500
-  effort_ratio: 32767
-  current_ratio: 16.113
+  series: LP
+  encoder_cpr: 361385
+  velocity_radps_to_reg: 4793.006
+  effort_reg_max: 32767
+  effort_reg_to_mA: 16.113
 
 - name: L54-50-S500
   model_number: 38152
-  type: LP
-  cpr: 361385
-  gear_conversion: 500
-  effort_ratio: 32767
-  current_ratio: 16.113
+  series: LP
+  encoder_cpr: 361385
+  velocity_radps_to_reg: 4793.006
+  effort_reg_max: 32767
+  effort_reg_to_mA: 16.113
 
 # ---- M ---- #
 
 - name: M42-10-S260
   model_number: 43288
-  type: LP
-  cpr: 263187
-  gear_conversion: 260
-  effort_ratio: 32767
-  current_ratio: 4.028
+  series: LP
+  encoder_cpr: 263187
+  velocity_radps_to_reg: 2454.353
+  effort_reg_max: 32767
+  effort_reg_to_mA: 4.028
 
 - name: M54-40-S250
   model_number: 46096
-  type: LP
-  cpr: 251417
-  gear_conversion: 250
-  effort_ratio: 32767
-  current_ratio: 16.113
+  series: LP
+  encoder_cpr: 251417
+  velocity_radps_to_reg: 2400.853
+  effort_reg_max: 32767
+  effort_reg_to_mA: 16.113
 
 - name: M54-60-S250
   model_number: 46352
-  type: LP
-  cpr: 251417
-  gear_conversion: 250
-  effort_ratio: 32767
-  current_ratio: 16.113
+  series: LP
+  encoder_cpr: 251417
+  velocity_radps_to_reg: 2400.853
+  effort_reg_max: 32767
+  effort_reg_to_mA: 16.113
 
 # ---- H ---- #
 
 - name: H42-20-S300
   model_number: 51200
-  type: LP
-  cpr: 303751
-  gear_conversion: 300.0
-  effort_ratio: 1395
-  current_ratio: 4.028
+  series: LP
+  encoder_cpr: 303751
+  velocity_radps_to_reg: 300.0
+  effort_reg_max: 1395
+  effort_reg_to_mA: 4.028
 
 - name: H54-100-S500
   model_number: 53768
-  type: LP
-  cpr: 501923
-  gear_conversion: 500.0
-  effort_ratio: 32767
-  current_ratio: 16.113
+  series: LP
+  encoder_cpr: 501923
+  velocity_radps_to_reg: 4793.006.0
+  effort_reg_max: 32767
+  effort_reg_to_mA: 16.113
 
 - name: H54-200-S500
   model_number: 54024
-  type: LP
-  cpr: 501923
-  gear_conversion: 500.0
-  effort_ratio: 32767
-  current_ratio: 16.113
+  series: LP
+  encoder_cpr: 501923
+  velocity_radps_to_reg: 4793.006.0
+  effort_reg_max: 32767
+  effort_reg_to_mA: 16.113
 
 
 # ---------------------------- AX SERIES ---------------------------- #
 
 - name: AX-18A
   model_number: 18
-  type: A
-  cpr: 1241 #tentative value
-  gear_conversion: 9.009 #tentative value
-  effort_ratio: 2047
-  current_ratio: 2.148
+  series: A
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1023
+  effort_reg_to_mA: 1.0
 
 - name: AX-12A
   model_number: 12
-  type: A
-  cpr: 1241
-  gear_conversion: 9.009
-  effort_ratio: 2047
-  current_ratio: 1.465
+  series: A
+  encoder_cpr: 1023
+  encoder_range_deg: 300
+  velocity_radps_to_reg: 86.023
+  effort_reg_max: 1023
+  effort_reg_to_mA: 1.0

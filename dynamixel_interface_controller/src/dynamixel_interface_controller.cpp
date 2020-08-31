@@ -613,7 +613,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
         }
 
         //set torque limit for the motor
-        if (!port.driver->setMaxTorque(info.id, info.model_spec->type, (int) (info.torque_limit * info.model_spec->effort_ratio)))
+        if (!port.driver->setMaxTorque(info.id, info.model_spec->type, (int) (info.torque_limit * info.model_spec->effort_reg_max)))
         {
           ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), info.id);
         }
@@ -780,7 +780,7 @@ void DynamixelInterfaceController::loop(void)
         //if in position control mode we enable the default join movement speed (profile velocity)
         if (control_type_ == dynamixel_interface_driver::DXL_POSITION_CONTROL)
         {
-          int regVal = (int) ((double) (it.second.joint_speed) * (60/(2.0 * M_PI)) * it.second.model_spec->gear_conversion);
+          int regVal = static_cast<int>((static_cast<double>(it.second.joint_speed) * it.second.model_spec->velocity_radps_to_reg));
           dynamixel_ports_[i].driver->setProfileVelocity(it.second.id, it.second.model_spec->type, regVal);
         }
 
@@ -1027,7 +1027,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       }
 
       //convert from radians to motor encoder value
-      double pos = (rad_pos / 2.0 / M_PI * info->model_spec->cpr + 0.5) + info->init;
+      double pos = (rad_pos / (2.0 * M_PI) * info->model_spec->encoder_cpr * (360.0/info->model_spec->encoder_range_deg)) + info->init;
 
       //clamp joint angle to be within safe limit
       if ((pos <= up_lim) && (pos >= dn_lim))
@@ -1038,12 +1038,12 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
         if (write_data.type <= dynamixel_interface_driver::DXL_LEGACY_MX)
         {
           write_data.data.resize(2);
-          *((uint16_t*) write_data.data.data()) = (uint16_t) pos;
+          *(reinterpret_cast<uint16_t*>(write_data.data.data())) = static_cast<uint16_t>(pos);
         }
         else
         {
           write_data.data.resize(4);
-          *((uint32_t*) write_data.data.data()) = (uint32_t) pos;
+          *(reinterpret_cast<uint32_t*>(write_data.data.data())) = static_cast<uint32_t>(pos);
         }
 
         positions[info->id] = write_data;
@@ -1063,7 +1063,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       }
 
       //convert to motor encoder value
-      int vel = (int) ((rad_s_vel * (60/(2.0 * M_PI)) * info->model_spec->gear_conversion));
+      int vel = (int) ((rad_s_vel * info->model_spec->velocity_radps_to_reg));
 
       //Velocity values serve 2 different functions, in velocity control mode their sign
       //defines direction, however in position control mode their absolute value is used
@@ -1090,12 +1090,12 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       if (write_data.type <= dynamixel_interface_driver::DXL_LEGACY_MX)
       {
         write_data.data.resize(2);
-        *((uint16_t*) write_data.data.data()) = (uint16_t) vel;
+        *(reinterpret_cast<uint16_t*>(write_data.data.data())) = static_cast<uint16_t>(vel);
       }
       else
       {
         write_data.data.resize(4);
-        *((int32_t*) write_data.data.data()) = (int32_t) vel;
+        *(reinterpret_cast<uint32_t*>(write_data.data.data())) = static_cast<uint32_t>(vel);
       }
 
       velocities[info->id] = write_data;
@@ -1109,9 +1109,9 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       int16_t effort = 0;
 
       //if this flag set, input and outputs are current values (in A)
-      if (info->model_spec->current_ratio != 0)
+      if (info->model_spec->effort_reg_to_mA != 0)
       {
-        effort = (input_effort * 1000 / info->model_spec->current_ratio);
+        effort = (input_effort * 1000 / info->model_spec->effort_reg_to_mA);
         effort = abs(effort);
 
         if ((input_effort < 0) != (info->min > info->max))
@@ -1212,7 +1212,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
 
       //POSITION VALUE
       //get position and convert to radians
-      double rad_pos = (state_map[it.second.id].position - it.second.init) / ((double) (it.second.model_spec->cpr)) * 2 * M_PI;
+      double rad_pos = (state_map[it.second.id].position - it.second.init) * (2.0*M_PI*it.second.model_spec->encoder_range_deg) / (360.0 * it.second.model_spec->encoder_cpr);
       if (it.second.min > it.second.max)
       {
         rad_pos = -rad_pos;
@@ -1244,7 +1244,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
       }
 
       //convert to rad/s
-      double rad_s_vel = ((double) raw_vel) * ((2.0 * M_PI) / 60.0) / it.second.model_spec->gear_conversion;
+      double rad_s_vel = (static_cast<double>(raw_vel)) / it.second.model_spec->velocity_radps_to_reg;
 
       //put velocity in message
       read_msg.velocity.push_back(rad_s_vel);
@@ -1254,7 +1254,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
 
       if (it.second.model_spec->type <= dynamixel_interface_driver::DXL_LEGACY_MX)
       {
-        effort = ((double) (state_map[it.second.id].effort & 0x3FF)) * it.second.model_spec->current_ratio;
+        effort = static_cast<double>(state_map[it.second.id].effort & 0x3FF) * it.second.model_spec->effort_reg_to_mA;
         //check sign
         if (state_map[it.second.id].effort < 1023)
         {
@@ -1263,7 +1263,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
       }
       else
       {
-        effort = ((double) (state_map[it.second.id].effort) * it.second.model_spec->current_ratio);
+        effort = static_cast<double>(state_map[it.second.id].effort) * it.second.model_spec->effort_reg_to_mA;
       }
 
       if (it.second.min > it.second.max)
@@ -1337,7 +1337,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
         msg.voltage = diag_map[it.second.id].voltage / 10.0;
 
         //get temperatures
-        msg.temperature = (double) diag_map[it.second.id].temperature;
+        msg.temperature = static_cast<double>(diag_map[it.second.id].temperature);
 
         //push msg into array
         diags_msg.diagnostics.push_back(msg);

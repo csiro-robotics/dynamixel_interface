@@ -5,19 +5,15 @@
 
 # # --------------------------------------------------------------------------- # #
 # GLOBAL OPERATION PARAMETERS
-publish_rate: 100                 # desired rate for joint state updates. actual rate may be less depending on number
+loop_rate: 100                 # desired rate for joint state updates. actual rate may be less depending on number
                                   # of dynamixels connected and port baud rate.
-control_mode: Position            # control mode, either 'Position', 'Velocity', or 'Torque'
+control_mode: position            # control mode, either 'position', 'velocity', or 'effort'
 disable_torque_on_shutdown: true  # with this enabled the motors will switch off when the controller closes
 echo_joint_commands: true         # debug flag to echo write commands sent to the controller, useful for measuring
                                   # write rates
-effort_use_raw: true              # when sending and receiving joint states, report effort as raw current (mA) or
-                                  # fraction of max load (0-1)
-mx_effort_use_current: true       # Use the current register instead of the load register on the mx series (IO
-                                  # performance hit but much more accurate for reading effort)
 ignore_input_velocity: false      # ignore input velocity commands in position mode (no profile velocity)
-diagnostics_rate: 0               # rate to publish diagnostic information
-dataport_rate: 0                  # rate to read from dynamixel pro external dataport 1
+diagnostics_rate: 1               # rate to publish diagnostic information
+dataport_rate: 1                  # rate to read from dynamixel external dataports
 
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for
 # the servo below
@@ -31,10 +27,11 @@ ports:
   # PORT LIST
   - name: Port_1               # name for this port in config
     device: /dev/ttyUSB0       # serial device this port will communicate on
-    baudrate: 1000000          # baudrate in use (see dynamixel_driver.h for valid values)
-    use_legacy_protocol: false # motor protocol in use, must be "1.0", "2.0", or "PRO"
-    group_read_enabled: true   # specify whether to use group comms (MUCH faster) for reading/writing (for more
-    group_write_enabled: true  # info refer to the bulk/sync read/write in the dynamixel communications protocols)
+    baudrate: 1000000          # baudrate in use
+    use_legacy_protocol: false # wether to use new 2.0 protocol (false) or legacy 1.0 protocol (true)
+    group_read_enabled: true   # specify whether to use group comms for reading
+    group_write_enabled: true  # specify whether to use group comms for writing
+
     servos:
 
         # SERVO LIST FOR THIS PORT
@@ -47,7 +44,7 @@ ports:
           min: 1023           # minimum servo position (in raw encoder count)
           max: 0              # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
           #
-          # The below arguments are all optional and override the global values:
+          # The below arguments are optional and override the global values:
           #
           joint_speed: 2.0    # maximum joint speed (rad/s) (in position or velocity control)
           torque_limit: 0.5   # maximum motor torque for all modes, given as a fraction of rated max (0-1)
@@ -68,8 +65,8 @@ ports:
     group_write_enabled: true
     servos:
 
-        - id: 1                     # id only needs to be unique for each port and so id 1 can be reused here
-          joint_name: joint_3
+        - id: 1               # id only needs to be unique for each port and so id 1 can be reused here
+          joint_name: joint_3 # name DOES have to be unique though, so we continue the naming scheme
           init: 1000
           min: 1000
           max: 3000

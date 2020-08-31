@@ -91,7 +91,7 @@
 
 #include <ros/ros.h>
 #include <dynamixel_sdk/dynamixel_sdk.h>
-#include <dynamixel_interface_driver/dynamixel_new_const.h>
+#include <dynamixel_interface_driver/dynamixel_const.h>
 
 
 namespace dynamixel_interface_driver
@@ -100,14 +100,15 @@ namespace dynamixel_interface_driver
 /// Struct that describes the dynamixel motor's static and physical properties
 typedef struct
 {
-  std::string name;         /// The Model Name
-  uint16_t model_number;    /// Model number (e.g 29 = MX-28)
-  DynamixelSeriesType type; /// Model type (e.g MX, AX, Pro)
-  bool has_dataport;        /// If this model has data ports
-  int cpr;                  /// Motor encoder counts per revolution
-  double gear_conversion;   /// Gear reduction ratio
-  double effort_ratio;      /// Torque ratio
-  double current_ratio;     /// Current ratio
+  std::string name;               /// The Model Name
+  uint16_t model_number;          /// Model number (e.g 29 = MX-28)
+  DynamixelSeriesType type;       /// Model type (e.g MX, AX, Pro)
+  bool has_dataports = false;     /// If this model has data ports
+  int encoder_cpr;                /// Motor encoder counts per revolution
+  double encoder_range_deg = 360; /// Motor encoder range in degrees
+  double velocity_radps_to_reg;   /// Conversion factor from velocity in radians/sec to register counts
+  double effort_reg_max;          /// Max possible value for effort register
+  double effort_reg_to_mA;        /// Conversion factor from register values to current in mA
 } DynamixelSpec;
 
 

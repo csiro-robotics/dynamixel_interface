@@ -173,10 +173,20 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
       spec.type = DXL_UNKNOWN;
     }
 
-    spec.cpr = doc[i]["cpr"].as<uint>();
-    spec.gear_conversion = doc[i]["gear_conversion"].as<double>();
-    spec.effort_ratio = doc[i]["effort_ratio"].as<double>();
-    spec.current_ratio = doc[i]["current_ratio"].as<double>();
+    spec.encoder_cpr = doc[i]["encoder_cpr"].as<uint>();
+    spec.velocity_radps_to_reg = doc[i]["velocity_radps_to_reg"].as<double>();
+    spec.effort_reg_max = doc[i]["effort_reg_max"].as<double>();
+    spec.effort_reg_to_mA = doc[i]["effort_reg_to_mA"].as<double>();
+
+    if (doc[i]["encoder_range_deg"])
+    {
+      spec.encoder_range_deg = doc[i]["encoder_range_deg"].as<double>();
+    }
+
+    if (doc[i]["has_dataports"])
+    {
+      spec.has_dataports = doc[i]["encoder_range_deg"].as<bool>();
+    }
 
     ROS_INFO("Model: %s, No: %d, Type: %s", spec.name.c_str(), spec.model_number, type.c_str());
     model_specs_.insert(std::pair<int, const DynamixelSpec>(spec.model_number, spec));
@@ -276,7 +286,7 @@ bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, DynamixelSeriesType ty
     case DXL_RX:
     case DXL_LEGACY_MX:
       dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_LEGACY_MAX_TORQUE,
-        (uint8_t*) max_torque, &error);
+        reinterpret_cast<uint8_t*>(max_torque), &error);
       break;
 
     case DXL_X:
@@ -375,23 +385,23 @@ bool DynamixelInterfaceDriver::getTargetTorque(int servo_id, DynamixelSeriesType
     case DXL_RX:
     case DXL_LEGACY_MX:
       dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_LEGACY_GOAL_TORQUE,
-        (uint16_t*) &target_torque, &error);
+        reinterpret_cast<uint16_t*>(target_torque), &error);
       break;
 
     case DXL_X:
     case DXL_MX:
       dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_STANDARD_GOAL_CURRENT,
-        (uint16_t*) &target_torque, &error);
+        reinterpret_cast<uint16_t*>(target_torque), &error);
       break;
 
     case DXL_P:
       dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_P_GOAL_CURRENT,
-        (uint16_t*) &target_torque, &error);
+        reinterpret_cast<uint16_t*>(target_torque), &error);
       break;
 
     case DXL_LEGACY_PRO:
       dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_LEGACY_PRO_GOAL_TORQUE,
-        (uint16_t*) &target_torque, &error);
+        reinterpret_cast<uint16_t*>(target_torque), &error);
       break;
   }
 
@@ -505,9 +515,9 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
       {
         if (it.second.success)
         {
-          it.second.position = *((int16_t*) &it.second.data[0]);
-          it.second.velocity = *((int16_t*) &it.second.data[2]);
-          it.second.effort = *((int16_t*) &it.second.data[4]);
+          it.second.position = *(reinterpret_cast<int16_t*>(&it.second.data[0]));
+          it.second.velocity = *(reinterpret_cast<int16_t*>(&it.second.data[2]));
+          it.second.effort = *(reinterpret_cast<int16_t*>(&it.second.data[]));
           success = true;
         }
       }
@@ -538,9 +548,9 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
       {
         if (it.second.success)
         {
-          it.second.effort = *((int16_t*) &it.second.data[0]);
-          it.second.velocity = *((int32_t*) &it.second.data[2]);
-          it.second.position = *((int32_t*) &it.second.data[6]);
+          it.second.effort = *(reinterpret_cast<int16_t*>(&it.second.data[0]));
+          it.second.velocity = *(reinterpret_cast<int32_t*>(&it.second.data[2]));
+          it.second.position = *(reinterpret_cast<int32_t*>(&it.second.data[6]));
           success = true;
         }
       }
@@ -571,9 +581,9 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
       {
         if (it.second.success)
         {
-          it.second.effort = *((int16_t*) &it.second.data[0]);
-          it.second.velocity = *((int32_t*) &it.second.data[2]);
-          it.second.position = *((int32_t*) &it.second.data[6]);
+          it.second.effort = *(reinterpret_cast<int16_t*>(&it.second.data[0]));
+          it.second.velocity = *(reinterpret_cast<int32_t*>(&it.second.data[2]));
+          it.second.position = *(reinterpret_cast<int32_t*>(&it.second.data[6]));
           success = true;
         }
       }
@@ -603,9 +613,9 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
       {
         if (it.second.success)
         {
-          it.second.position = *((int32_t*) &it.second.data[0]);
-          it.second.velocity = *((int32_t*) &it.second.data[4]);
-          it.second.effort = *((int16_t*) &it.second.data[8]);
+          it.second.position = *(reinterpret_cast<int32_t*>(&it.second.data[0]));
+          it.second.velocity = *(reinterpret_cast<int32_t*>(&it.second.data[4]));
+          it.second.effort = *(reinterpret_cast<int16_t*>(&it.second.data[8]));
           success = true;
         }
       }
@@ -679,9 +689,9 @@ bool DynamixelInterfaceDriver::getBulkDataportInfo(std::unordered_map<int, Dynam
       {
         if (it.second.success)
         {
-          it.second.port_values[0] = *((uint16_t*) &it.second.data[0]);
-          it.second.port_values[1] = *((uint16_t*) &it.second.data[2]);
-          it.second.port_values[2] = *((uint16_t*) &it.second.data[4]);
+          it.second.port_values[0] = *(reinterpret_cast<uint16_t*>(&it.second.data[0]));
+          it.second.port_values[1] = *(reinterpret_cast<uint16_t*>(&it.second.data[2]));
+          it.second.port_values[2] = *(reinterpret_cast<uint16_t*>(&it.second.data[4]));
           it.second.port_values[4] = 0;
           success = true;
         }
@@ -715,10 +725,10 @@ bool DynamixelInterfaceDriver::getBulkDataportInfo(std::unordered_map<int, Dynam
       {
         if (it.second.success)
         {
-          it.second.port_values[0] = *((uint16_t*) &it.second.data[0]);
-          it.second.port_values[1] = *((uint16_t*) &it.second.data[2]);
-          it.second.port_values[2] = *((uint16_t*) &it.second.data[4]);
-          it.second.port_values[3] = *((uint16_t*) &it.second.data[6]);
+          it.second.port_values[0] = *(reinterpret_cast<uint16_t*>(&it.second.data[0]));
+          it.second.port_values[1] = *(reinterpret_cast<uint16_t*>(&it.second.data[2]));
+          it.second.port_values[2] = *(reinterpret_cast<uint16_t*>(&it.second.data[4]));
+          it.second.port_values[3] = *(reinterpret_cast<uint16_t*>(&it.second.data[6]));
           success = true;
         }
       }
@@ -750,10 +760,10 @@ bool DynamixelInterfaceDriver::getBulkDataportInfo(std::unordered_map<int, Dynam
       {
         if (it.second.success)
         {
-          it.second.port_values[0] = *((uint16_t*) &it.second.data[0]);
-          it.second.port_values[1] = *((uint16_t*) &it.second.data[2]);
-          it.second.port_values[2] = *((uint16_t*) &it.second.data[4]);
-          it.second.port_values[3] = *((uint16_t*) &it.second.data[6]);
+          it.second.port_values[0] = *(reinterpret_cast<uint16_t*>(&it.second.data[0]));
+          it.second.port_values[1] = *(reinterpret_cast<uint16_t*>(&it.second.data[2]));
+          it.second.port_values[2] = *(reinterpret_cast<uint16_t*>(&it.second.data[4]));
+          it.second.port_values[3] = *(reinterpret_cast<uint16_t*>(&it.second.data[6]));
           success = true;
         }
       }
@@ -864,7 +874,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
       {
         if (it.second.success)
         {
-          it.second.voltage = *((uint16_t*) &it.second.data[0]);
+          it.second.voltage = *(reinterpret_cast<uint16_t*>(&it.second.data[6]));
           it.second.temperature = it.second.data[2];
           success = true;
         }
@@ -898,7 +908,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
       {
         if (it.second.success)
         {
-          it.second.voltage = *((uint16_t*) &it.second.data[0]);
+          it.second.voltage = *(reinterpret_cast<uint16_t*>(&it.second.data[0]));
           it.second.temperature = it.second.data[2];
           success = true;
         }
@@ -931,7 +941,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
       {
         if (it.second.success)
         {
-          it.second.voltage = *((uint16_t*) &it.second.data[0]);
+          it.second.voltage = *(reinterpret_cast<uint16_t*>(&it.second.data[0]));
           it.second.temperature = it.second.data[2];
           success = true;
         }
