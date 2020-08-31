@@ -1,33 +1,31 @@
 
-
-NOTE: This repository now has documentation on confluence: 
-
+NOTE: This repository now has documentation on confluence:
 
 https://confluence.csiro.au/display/~mol112/The+dynamixel_interface+stack+for+ROS
 
 Please use the confluence page for installation and tutorials
 
-
-
 original readme follows:
 
-These packages aim to provide a scalable and easily configurable interface for controlling many dynamixel's across multiple serial devices. Currently the following series of motors are supported:
+This package aims to provide a scalable and easily configurable interface for controlling many dynamixel's across multiple serial devices. Currently the following series of motors are supported:
 
+- AX
+- RX
 - MX
 - XM
 - PRO
+- PRO+
+- P
 
 Features:
 
 - Easily adjustable configuration file
 - Synchronous across multiple serial ports (using threaded IO)
 - All dynamixel states are published to a single message
-- Supports position, velocity and torque* control modes.
-	- In position control mode, can supply profile velocities as well 
+- Supports position, velocity and current* control modes.
+	- In position control mode, can supply profile velocities as well
 
-
-*Torque control is unavailable on the MX-28 model of dynamixel.
-
+*current control not available on all models.
 
 INSTALLATION NOTES:
 
@@ -36,17 +34,10 @@ This package depends on the dynamixel_sdk ROS package released by Robotis. To in
 
 USAGE NOTES:
 
-1. In the config folder of your robot's package:
-	- Create a controller_config.yaml with the necessary parameters for each servo
-	- see the example in the dynamixel_controller/config/ folder for an example and explanation of the various configuration options
+To use the dynamixel_interface_controller to operatre servos:
+	- Create a controller_config.yaml with the necessary parameters for each servo (see the example in the config/ folder for an example and explanation of the various configuration options)
+  - Launch the dynamixel_interface_controller_node, loading in the custom config file (see the example in the launch/ folder)
 
-2. In the launch folder of your robot's package:
-	- Create a dynamixel_controller.launch file:
-	- Follow the same format as the example provided in the dynamixel_controller/launch/ folder in this package
-	- Make sure said launch file loads the controller_config.yaml from your robot's package and NOT the default one included in dynamixel_controller.
-
-3. In the top level launch file for your robot:
-	- launch the file created in step 2 BEFORE launching any higher level controllers
 
 4. During operation:
 
@@ -64,4 +55,6 @@ USAGE NOTES:
 	A note on units:
 	- Positions are in radians
 	- Velocities are in radians/second
-	- Efforts are a decimal fraction of the maximum torque for each servo
+	- Effort is in mA of current
+
+Dynamixel Interface Controller. Provides a simple abstracted interface that can control many dynamixels across multiple serial ports using only two topics.
