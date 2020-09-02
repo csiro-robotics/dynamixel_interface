@@ -403,6 +403,7 @@ typedef enum
 /// Error return codes
 typedef enum
 {
+  DXL_ERROR_NO_ERROR = 0,
   // Common error codes
   DXL_ERROR_OVERLOAD = 32,
   DXL_ERROR_ELECTRIC_SHOCK = 16,
@@ -410,7 +411,6 @@ typedef enum
   DXL_ERROR_OVERHEATING = 4,
   DXL_ERROR_MOTOR_HALL = 2,
   DXL_ERROR_INPUT_VOLTAGE = 1,
-
   // Legacy specific error codes
   DXL_ERROR_LEGACY_INSTRUCTION = 64,
   DXL_ERROR_LEGACY_CHECKSUM = 16,

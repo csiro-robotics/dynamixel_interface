@@ -122,7 +122,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 
   ros::param::param<std::string>("~control_mode", mode, "Position");
 
-  ros::param::param<double>("~global_joint_speed", global_joint_speed_, 5.0);
+  ros::param::param<double>("~global_max_vel", global_max_vel_, 5.0);
   ros::param::param<double>("~global_torque_limit", global_torque_limit_, 1.0);
 
 
@@ -130,7 +130,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   if (loop_rate_ <= 0)
   {
     ROS_ERROR("Loop rate must be > 0!");
-    ROS_BREAK();
+    ros::shutdown();
   }
 
   if (diagnostics_rate_ < 0)
@@ -181,7 +181,7 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   else
   {
     ROS_ERROR("Control Mode Not Supported!");
-    ROS_BREAK();
+    ros::shutdown();
   }
 
   // Initialise write state variables
@@ -201,14 +201,14 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     if (dynamixel_ports_.size() == 0)
     {
       ROS_ERROR("No valid ports found, shutting_down_...");
-      ROS_BREAK();
+      ros::shutdown();
     }
 
   }
   else
   {
     ROS_ERROR("No port details loaded to param server");
-    ROS_BREAK();
+    ros::shutdown();
   }
 
   if (diagnostics_rate_ > 0)
@@ -267,7 +267,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
   if (!ports.getType() == XmlRpc::XmlRpcValue::TypeArray)
   {
     ROS_ERROR("Invalid/missing device information on the param server");
-    ROS_BREAK();
+    ros::shutdown();
   }
 
   //number of ports defined
@@ -289,7 +289,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (!ports[i].getType() == XmlRpc::XmlRpcValue::TypeStruct)
     {
       ROS_ERROR("Invalid/Missing info-struct for servo index %d", i);
-      ROS_BREAK();
+      ros::shutdown();
     }
 
 
@@ -297,11 +297,11 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (!ports[i]["port_name"].getType() == XmlRpc::XmlRpcValue::TypeString)
     {
       ROS_ERROR("Invalid/Missing port name for port %d", i);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
-      port.port_name = static_cast<std::string>(ports[i]["port_name"]);
+      port.port_name = static_cast<std::string>(ports[i]["name"]);
     }
 
 
@@ -309,7 +309,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (!ports[i]["device"].getType() == XmlRpc::XmlRpcValue::TypeString)
     {
       ROS_ERROR("Invalid/Missing device name for port %d", i);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -320,7 +320,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (!ports[i]["baudrate"].getType() == XmlRpc::XmlRpcValue::TypeInt)
     {
       ROS_ERROR("Invalid/Missing baudrate for port %d", i);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -331,7 +331,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (!ports[i]["use_legacy_protocol"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
     {
       ROS_ERROR("Invalid/Missing use_legacy_protocol option for port %d", i);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -342,7 +342,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (!ports[i]["group_read_enabled"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
     {
       ROS_ERROR("Invalid/Missing group_read_enabled option for port %d", i);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -353,7 +353,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (!ports[i]["group_write_enabled"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
     {
       ROS_ERROR("Invalid/Missing group_write_enabled option for port %d", i);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -372,7 +372,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     catch (int n)
     {
       ROS_ERROR("Unable to start driver!, code %d", n);
-      ROS_BREAK();
+      ros::shutdown();
     }
 
     /************************* Dynamixel initialisation *********************/
@@ -383,7 +383,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (!servos.getType() == XmlRpc::XmlRpcValue::TypeArray)
     {
       ROS_ERROR("Invalid/missing servo information on the param server");
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -395,6 +395,66 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     //add port only if dynamixels were found
     if (port.joints.size() > 0)
     {
+      // DynamixelSeriesType type_check;
+      // bool first_dynamixel = true;
+
+      // //check type safety of bus
+      // for (auto &it : port.joints)
+      // {
+      //   if (first_dynamixel)
+      //   {
+      //     type_check = it.second.model_spec->type;
+      //     first_dynamixel = false;
+      //   }
+      //   else
+      //   {
+      //     switch(type_check)
+      //     {
+      //       case DXL_SERIES_AX:
+      //       case DXL_SERIES_RX:
+      //       case DXL_SERIES_DX:
+      //       case DXL_SERIES_EX:
+      //       case DXL_SERIES_LEGACY_MX:
+      //         if (it.second.model_spec->type > DXL_SERIES_LEGACY_MX)
+      //         {
+      //           ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
+      //               port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
+      //           ros::shutdown();
+      //         }
+      //         break;
+
+      //       case DXL_SERIES_X:
+      //       case DXL_SERIES_MX:
+      //         if ((it.second.model_spec->type != DXL_SERIES_X) && (it.second.model_spec->type != DXL_SERIES_MX))
+      //         {
+      //           ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
+      //               port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
+      //           ros::shutdown();
+      //         }
+      //         break;
+
+      //       case DXL_SERIES_P:
+      //         if (it.second.model_spec->type != DXL_SERIES_P)
+      //         {
+      //           ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
+      //               port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
+      //           ros::shutdown();
+      //         }
+      //         break;
+
+      //       case DXL_SERIES_LEGACY_PRO:
+      //         if (it.second.model_spec->type != DXL_SERIES_LEGACY_PRO)
+      //         {
+      //           ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
+      //               port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
+      //           ros::shutdown();
+      //         }
+      //         break;
+      //     }
+      //   }
+      // }
+
+      ROS_INFO("Adding port %s to loop", port.port_name.c_str());
       //add port information to server
       dynamixel_ports_.push_back(port);
     }
@@ -425,14 +485,14 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     if (!servos[i].getType() == XmlRpc::XmlRpcValue::TypeStruct)
     {
       ROS_ERROR("Invalid/Missing info-struct for servo index %d", i);
-      ROS_BREAK();
+      ros::shutdown();
     }
 
     //get joint id
     if ((!servos[i].hasMember("id")) || (!servos[i]["id"].getType() == XmlRpc::XmlRpcValue::TypeInt))
     {
       ROS_ERROR("Invalid/Missing id for servo index %d", i);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -444,7 +504,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     if ((!servos[i].hasMember("joint_name")) || (!servos[i]["joint_name"].getType() == XmlRpc::XmlRpcValue::TypeString))
     {
       ROS_ERROR("Invalid/Missing joint name for servo index %d, id: %d", i, info.id);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -456,7 +516,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
       if (port.joints.find(info.joint_name) !=  port.joints.end() )
       {
         ROS_ERROR("Cannot have multiple joints with the same name [%s]", info.joint_name.c_str());
-        ROS_BREAK();
+        ros::shutdown();
       }
       else
       {
@@ -465,7 +525,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
           if (dynamixel_ports_[j].joints.find(info.joint_name) !=  dynamixel_ports_[j].joints.end())
           {
             ROS_ERROR("Cannot have multiple joints with the same name [%s]", info.joint_name.c_str());
-            ROS_BREAK();
+            ros::shutdown();
           }
         }
       }
@@ -475,7 +535,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     if ((!servos[i].hasMember("init")) || (!servos[i]["init"].getType() == XmlRpc::XmlRpcValue::TypeInt))
     {
       ROS_WARN("Invalid/Missing initial position for servo index %d, id: %d", i, info.id);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -487,7 +547,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     if ((!servos[i].hasMember("min")) || (!servos[i]["min"].getType() == XmlRpc::XmlRpcValue::TypeDouble))
     {
       ROS_WARN("Invalid/Missing min position for servo index %d, id: %d", i, info.id);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -498,7 +558,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     if ((!servos[i].hasMember("max")) || (servos[i]["max"].getType() == XmlRpc::XmlRpcValue::TypeDouble))
     {
       ROS_WARN("Invalid/Missing max position for servo index %d, id: %d", i, info.id);
-      ROS_BREAK();
+      ros::shutdown();
     }
     else
     {
@@ -506,16 +566,16 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     }
 
     //get joint default joint speed (or set to global if none specified)
-    if ((!servos[i].hasMember("joint_speed")) || (!servos[i]["joint_speed"].getType() == XmlRpc::XmlRpcValue::TypeDouble))
+    if ((!servos[i].hasMember("max_vel")) || (!servos[i]["max_vel"].getType() == XmlRpc::XmlRpcValue::TypeDouble))
     {
-      info.joint_speed = global_joint_speed_;
+      info.max_vel = global_max_vel_;
     }
     else
     {
-      info.joint_speed = static_cast<double>(servos[i]["joint_speed"]);
-      if (info.joint_speed < 0.0)
+      info.max_vel = static_cast<double>(servos[i]["max_vel"]);
+      if (info.max_vel < 0.0)
       {
-          info.joint_speed = global_joint_speed_;
+          info.max_vel = global_max_vel_;
       }
     }
 
@@ -577,13 +637,25 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
           ROS_ERROR("Failed to load model information for dynamixel id %d", info.id);
           ROS_ERROR("Model Number: %d", model_number);
           ROS_ERROR("Info is not in database");
-          ROS_BREAK();
+          ros::shutdown();
+        }
+
+        // check error status of dynamixel
+        uint8_t error_status = 0;
+        if (!port.driver->getErrorStatus(info.id, info.model_spec->type, &error_status))
+        {
+          ROS_WARN("Failed to check error status of dynamixel id %d", info.id);
+        }
+        else if (error_status)
+        {
+          ROS_WARN("Dynamixel %d returned error code %d", info.id, error_status);
         }
 
         info.torque_enabled = false;
 
         //Display joint info
-        ROS_INFO("Joint Name: %s, ID: %d, Model: %s", info.joint_name.c_str(), info.id, info.model_spec->name.c_str());
+        ROS_INFO("Joint Name: %s, ID: %d, Series: %s, Model: %s", info.joint_name.c_str(), info.id,
+             port.driver->getSeriesName(info.model_spec->type).c_str(), info.model_spec->name.c_str());
 
         //Only support effort control on newer spec dynamixels
         if (control_type_ == DXL_MODE_TORQUE_CONTROL)
@@ -597,7 +669,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
             case DXL_SERIES_LEGACY_MX:
             case DXL_SERIES_LEGACY_PRO:
               ROS_ERROR("Effort Control not supported for legacy series dynamixels!");
-              ROS_BREAK();
+              ros::shutdown();
           }
         }
 
@@ -609,13 +681,22 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
         if (!port.driver->setOperatingMode(info.id, info.model_spec->type, control_type_))
         {
           ROS_WARN("Failed to set operating mode for %s motor (id %d)", info.joint_name.c_str(), info.id);
-          ROS_BREAK();
+          ros::shutdown();
         }
 
         //set torque limit for the motor
         if (!port.driver->setMaxTorque(info.id, info.model_spec->type, (int) (info.torque_limit * info.model_spec->effort_reg_max)))
         {
           ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), info.id);
+        }
+
+        //set velocity limits for the motor
+        if (info.model_spec->type > DXL_SERIES_LEGACY_MX)
+        {
+          if (!port.driver->setMaxVelocity(info.id, info.model_spec->type, (int) (info.max_vel * info.model_spec->velocity_radps_to_reg)))
+          {
+            ROS_WARN("Failed to set velocity limit for %s motor (id %d)", info.joint_name.c_str(), info.id);
+          }
         }
 
         //angle limits are only relevant in position control mode
@@ -652,7 +733,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
       {
         //can detect but cannot communicate, possibly serial error
         ROS_ERROR("Failed to retrieve model number for id %d", info.id);
-        ROS_BREAK();
+        ros::shutdown();
       }
     }
     else
@@ -779,7 +860,7 @@ void DynamixelInterfaceController::loop(void)
         //if in position control mode we enable the default join movement speed (profile velocity)
         if (control_type_ == DXL_MODE_POSITION_CONTROL)
         {
-          int regVal = static_cast<int>((static_cast<double>(it.second.joint_speed) * it.second.model_spec->velocity_radps_to_reg));
+          int regVal = static_cast<int>((static_cast<double>(it.second.max_vel) * it.second.model_spec->velocity_radps_to_reg));
           dynamixel_ports_[i].driver->setProfileVelocity(it.second.id, it.second.model_spec->type, regVal);
         }
 
@@ -972,7 +1053,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
   {
     has_vel = true;
   }
-  if ((joint_commands.velocity.size() == joint_commands.name.size()) && (control_type_ == DXL_MODE_TORQUE_CONTROL))
+  if ((joint_commands.effort.size() == joint_commands.name.size()) && (control_type_ == DXL_MODE_TORQUE_CONTROL))
   {
     has_eff = true;
   }
@@ -1026,7 +1107,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       }
 
       //convert from radians to motor encoder value
-      double pos = (rad_pos / (2.0 * M_PI) * info->model_spec->encoder_cpr * (360.0/info->model_spec->encoder_range_deg)) + info->init;
+      double pos = rad_pos * ((info->model_spec->encoder_cpr * 360.0)/(2 * M_PI *info->model_spec->encoder_range_deg)) + info->init;
 
       //clamp joint angle to be within safe limit
       if ((pos <= up_lim) && (pos >= dn_lim))
@@ -1050,16 +1131,13 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
     }
 
     //calculate the velocity register value for the motor
-    if (has_vel)
+    if (has_vel && (control_type_ != DXL_MODE_TORQUE_CONTROL))
     {
       //get rad/s value from message
       double rad_s_vel = joint_commands.velocity[i];
 
       //clamp to joint speed limit
-      if (abs(rad_s_vel) > info->joint_speed)
-      {
-        rad_s_vel = (rad_s_vel < 0) ? (-info->joint_speed) : (info->joint_speed);
-      }
+      rad_s_vel = std::clamp(-info->max_vel, rad_s_vel, info->max_vel);
 
       //convert to motor encoder value
       int vel = (int) ((rad_s_vel * info->model_spec->velocity_radps_to_reg));
@@ -1067,20 +1145,22 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       //Velocity values serve 2 different functions, in velocity control mode their sign
       //defines direction, however in position control mode their absolute value is used
       //to set the profile velocity (how fast the motor moves to the specified position)
-      vel = abs(vel);
-
       //we also need to take an absolute value as each motor series handles negative inputs
       //differently
-      if ((control_type_ == DXL_MODE_VELOCITY_CONTROL) && ((rad_s_vel < 0) != (info->min > info->max)))
+      if ((control_type_ == DXL_MODE_VELOCITY_CONTROL) && (info->min > info->max))
       {
         if (info->model_spec->type <= DXL_SERIES_LEGACY_MX)
         {
-          vel = vel + 1024;
+          vel = std::abs(vel) + 1024;
         }
         else
         {
           vel = -vel;
         }
+      }
+      else if (control_type_ == DXL_MODE_POSITION_CONTROL)
+      {
+        vel = std::abs(vel);
       }
 
       //push motor encoder value onto list
@@ -1100,14 +1180,13 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       velocities[info->id] = write_data;
     }
 
-    if (has_eff)
+    if (has_eff && (control_type_ == DXL_MODE_TORQUE_CONTROL))
     {
-      //replace the below with proper code when you can figure out the units
       double input_effort = joint_commands.effort[i];
 
       int16_t effort = 0;
 
-      //if this flag set, input and outputs are current values (in A)
+      //input and outputs are current values (in A)
       if (info->model_spec->effort_reg_to_mA != 0)
       {
         effort = (input_effort * 1000 / info->model_spec->effort_reg_to_mA);
@@ -1123,7 +1202,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       write_data.id = info->id;
       write_data.type = info->model_spec->type;
       write_data.data.resize(2);
-      *((int16_t*) write_data.data.data()) = effort;
+      *(reinterpret_cast<int16_t*>(write_data.data.data())) = effort;
 
       efforts[info->id] = write_data;
     }
@@ -1136,24 +1215,35 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
     //set the profile velocities if they have been defined
     if ((has_vel) && (!ignore_input_velocity_))
     {
-      port.driver->setMultiProfileVelocity(velocities);
+      if(!port.driver->setMultiProfileVelocity(velocities))
+      {
+        ROS_ERROR("Failed to set profile velocities on port %s!", port.port_name.c_str());
+      }
     }
     //send the positions to the motors
     if (has_pos)
     {
-      port.driver->setMultiPosition(positions);
+      if(!port.driver->setMultiPosition(positions))
+      {
+        ROS_ERROR("Failed to set positions on port %s!", port.port_name.c_str());
+      }
     }
   }
   else if ((control_type_ == DXL_MODE_VELOCITY_CONTROL) && has_vel)
   {
     //set the velocity values for each motor
-    port.driver->setMultiVelocity(velocities);
+    if(!port.driver->setMultiVelocity(velocities))
+    {
+      ROS_ERROR("Failed to set velocities on port %s!", port.port_name.c_str());
+    }
   }
   else if ((control_type_ == DXL_MODE_TORQUE_CONTROL) && has_eff)
   {
     //set the effort values for each motor
-    port.driver->setMultiTorque(efforts);
-
+    if(!port.driver->setMultiTorque(efforts))
+    {
+      ROS_ERROR("Failed to set efforts on port %s!", port.port_name.c_str());
+    }
   }
 
 }
@@ -1183,10 +1273,12 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
     diag_map[it.second.id] = DynamixelDiagnostic();
     diag_map[it.second.id].id = it.second.id;
     diag_map[it.second.id].type = it.second.model_spec->type;
-    data_map[it.second.id] = DynamixelDataport();
-    data_map[it.second.id].id = it.second.id;
-    data_map[it.second.id].type = it.second.model_spec->type;
-
+    if (it.second.model_spec->external_ports)
+    {
+      data_map[it.second.id] = DynamixelDataport();
+      data_map[it.second.id].id = it.second.id;
+      data_map[it.second.id].type = it.second.model_spec->type;
+    }
   }
 
   //get state info back from all dynamixels
@@ -1211,7 +1303,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
 
       //POSITION VALUE
       //get position and convert to radians
-      double rad_pos = (state_map[it.second.id].position - it.second.init) * (2.0*M_PI*it.second.model_spec->encoder_range_deg) / (360.0 * it.second.model_spec->encoder_cpr);
+      double rad_pos = (state_map[it.second.id].position - it.second.init) * (2.0 * M_PI * it.second.model_spec->encoder_range_deg) / (360.0 * it.second.model_spec->encoder_cpr);
       if (it.second.min > it.second.max)
       {
         rad_pos = -rad_pos;
@@ -1275,8 +1367,13 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
     }
     read_msg.header.stamp = ros::Time::now();
   }
+  else
+  {
+    ROS_WARN("Failed to get bulk state on port %s", port.port_name.c_str());
+  }
 
-  if (read_dataport_)
+
+  if (read_dataport_ && (data_map.size() > 0))
   {
     if( port.driver->getBulkDataportInfo(data_map) )
     {
@@ -1305,6 +1402,10 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
         //push msg into array
         dataport_msg.states.push_back(msg);
       }
+    }
+    else
+    {
+      ROS_WARN("Failed to get dataports on port %s", port.port_name.c_str());
     }
   }
 
@@ -1341,6 +1442,10 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
         //push msg into array
         diags_msg.diagnostics.push_back(msg);
       }
+    }
+    else
+    {
+      ROS_WARN("Failed to get diagnostics on port %s", port.port_name.c_str());
     }
   }
 }

@@ -125,7 +125,7 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
 
   // read in motor data yaml file
   // load the file containing model info, we're not using the param server here
-  std::string path = ros::package::getPath("dynamixel_interface_driver");
+  std::string path = ros::package::getPath("dynamixel_interface");
   path += "/config/motor_data.yaml";
   YAML::Node doc = YAML::LoadFile(path);
 
@@ -138,7 +138,7 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
     spec.name = doc[i]["name"].as<std::string>();
     spec.model_number = doc[i]["model_number"].as<uint>();
 
-    std::string type = doc[i]["type"].as<std::string>();
+    std::string type = doc[i]["series"].as<std::string>();
     if (type == "M")
     {
       spec.type = DXL_SERIES_MX;
@@ -190,9 +190,9 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(std::string device="/dev/ttyU
       spec.encoder_range_deg = doc[i]["encoder_range_deg"].as<double>();
     }
 
-    if (doc[i]["has_dataports"])
+    if (doc[i]["external_ports"])
     {
-      spec.has_dataports = doc[i]["encoder_range_deg"].as<bool>();
+      spec.external_ports = doc[i]["external_ports"].as<bool>();
     }
 
     ROS_INFO("Model: %s, No: %d, Type: %s", spec.name.c_str(), spec.model_number, type.c_str());
@@ -276,6 +276,56 @@ bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t* model_numb
   }
 }
 
+/// Retrieves the hardware status error value from the dynamixel's eeprom
+/// @param[in] servo_id The ID of the servo to retrieve from
+/// @param[in] type the type of the servo to read from
+/// @param[out] error Stores the returned error code
+/// @return True on comm success, false otherwise.
+bool DynamixelInterfaceDriver::getErrorStatus(int servo_id, DynamixelSeriesType type, uint8_t* error_status)
+{
+  uint8_t error;
+  int dxl_comm_result = -1;
+
+  //Read address and size always depends on servo series
+  switch(type)
+  {
+    case DXL_SERIES_AX:
+    case DXL_SERIES_RX:
+    case DXL_SERIES_DX:
+    case DXL_SERIES_EX:
+    case DXL_SERIES_LEGACY_MX:
+      dxl_comm_result = packetHandler_->ping(portHandler_, servo_id, &error);
+      *error_status = error;
+      break;
+
+    case DXL_SERIES_X:
+    case DXL_SERIES_MX:
+      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_HARDWARE_ERROR_STATUS,
+        error_status, &error);
+      break;
+
+    case DXL_SERIES_P:
+      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_P_HARDWARE_ERROR_STATUS,
+        error_status, &error);
+      break;
+
+    case DXL_SERIES_LEGACY_PRO:
+      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_HARDWARE_ERROR_STATUS,
+        error_status, &error);
+      break;
+  }
+
+  // check return value
+  if (dxl_comm_result == COMM_SUCCESS)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
 /// Retrieves the maximum torque limit from the dynamixel's eeprom.
 /// @param[in] servo_id The ID of the servo to retrieve from
 /// @param[in] type the type of the servo to read from
@@ -291,6 +341,8 @@ bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, DynamixelSeriesType ty
   {
     case DXL_SERIES_AX:
     case DXL_SERIES_RX:
+    case DXL_SERIES_DX:
+    case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_MAX_TORQUE,
         reinterpret_cast<uint8_t*>(max_torque), &error);
@@ -341,6 +393,8 @@ bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, DynamixelSeriesTyp
   {
     case DXL_SERIES_AX:
     case DXL_SERIES_RX:
+    case DXL_SERIES_DX:
+    case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_TORQUE_ENABLE,
         &data, &error);
@@ -392,6 +446,8 @@ bool DynamixelInterfaceDriver::getTargetTorque(int servo_id, DynamixelSeriesType
   {
     case DXL_SERIES_AX:
     case DXL_SERIES_RX:
+    case DXL_SERIES_DX:
+    case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_GOAL_TORQUE,
         reinterpret_cast<uint16_t*>(target_torque), &error);
@@ -466,7 +522,6 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint16_t address, uin
 /// @return True on comm success, false otherwise
 bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelState> &state_map)
 {
-  DynamixelSeriesType type;
   bool success = false;
   std::unordered_map<int, SyncData*> read_map;
   uint i = 0;
@@ -474,30 +529,23 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
   // base case, nothing to read
   if (state_map.size() == 0)
   {
-    return false;
+    return true;
   }
 
-  // check types match
   for (auto& it : state_map)
   {
-    if (i == 0)
-    {
-      type = it.second.type;
-    }
-    else if ((i > 0) && (type != it.second.type))
-    {
-      return false;
-    }
     it.second.success = false;
     read_map[it.first] = static_cast<SyncData*>(&it.second);
-    i++;
   }
 
   // perform bulk read depending on type
+  DynamixelSeriesType type = state_map.begin()->second.type;
   switch(type)
   {
     case DXL_SERIES_AX:
     case DXL_SERIES_RX:
+    case DXL_SERIES_DX:
+    case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       // read data
       if(use_group_read_)
@@ -537,7 +585,7 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
       // read data
       if(use_group_read_)
       {
-        bulkRead(read_map, DXL_REG_STANDARD_PRESENT_CURRENT, 10); // bulk method
+        syncRead(read_map, DXL_REG_STANDARD_PRESENT_CURRENT, 10); // bulk method
       }
       else
       {
@@ -569,7 +617,7 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
       // read data
       if(use_group_read_)
       {
-        bulkRead(read_map, DXL_REG_P_PRESENT_CURRENT, 10); // bulk method
+        syncRead(read_map, DXL_REG_P_PRESENT_CURRENT, 10); // bulk method
       }
       else
       {
@@ -631,9 +679,11 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
       return success;
 
     default:
+      //ROS_WARN("BAD TYPE: %d", type);
       return false;
   }
 
+  //ROS_WARN("FAIL OUT OF FUNCTION");
   return false;
 }
 
@@ -642,7 +692,6 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
 /// @return True on comm success, false otherwise
 bool DynamixelInterfaceDriver::getBulkDataportInfo(std::unordered_map<int, DynamixelDataport> &data_map)
 {
-  DynamixelSeriesType type;
   bool success = false;
   std::unordered_map<int, SyncData*> read_map;
   uint i = 0;
@@ -650,26 +699,17 @@ bool DynamixelInterfaceDriver::getBulkDataportInfo(std::unordered_map<int, Dynam
   // base case, nothing to read
   if (data_map.size() == 0)
   {
-    return false;
+    return true;
   }
 
-  // check types match
   for (auto& it : data_map)
   {
-    if (i == 0)
-    {
-      type = it.second.type;
-    }
-    else if ((i > 0) && (type != it.second.type))
-    {
-      return false;
-    }
     it.second.success = false;
     read_map[it.first] = static_cast<SyncData*>(&it.second);
-    i++;
   }
 
   // perform bulk read depending on type
+  DynamixelSeriesType type = data_map.begin()->second.type;
   switch(type)
   {
     case DXL_SERIES_X:
@@ -790,7 +830,6 @@ bool DynamixelInterfaceDriver::getBulkDataportInfo(std::unordered_map<int, Dynam
 /// @return True on comm success, false otherwise
 bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, DynamixelDiagnostic> &diag_map)
 {
-  DynamixelSeriesType type;
   bool success = false;
   std::unordered_map<int, SyncData*> read_map;
   uint i = 0;
@@ -798,26 +837,17 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
   // base case, nothing to read
   if (diag_map.size() == 0)
   {
-    return false;
+    return true;
   }
 
-  // check types match
   for (auto& it : diag_map)
   {
-    if (i == 0)
-    {
-      type = it.second.type;
-    }
-    else if ((i > 0) && (type != it.second.type))
-    {
-      return false;
-    }
     it.second.success = false;
     read_map[it.first] = static_cast<SyncData*>(&it.second);
-    i++;
   }
 
   // perform bulk read depending on type
+  DynamixelSeriesType type = diag_map.begin()->second.type;
   switch(type)
   {
     // OLDER, DISCONTINUED SERIES
@@ -1016,10 +1046,6 @@ bool DynamixelInterfaceDriver::bulkRead(std::unordered_map<int, SyncData*> &read
       }
       it.second->success = true;
     }
-    else
-    {
-      it.second->success = false;
-    }
   }
 
   if (!success)
@@ -1129,7 +1155,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
     case DXL_SERIES_LEGACY_MX:
 
       //MX Series has no operating mode register, instead operating mode depends on
-      //angle limits and torque_control_enable register
+      //angle limits
       switch (operating_mode)
       {
 
@@ -1137,48 +1163,19 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
 
           //Position control, set normal angle limits
           success = setAngleLimits(servo_id, type, 0, 4095); //Master mode, normal roatation
-
-          //Turn off Torque control mode if there is actually a register for this
-          success = getModelNumber(servo_id, &model_num);
-
-          if (success && ((model_num == 310) || (model_num == 320))) // only MX-64 and MX-106
-          {
-            dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_TORQUE_CONTROL_ENABLE,
-                0, &error);
-          }
           break;
 
         case DXL_MODE_VELOCITY_CONTROL:
 
           //Velocity control, turn off angle limits
           success = setAngleLimits(servo_id, type, 0, 0); //Master mode, normal roatation
-
-          //Torque control mode, there is actually a register for this
-          success = getModelNumber(servo_id, &model_num);
-
-          if (success & ((model_num == 310) || (model_num == 320))) // only MX-64 and MX-106
-          {
-            dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_TORQUE_CONTROL_ENABLE,
-                0, &error);
-          }
           break;
 
         case DXL_MODE_TORQUE_CONTROL:
-
-          //Torque control mode, only MX-64 and MX-106
-          success = getModelNumber(servo_id, &model_num);
-
-          if (success && ((model_num == 310) || (model_num == 320)))
-          {
-            //Turn off angle limits
-            success = setAngleLimits(servo_id, type, 0, 0); //Master mode, normal roatation
-            ROS_INFO("torque_control_enabled");
-            dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_TORQUE_CONTROL_ENABLE,
-                1, &error);
-          }
           break;
 
       }
+      break;
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
@@ -1410,8 +1407,56 @@ bool DynamixelInterfaceDriver::setMaxTorque(int servo_id, DynamixelSeriesType ty
   {
     return false;
   }
+}
 
+  /// Sets the maximum velocity limit for the dynamixel
+  /// @param[in] servo_id The ID of the servo to write to
+  /// @param[in] type the type of the servo to read from
+  /// @param[in] max_vel the maximum velocity limit
+  /// @return True on comm success, false otherwise.
+bool DynamixelInterfaceDriver::setMaxVelocity(int servo_id, DynamixelSeriesType type, uint32_t max_vel)
+{
 
+  uint8_t error;
+  int dxl_comm_result;
+
+  //Read address and size always depends on servo series
+  switch(type)
+  {
+    case DXL_SERIES_AX:
+    case DXL_SERIES_RX:
+    case DXL_SERIES_DX:
+    case DXL_SERIES_EX:
+    case DXL_SERIES_LEGACY_MX:
+      break;
+
+    case DXL_SERIES_MX:
+    case DXL_SERIES_X:
+      dxl_comm_result = packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_VELOCITY_LIMIT,
+          max_vel, &error);
+      break;
+
+    case DXL_SERIES_P:
+      dxl_comm_result = packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_P_VELOCITY_LIMIT,
+          max_vel, &error);
+      break;
+
+    case DXL_SERIES_LEGACY_PRO:
+      dxl_comm_result = packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_VELOCITY_LIMIT,
+          max_vel, &error);
+      break;
+
+  }
+
+  // check return value
+  if (dxl_comm_result == COMM_SUCCESS)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 /// Sets the torque enable register of the dynamixel. This value defines the on/off state of the servo.
@@ -2016,23 +2061,12 @@ bool DynamixelInterfaceDriver::writeRegisters(int servo_id, uint16_t address, ui
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMultiPosition(std::unordered_map<int, SyncData> &position_data)
 {
-
-  DynamixelSeriesType type;
-  uint i = 0;
-
-  // check types match
-  for (auto& it : position_data)
+  if (position_data.size() == 0)
   {
-    if (i == 0)
-    {
-      type = it.second.type;
-    }
-    else if ((i > 0) && (type != it.second.type))
-    {
-      return false;
-    }
-    i++;
+    return true;
   }
+
+  DynamixelSeriesType type = position_data.begin()->second.type;
 
   // switch on series type
   switch(type)
@@ -2061,24 +2095,12 @@ bool DynamixelInterfaceDriver::setMultiPosition(std::unordered_map<int, SyncData
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMultiVelocity(std::unordered_map<int, SyncData> &velocity_data)
 {
-
-  DynamixelSeriesType type;
-  uint i = 0;
-
-  // check types match
-  for (auto& it : velocity_data)
+  if (velocity_data.size() == 0)
   {
-    if (i == 0)
-    {
-      type = it.second.type;
-    }
-    else if ((i > 0) && (type != it.second.type))
-    {
-      return false;
-    }
-    i++;
+    return true;
   }
 
+  DynamixelSeriesType type = velocity_data.begin()->second.type;
   // switch on series type
   switch(type)
   {
@@ -2106,24 +2128,12 @@ bool DynamixelInterfaceDriver::setMultiVelocity(std::unordered_map<int, SyncData
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMultiProfileVelocity(std::unordered_map<int, SyncData> &velocity_data)
 {
-
-  DynamixelSeriesType type;
-  uint i = 0;
-
-  // check types match
-  for (auto& it : velocity_data)
+  if (velocity_data.size() == 0)
   {
-    if (i == 0)
-    {
-      type = it.second.type;
-    }
-    else if ((i > 0) && (type != it.second.type))
-    {
-      return false;
-    }
-    i++;
+    return true;
   }
 
+  DynamixelSeriesType type = velocity_data.begin()->second.type;
   // switch on series type
   switch(type)
   {
@@ -2151,24 +2161,12 @@ bool DynamixelInterfaceDriver::setMultiProfileVelocity(std::unordered_map<int, S
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setMultiTorque(std::unordered_map<int, SyncData> &torque_data)
 {
-
-  DynamixelSeriesType type;
-  uint i = 0;
-
-  // check types match
-  for (auto& it : torque_data)
+  if (torque_data.size() == 0)
   {
-    if (i == 0)
-    {
-      type = it.second.type;
-    }
-    else if ((i > 0) && (type != it.second.type))
-    {
-      return false;
-    }
-    i++;
+    return true;
   }
 
+  DynamixelSeriesType type = torque_data.begin()->second.type;
   // switch on series type
   switch(type)
   {

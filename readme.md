@@ -70,9 +70,23 @@ During operation:
 
 Dynamixel Interface Controller. Provides a simple abstracted interface that can control many dynamixels across multiple serial ports using only two topics.
 
-## A NOTE ON FTDI USB INTERFACES FOR SERIAL COMMUINICATIONS
+## IMPROVING DRIVER PERFORMANCE
 
-since 16.04, the default latency_timer value for the ftdi driver was changed from 1ms to 16ms. This value significantly affects the speed the driver will be able to communicate with the dynamixels, resulting in very low achievable loop rates. To correct this, a script is included that can change a serial port into 'low latency' mode, which requires the installation of the setserial command:
+This driver is designed with goal of achieveing the maximum possible loop rate for a given configuration of dynamixels. To that end, there are three key optimisations that we recommend :
+
+### Baud rate
+
+The baud rate used to communicate on the bus directly affects the maximum achieveable loop rate on the bus. A higher loop rate will result in faster update rates but can reduce the noise the bus can tolerate, for most applications the recommended baud rate is the maximum of 3Mbps.
+
+### Return delay time
+
+The return delay time is a parameter on the dynamixels that sets the amount of delay in microseconds before they respond to a packet, by default this value is quite large (250, which equates to 500 microseconds). Lowering this value will reduce the total round-trip time for any comms on the bus. It is recommended to set this value very low (tested at 5, or 10 microseconds).
+
+Both the above values will need to be configured PRIOR TO OPERATION using the dynamixel wizard available from robotis.
+
+### FTDI DRIVER LATENCY FOR SERIAL COMMUINICATIONS
+
+Since 16.04, the default latency_timer value for the ftdi usb driver was changed from 1ms to 16ms. This value represents how long the kernel driver waits before passing data up to the user application. It significantly affects the speed the driver will be able to communicate with the dynamixels, resulting in very low achievable loop rates. To correct this, a script is included that can change a serial port into 'low latency' mode (a latency_timer value of 1), which requires the installation of the setserial command:
 
 ```bash
 

@@ -1,7 +1,5 @@
-# This file contains servo parameters specific to each model, used to convert
-# input positions, velocities and torques into servo register values.
-# These values should NOT need to be edited once they are added.
-
+# This file contains servo parameters specific to each model, used to convert input positions, velocities and torques
+# into servo register values. These values should NOT need to be edited once they are added.
 # To add a new model of dynamixel to the driver, insert an entry in the list below with the following information:
 # - name: The model name
 # - model_number: The unique model number for this dynamixel
@@ -20,10 +18,9 @@
 # - effort_reg_max: The max value possible in the effort/current register, this is usually the maximum possible value of
 #                   the max_torque/current_limit/effort_limit register
 # - effort_reg_to_mA: The conversion factor for converting from register values to current in mA
-# - has_dataports: (optional) Specify if the model has external dataports
+# - external_ports: (optional) Specify if the model has external dataports
 # All the above can be obtained from the datasheet for the motor, found at https://emanual.robotis.com/
 # --------------------------- MX SERIES (1.0) ---------------------------- #
-
 - name: MX12-W
   model_number: 360
   series: LM
@@ -151,6 +148,7 @@
 - name: XM540-W270
   model_number: 1120
   series: X
+  external_ports: true
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
   effort_reg_max: 1193
@@ -159,6 +157,7 @@
 - name: XM540-W150
   model_number: 1130
   series: X
+  external_ports: true
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
   effort_reg_max: 2047
@@ -201,6 +200,7 @@
 - name: XH540-W150
   model_number: 1110
   series: X
+  external_ports: true
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
   effort_reg_max: 2047
@@ -209,6 +209,7 @@
 - name: XH540-W270
   model_number: 1100
   series: X
+  external_ports: true
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
   effort_reg_max: 2047
@@ -217,6 +218,7 @@
 - name: XH540-V150
   model_number: 1150
   series: X
+  external_ports: true
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
   effort_reg_max: 2047
@@ -225,6 +227,7 @@
 - name: XH540-V270
   model_number: 1140
   series: X
+  external_ports: true
   encoder_cpr: 4096
   velocity_radps_to_reg: 41.700
   effort_reg_max: 2047
@@ -260,9 +263,11 @@
   effort_reg_max: 1461
   effort_reg_to_mA: 1
 
+
 - name: PM54-040-S250
   model_number: 2110
   series: P
+  external_ports: true
   encoder_cpr: 502834
   velocity_radps_to_reg: 954.930
   effort_reg_max: 4470
@@ -271,6 +276,7 @@
 - name: PM54-060-S250
   model_number: 2110
   series: P
+  external_ports: true
   encoder_cpr: 502834
   velocity_radps_to_reg: 954.930
   effort_reg_max: 7980
@@ -281,6 +287,7 @@
 - name: PH54-100-S500
   model_number: 2010
   series: P
+  external_ports: true
   encoder_cpr: 1003846
   velocity_radps_to_reg: 954.930
   effort_reg_max: 15900
@@ -289,19 +296,21 @@
 - name: PH54-200-S500
   model_number: 2020
   series: P
+  external_ports: true
   encoder_cpr: 1003846
   velocity_radps_to_reg: 954.930
   effort_reg_max: 22740
   effort_reg_to_mA: 1
 
 
-# -------------------------- Legacy (discontinued) PRO+ SERIES ---------------------------- #
+# -------------------------- Legacy (discontinued) PRO+ (PRO-A) SERIES ---------------------------- #
 
 # ---- M ---- #
 
 - name: M42-010-S260A
   model_number: 43289
   series: P
+  external_ports: true
   encoder_cpr: 526374
   velocity_radps_to_reg: 954.930
   effort_reg_max: 1461
@@ -310,6 +319,7 @@
 - name: M54-040-S250A
   model_number: 46097
   series: P
+  external_ports: true
   encoder_cpr: 502834
   velocity_radps_to_reg: 954.930
   effort_reg_max: 4470
@@ -318,6 +328,7 @@
 - name: M54-060-S250A
   model_number: 46353
   series: P
+  external_ports: true
   encoder_cpr: 502834
   velocity_radps_to_reg: 954.930
   effort_reg_max: 7980
@@ -328,6 +339,7 @@
 - name: H42-20-S300A
   model_number: 51201
   series: P
+  external_ports: true
   encoder_cpr: 607500
   velocity_radps_to_reg: 954.930
   effort_reg_max: 4500
@@ -336,6 +348,7 @@
 - name: H54-100-S500A
   model_number: 53769
   series: P
+  external_ports: true
   encoder_cpr: 1003846
   velocity_radps_to_reg: 954.930
   effort_reg_max: 15900
@@ -344,11 +357,11 @@
 - name: H54-200-S500A
   model_number: 54025
   series: P
+  external_ports: true
   encoder_cpr: 1003846
   velocity_radps_to_reg: 954.930
   effort_reg_max: 22740
   effort_reg_to_mA: 1
-
 
 # -------------------------- Legacy (discontinued) PRO SERIES ---------------------------- #
 
@@ -357,6 +370,7 @@
 - name: L42-10-S300
   model_number: 35072
   series: LP
+  external_ports: true
   encoder_cpr: 4096
   velocity_radps_to_reg: 300
   effort_reg_max: 1023
@@ -373,6 +387,7 @@
 - name: L54-50-S290
   model_number: 38176
   series: LP
+  external_ports: true
   encoder_cpr: 207692
   velocity_radps_to_reg: 2754.602
   effort_reg_max: 32767
@@ -381,6 +396,7 @@
 - name: L54-30-S500
   model_number: 37896
   series: LP
+  external_ports: true
   encoder_cpr: 361385
   velocity_radps_to_reg: 4793.006
   effort_reg_max: 32767
@@ -389,6 +405,7 @@
 - name: L54-50-S500
   model_number: 38152
   series: LP
+  external_ports: true
   encoder_cpr: 361385
   velocity_radps_to_reg: 4793.006
   effort_reg_max: 32767
@@ -399,6 +416,7 @@
 - name: M42-10-S260
   model_number: 43288
   series: LP
+  external_ports: true
   encoder_cpr: 263187
   velocity_radps_to_reg: 2454.353
   effort_reg_max: 32767
@@ -407,6 +425,7 @@
 - name: M54-40-S250
   model_number: 46096
   series: LP
+  external_ports: true
   encoder_cpr: 251417
   velocity_radps_to_reg: 2400.853
   effort_reg_max: 32767
@@ -415,6 +434,7 @@
 - name: M54-60-S250
   model_number: 46352
   series: LP
+  external_ports: true
   encoder_cpr: 251417
   velocity_radps_to_reg: 2400.853
   effort_reg_max: 32767
@@ -425,6 +445,7 @@
 - name: H42-20-S300
   model_number: 51200
   series: LP
+  external_ports: true
   encoder_cpr: 303751
   velocity_radps_to_reg: 300.0
   effort_reg_max: 1395
@@ -433,19 +454,20 @@
 - name: H54-100-S500
   model_number: 53768
   series: LP
+  external_ports: true
   encoder_cpr: 501923
-  velocity_radps_to_reg: 4793.006.0
+  velocity_radps_to_reg: 4793.006
   effort_reg_max: 32767
   effort_reg_to_mA: 16.113
 
 - name: H54-200-S500
   model_number: 54024
   series: LP
+  external_ports: true
   encoder_cpr: 501923
-  velocity_radps_to_reg: 4793.006.0
+  velocity_radps_to_reg: 4793.006
   effort_reg_max: 32767
   effort_reg_to_mA: 16.113
-
 
 # ---------------------------- AX SERIES ---------------------------- #
 

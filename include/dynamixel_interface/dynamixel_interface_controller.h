@@ -85,6 +85,7 @@
 #include <string>
 #include <mutex>
 #include <map>
+#include <algorithm>
 
 #include <XmlRpcValue.h>
 
@@ -110,7 +111,7 @@ typedef struct
   int id; /// The unique (per port) ID of the motor
   std::string joint_name; /// The unique (globally) name of the joint
 
-  double joint_speed; /// Motor default joint speed (rad/s)
+  double max_vel; /// Motor maximum joint velocity (rad/s)
   double torque_limit; /// Motor maximum torque limit (%rated max)
 
   int init; /// Motor initial position (in raw encoder values). This value defines the 0 radian position for the motor
@@ -227,7 +228,7 @@ private:
   uint dataport_counter_ = 0; /// counter for tracking dataport rate
   uint dataport_iters_ = 0;   /// publish when dataport_counter_ == this
 
-  double global_joint_speed_;  /// global joint speed limit
+  double global_max_vel_;  /// global joint speed limit
   double global_torque_limit_; /// global joint torque limit
 
   sensor_msgs::JointState write_msg_; /// Stores the last message received from the write command topic

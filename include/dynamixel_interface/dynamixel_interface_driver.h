@@ -93,7 +93,6 @@
 #include <dynamixel_sdk/dynamixel_sdk.h>
 #include <dynamixel_interface/dynamixel_const.h>
 
-
 namespace dynamixel_interface
 {
 
@@ -103,7 +102,7 @@ typedef struct
   std::string name;               /// The Model Name
   uint16_t model_number;          /// Model number (e.g 29 = MX-28)
   DynamixelSeriesType type;       /// Model type (e.g MX, AX, Pro)
-  bool has_dataports = false;     /// If this model has data ports
+  bool external_ports = false;    /// If this model has data ports
   int encoder_cpr;                /// Motor encoder counts per revolution
   double encoder_range_deg = 360; /// Motor encoder range in degrees
   double velocity_radps_to_reg;   /// Conversion factor from velocity in radians/sec to register counts
@@ -183,6 +182,13 @@ public:
   /// @param[out] model_number Stores the model_number returned
   /// @return True on comm success, false otherwise.
   bool getModelNumber(int servo_id, uint16_t* model_number);
+
+  /// Retrieves the hardware status error value from the dynamixel's eeprom
+  /// @param[in] servo_id The ID of the servo to retrieve from
+  /// @param[in] type the type of the servo to read from
+  /// @param[out] error Stores the returned error code
+  /// @return True on comm success, false otherwise.
+  bool getErrorStatus(int servo_id, DynamixelSeriesType type, uint8_t* error);
 
   /// Retrieves the maximum torque limit from the dynamixel's eeprom.
   /// @param[in] servo_id The ID of the servo to retrieve from
@@ -274,6 +280,13 @@ public:
   /// @param[in] max_torque the maximum torque limit
   /// @return True on comm success, false otherwise.
   bool setMaxTorque(int servo_id, DynamixelSeriesType type, uint16_t max_torque);
+
+  /// Sets the maximum velocity limit for the dynamixel
+  /// @param[in] servo_id The ID of the servo to write to
+  /// @param[in] type the type of the servo to read from
+  /// @param[in] max_vel the maximum velocity limit
+  /// @return True on comm success, false otherwise.
+  bool setMaxVelocity(int servo_id, DynamixelSeriesType type, uint32_t max_vel);
 
   /// Sets the torque enable register of the dynamixel. This value defines the on/off state of the servo.
   /// @param[in] servo_id The ID of the servo to write to
@@ -410,6 +423,44 @@ public:
   /// @return True on comm success, false otherwise.
   bool setMultiTorque(std::unordered_map<int, SyncData> &torque_data);
 
+  /// Returns a string version of the dynamixel series based on the input type
+  /// @param[in] type the type of the servo to read from
+  /// @returns The string name of the Dynamixel series
+  inline std::string getSeriesName(DynamixelSeriesType type)
+  {
+    std::string series_name = "undefined";
+    switch(type)
+    {
+      case DXL_SERIES_AX:
+        series_name = "AX";
+        break;
+      case DXL_SERIES_RX:
+        series_name = "RX";
+        break;
+      case DXL_SERIES_DX:
+        series_name = "DX";
+        break;
+      case DXL_SERIES_EX:
+        series_name = "EX";
+        break;
+      case DXL_SERIES_LEGACY_MX:
+        series_name = "Legacy MX";
+        break;
+      case DXL_SERIES_MX:
+        series_name = "MX";
+        break;
+      case DXL_SERIES_X:
+        series_name = "X";
+        break;
+      case DXL_SERIES_P:
+        series_name = "P";
+        break;
+      case DXL_SERIES_LEGACY_PRO:
+        series_name = "Legacy Pro";
+        break;
+    }
+    return series_name;
+  };
 private:
 
   /// Performs the bulk read for each protocol. A bulk read is a broadcast instruction on a bus that commands a list
