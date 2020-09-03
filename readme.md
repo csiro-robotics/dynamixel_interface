@@ -28,8 +28,7 @@ This package depends on the dynamixel_sdk ROS package released by Robotis. To in
 
 ``` bash
 
-sudo apt install ros-$ROSDISTRO-dynamixel-sdk
- https://github.com/ROBOTIS-GIT/DynamixelSDK and place the ROS folder from the sdk into your workspace. Currently the sdk is confirmed to be compatable with the following versions of ROS: jade, indigo and kinetic.
+sudo apt install ros-$ROS_DISTRO-dynamixel-sdk
 
 ```
 

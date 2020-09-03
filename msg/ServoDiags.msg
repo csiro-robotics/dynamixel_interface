@@ -1,2 +1,2 @@
 Header header
-ServoDiag[] diagnostics
+ServoDiag[] diagnostics #array of diagnostics messages for all dynamixels on bus

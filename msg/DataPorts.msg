@@ -1,2 +1,2 @@
 Header header
-DataPort[] states
+DataPort[] states #array of Dataport messages for all dynamixels on bus
