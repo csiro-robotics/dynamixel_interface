@@ -395,64 +395,64 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     //add port only if dynamixels were found
     if (port.joints.size() > 0)
     {
-      // DynamixelSeriesType type_check;
-      // bool first_dynamixel = true;
+      DynamixelSeriesType type_check;
+      bool first_dynamixel = true;
 
-      // //check type safety of bus
-      // for (auto &it : port.joints)
-      // {
-      //   if (first_dynamixel)
-      //   {
-      //     type_check = it.second.model_spec->type;
-      //     first_dynamixel = false;
-      //   }
-      //   else
-      //   {
-      //     switch(type_check)
-      //     {
-      //       case DXL_SERIES_AX:
-      //       case DXL_SERIES_RX:
-      //       case DXL_SERIES_DX:
-      //       case DXL_SERIES_EX:
-      //       case DXL_SERIES_LEGACY_MX:
-      //         if (it.second.model_spec->type > DXL_SERIES_LEGACY_MX)
-      //         {
-      //           ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
-      //               port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
-      //           ros::shutdown();
-      //         }
-      //         break;
+      //check type safety of bus
+      for (auto &it : port.joints)
+      {
+        if (first_dynamixel)
+        {
+          type_check = it.second.model_spec->type;
+          first_dynamixel = false;
+        }
+        else
+        {
+          switch(type_check)
+          {
+            case DXL_SERIES_AX:
+            case DXL_SERIES_RX:
+            case DXL_SERIES_DX:
+            case DXL_SERIES_EX:
+            case DXL_SERIES_LEGACY_MX:
+              if (it.second.model_spec->type > DXL_SERIES_LEGACY_MX)
+              {
+                ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
+                    port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
+                ros::shutdown();
+              }
+              break;
 
-      //       case DXL_SERIES_X:
-      //       case DXL_SERIES_MX:
-      //         if ((it.second.model_spec->type != DXL_SERIES_X) && (it.second.model_spec->type != DXL_SERIES_MX))
-      //         {
-      //           ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
-      //               port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
-      //           ros::shutdown();
-      //         }
-      //         break;
+            case DXL_SERIES_X:
+            case DXL_SERIES_MX:
+              if ((it.second.model_spec->type != DXL_SERIES_X) && (it.second.model_spec->type != DXL_SERIES_MX))
+              {
+                ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
+                    port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
+                ros::shutdown();
+              }
+              break;
 
-      //       case DXL_SERIES_P:
-      //         if (it.second.model_spec->type != DXL_SERIES_P)
-      //         {
-      //           ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
-      //               port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
-      //           ros::shutdown();
-      //         }
-      //         break;
+            case DXL_SERIES_P:
+              if (it.second.model_spec->type != DXL_SERIES_P)
+              {
+                ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
+                    port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
+                ros::shutdown();
+              }
+              break;
 
-      //       case DXL_SERIES_LEGACY_PRO:
-      //         if (it.second.model_spec->type != DXL_SERIES_LEGACY_PRO)
-      //         {
-      //           ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
-      //               port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
-      //           ros::shutdown();
-      //         }
-      //         break;
-      //     }
-      //   }
-      // }
+            case DXL_SERIES_LEGACY_PRO:
+              if (it.second.model_spec->type != DXL_SERIES_LEGACY_PRO)
+              {
+                ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! Have both %s and %s.",
+                    port.driver->getSeriesName(type_check).c_str(), port.driver->getSeriesName(it.second.model_spec->type).c_str());
+                ros::shutdown();
+              }
+              break;
+          }
+        }
+      }
 
       ROS_INFO("Adding port %s to loop", port.port_name.c_str());
       //add port information to server
