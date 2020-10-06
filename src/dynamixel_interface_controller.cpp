@@ -522,10 +522,10 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
       }
     }
 
-    // get joint initial position
-    if (servos[i]["init"].getType() != XmlRpc::XmlRpcValue::TypeInt)
+    // get joint zero position
+    if (servos[i]["zero_pos"].getType() != XmlRpc::XmlRpcValue::TypeInt)
     {
-      ROS_WARN("Invalid/Missing initial position for servo index %d, id: %d", i, info.id);
+      ROS_WARN("Invalid/Missing zero position for servo index %d, id: %d", i, info.id);
       ros::shutdown();
     }
     else
@@ -535,7 +535,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     }
 
     // get joint default min position
-    if (servos[i]["min"].getType() != XmlRpc::XmlRpcValue::TypeInt)
+    if (servos[i]["min_pos"].getType() != XmlRpc::XmlRpcValue::TypeInt)
     {
       ROS_WARN("Invalid/Missing min position for servo index %d, id: %d", i, info.id);
       ros::shutdown();
@@ -546,7 +546,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     }
 
     // get joint default max position
-    if (servos[i]["max"].getType() != XmlRpc::XmlRpcValue::TypeInt)
+    if (servos[i]["max_pos"].getType() != XmlRpc::XmlRpcValue::TypeInt)
     {
       ROS_WARN("Invalid/Missing max position for servo index %d, id: %d", i, info.id);
       ros::shutdown();
@@ -909,15 +909,17 @@ void DynamixelInterfaceController::loop(void)
 
   // perform the IO on the first port
 
-  // perform write
-  if (write_ready_)
-  {
-    multiThreadedWrite(dynamixel_ports_[0], temp_msg);
-  }
+  // // perform write
+  // if (write_ready_)
+  // {
+  //   multiThreadedWrite(dynamixel_ports_[0], temp_msg);
+  // }
 
-  // perform read
-  multiThreadedRead(dynamixel_ports_[0], reads[0], dataports_reads[0], diags_reads[0]);
+  // // perform read
+  // multiThreadedRead(dynamixel_ports_[0], reads[0], dataports_reads[0], diags_reads[0]);
 
+  // Perform the IO for the first port here (don't bother spinning out another thread)
+  multiThreadedIO(dynamixel_ports_[0], reads[0], dataports_reads[0], diags_reads[0], write_ready_);
 
   // loop and get port information (wait for threads in order if any were created)
   for (int i = 0; i < dynamixel_ports_.size(); i++)
