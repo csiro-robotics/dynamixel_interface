@@ -453,7 +453,8 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     }
     else
     {
-      ROS_ERROR("No dynamixels found on %s, %s will not be used", port.device.c_str(), port.port_name.c_str());
+      ROS_ERROR("No dynamixels found on %s (%s)!", port.device.c_str(), port.port_name.c_str());
+      ros::shutdown();
     }
   }
 }
@@ -841,8 +842,6 @@ void DynamixelInterfaceController::loop(void)
       // get every joint on that port
       for (auto &it : dynamixel_ports_[i].joints)
       {
-        int32_t priorPos = it.second.zero_pos;
-
         // enable motor torque
         if (!dynamixel_ports_[i].driver->setTorqueEnabled(it.second.id, it.second.model_spec->type, 1))
         {
@@ -994,12 +993,10 @@ void DynamixelInterfaceController::multiThreadedIO(PortInfo &port, sensor_msgs::
                                                    dynamixel_interface::DataPorts &dataport_msg,
                                                    dynamixel_interface::ServoDiags &diags_msg, bool perform_write) const
 {
-  sensor_msgs::JointState thread_write_msg = write_msg_;
-
   // perform write
   if (perform_write)
   {
-    multiThreadedWrite(port, thread_write_msg);
+    multiThreadedWrite(port, write_msg_);
   }
 
   // perform read
