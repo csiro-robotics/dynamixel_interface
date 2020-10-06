@@ -907,17 +907,6 @@ void DynamixelInterfaceController::loop(void)
   // keep the write message thread safe
   sensor_msgs::JointState temp_msg = write_msg_;
 
-  // perform the IO on the first port
-
-  // // perform write
-  // if (write_ready_)
-  // {
-  //   multiThreadedWrite(dynamixel_ports_[0], temp_msg);
-  // }
-
-  // // perform read
-  // multiThreadedRead(dynamixel_ports_[0], reads[0], dataports_reads[0], diags_reads[0]);
-
   // Perform the IO for the first port here (don't bother spinning out another thread)
   multiThreadedIO(dynamixel_ports_[0], reads[0], dataports_reads[0], diags_reads[0], write_ready_);
 
