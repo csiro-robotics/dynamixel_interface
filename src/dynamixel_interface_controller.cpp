@@ -241,7 +241,7 @@ DynamixelInterfaceController::~DynamixelInterfaceController()
       for (auto &it : dynamixel_ports_[i].joints)
       {
         dynamixel_ports_[i].driver->setTorqueEnabled(it.second.id, it.second.model_spec->type, 0);
-        printf("Torque disabled on %s joint\n", it.first.c_str());
+        ROS_INFO("Torque disabled on %s joint\n", it.first.c_str());
       }
     }
   }
@@ -272,8 +272,8 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
   {
     PortInfo port;
 
-    bool use_group_read;
-    bool use_group_write;
+    bool use_group_read = false;
+    bool use_group_write = false;
 
     /************************* PORT ARGUMENTS *********************/
 
@@ -811,7 +811,6 @@ void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointSt
   }
 
   write_ready_ = true;
-
 }
 
 /// main loop for performing IO, handles the creation and joining of IO threads for each port, so that IO for multiple

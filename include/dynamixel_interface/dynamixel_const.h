@@ -91,7 +91,6 @@
 
 namespace dynamixel_interface
 {
-
 /// Dynamixel types
 enum DynamixelSeriesType
 {
@@ -245,7 +244,7 @@ enum DynamixelProRegisterTable
 {
   // EEPROM
   DXL_REG_P_MODEL_NUMBER = 0,
-  DXL_REG_P_MODEL_INFO= 2,
+  DXL_REG_P_MODEL_INFO = 2,
   DXL_REG_P_FIRMWARE_VERSION = 6,
   DXL_REG_P_ID = 7,
   DXL_REG_P_BAUD_RATE = 8,
@@ -318,7 +317,7 @@ enum DynamixelLegacyProRegisterTable
 {
   // EEPROM
   DXL_REG_LEGACY_PRO_MODEL_NUMBER = 0,
-  DXL_REG_LEGACY_PRO_MODEL_INFO=2,
+  DXL_REG_LEGACY_PRO_MODEL_INFO = 2,
   DXL_REG_LEGACY_PRO_FIRMWARE_VERSION = 6,
   DXL_REG_LEGACY_PRO_ID = 7,
   DXL_REG_LEGACY_PRO_BAUD_RATE = 8,
@@ -368,7 +367,7 @@ enum DynamixelLegacyProRegisterTable
 /// on the motors themselves.
 enum DynamixelControlMode
 {
-  UNKNOWN  = -1,
+  UNKNOWN = -1,
 
   DXL_MODE_TORQUE_CONTROL = 0,
   DXL_MODE_VELOCITY_CONTROL = 1,
@@ -419,6 +418,6 @@ enum DynamixelErrorCode
 
 };
 
-}
+}  // namespace dynamixel_interface
 
 #endif  // DYNAMIXEL_CONST_H__
