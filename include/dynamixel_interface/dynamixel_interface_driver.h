@@ -497,8 +497,8 @@ private:
   bool syncWrite(std::unordered_map<int, SyncData> &write_data, uint16_t address, uint16_t length) const;
 
 private:
-  dynamixel::PortHandler *portHandler_;      /// The port handler object. The dynamixel sdk serial object.
-  dynamixel::PacketHandler *packetHandler_;  /// packet handler. Provides raw response deconstruction.
+  std::unique_ptr<dynamixel::PortHandler> portHandler_;      /// The port handler object. The dynamixel sdk serial object.
+  std::unique_ptr<dynamixel::PacketHandler> packetHandler_;  /// packet handler. Provides raw response deconstruction.
 
   bool use_legacy_protocol_;  /// if we are using legacy 1.0 protocol or newer 2.0 protocol (depends on model support)
 

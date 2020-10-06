@@ -103,7 +103,7 @@ namespace dynamixel_interface
 /// The motor states.
 DynamixelInterfaceController::DynamixelInterfaceController()
 {
-  nh_ = new ros::NodeHandle();
+  nh_ = std::make_unique<ros::NodeHandle>();
 
   // Stores config variables only used in init function
   std::string mode;
@@ -231,7 +231,6 @@ DynamixelInterfaceController::DynamixelInterfaceController()
 DynamixelInterfaceController::~DynamixelInterfaceController()
 {
   ROS_INFO("shutting_down dynamixel_interface_controller");
-  delete nh_;
 
   if (stop_motors_on_shutdown_)
   {
@@ -244,12 +243,6 @@ DynamixelInterfaceController::~DynamixelInterfaceController()
         ROS_INFO("Torque disabled on %s joint\n", it.first.c_str());
       }
     }
-  }
-
-  for (int i = 0; i < dynamixel_ports_.size(); i++)
-  {
-    // Delete driver objects
-    delete dynamixel_ports_[i].driver;
   }
 }
 
@@ -357,8 +350,8 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     /************************* Driver initialisation *********************/
 
     // Attempt to start driver
-    port.driver = new DynamixelInterfaceDriver(port.device, port.baudrate, port.use_legacy_protocol, use_group_read,
-                                               use_group_write);
+    port.driver = std::unique_ptr<DynamixelInterfaceDriver>(new DynamixelInterfaceDriver(port.device, port.baudrate, port.use_legacy_protocol, use_group_read,
+                                               use_group_write));
 
     /************************* Dynamixel initialisation *********************/
 
@@ -449,7 +442,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
 
       ROS_INFO("Adding port %s to loop", port.port_name.c_str());
       // add port information to server
-      dynamixel_ports_.push_back(port);
+      dynamixel_ports_.emplace_back(std::move(port));
     }
     else
     {

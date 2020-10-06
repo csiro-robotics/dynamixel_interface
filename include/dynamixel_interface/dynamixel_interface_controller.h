@@ -135,7 +135,7 @@ struct PortInfo
 
   bool use_legacy_protocol;  /// boolean indicating if legacy protocol (for older series dynamixels) is in use
 
-  DynamixelInterfaceDriver *driver;  /// The driver object
+  std::unique_ptr<DynamixelInterfaceDriver> driver;  /// The driver object
 
   std::unordered_map<std::string, DynamixelInfo> joints;  /// map of joint information by name
 };
@@ -202,7 +202,7 @@ private:
                          dynamixel_interface::DataPorts &dataports_msg,
                          dynamixel_interface::ServoDiags &diags_msg) const;
 
-  ros::NodeHandle *nh_;  /// Handler for the ROS Node
+  std::unique_ptr<ros::NodeHandle> nh_;  /// Handler for the ROS Node
 
   std::vector<PortInfo> dynamixel_ports_;  /// method of control (position/velocity/torque)
 

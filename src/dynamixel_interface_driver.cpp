@@ -101,7 +101,7 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(const std::string &device, in
   // Initialize PortHandler instance
   // Set the port path
   // Get methods and members of PortHandlerLinux
-  portHandler_ = dynamixel::PortHandler::getPortHandler(device.c_str());
+  portHandler_ = std::unique_ptr<dynamixel::PortHandler>(dynamixel::PortHandler::getPortHandler(device.c_str()));
 
   // set indicator for using group comms
   use_legacy_protocol_ = use_legacy_protocol;
@@ -115,11 +115,11 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(const std::string &device, in
   if (use_legacy_protocol_)
   {
     // Initialize PacketHandler instances for each protocol version
-    packetHandler_ = dynamixel::PacketHandler::getPacketHandler(1.0);
+    packetHandler_ = std::unique_ptr<dynamixel::PacketHandler>(dynamixel::PacketHandler::getPacketHandler(1.0));
   }
   else
   {
-    packetHandler_ = dynamixel::PacketHandler::getPacketHandler(2.0);
+    packetHandler_ = std::unique_ptr<dynamixel::PacketHandler>(dynamixel::PacketHandler::getPacketHandler(2.0));
   }
 
   // read in motor data yaml file
@@ -242,8 +242,6 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(const std::string &device, in
 DynamixelInterfaceDriver::~DynamixelInterfaceDriver()
 {
   portHandler_->closePort();
-  delete portHandler_;
-  delete packetHandler_;
 }
 
 /// Ping the specified id, used to check if a dynamixel with that ID is on the bus
@@ -255,7 +253,7 @@ bool DynamixelInterfaceDriver::ping(int servo_id) const
   int dxl_comm_result;
 
   // ping dynamixel on bus
-  dxl_comm_result = packetHandler_->ping(portHandler_, servo_id, &error);
+  dxl_comm_result = packetHandler_->ping(portHandler_.get(), servo_id, &error);
 
   // CHECK IF PING SUCCEEDED
   if (dxl_comm_result == COMM_SUCCESS)
@@ -278,7 +276,7 @@ bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t *model_numb
   int dxl_comm_result;
 
   // read in first 2 bytes of eeprom (same for all series)
-  dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, 0, model_number, &error);
+  dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_.get(), servo_id, 0, model_number, &error);
 
   // check return value
   if (dxl_comm_result == COMM_SUCCESS)
@@ -310,23 +308,23 @@ bool DynamixelInterfaceDriver::getErrorStatus(int servo_id, DynamixelSeriesType 
     case DXL_SERIES_DX:
     case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
-      dxl_comm_result = packetHandler_->ping(portHandler_, servo_id, &error);
+      dxl_comm_result = packetHandler_->ping(portHandler_.get(), servo_id, &error);
       *error_status = error;
       break;
 
     case DXL_SERIES_X:
     case DXL_SERIES_MX:
-      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_HARDWARE_ERROR_STATUS,
+      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_HARDWARE_ERROR_STATUS,
                                                       error_status, &error);
       break;
 
     case DXL_SERIES_P:
       dxl_comm_result =
-        packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_P_HARDWARE_ERROR_STATUS, error_status, &error);
+        packetHandler_->read1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_HARDWARE_ERROR_STATUS, error_status, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
-      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_HARDWARE_ERROR_STATUS,
+      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_HARDWARE_ERROR_STATUS,
                                                       error_status, &error);
       break;
   }
@@ -360,24 +358,24 @@ bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, DynamixelSeriesType ty
     case DXL_SERIES_DX:
     case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
-      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_MAX_TORQUE,
+      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_MAX_TORQUE,
                                                       reinterpret_cast<uint8_t*>(max_torque), &error);
       break;
 
     case DXL_SERIES_X:
     case DXL_SERIES_MX:
       dxl_comm_result =
-        packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_CURRENT_LIMIT, max_torque, &error);
+        packetHandler_->read2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_CURRENT_LIMIT, max_torque, &error);
       break;
 
     case DXL_SERIES_P:
       dxl_comm_result =
-        packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_REG_P_CURRENT_LIMIT, max_torque, &error);
+        packetHandler_->read2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_CURRENT_LIMIT, max_torque, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_MAX_TORQUE, max_torque, &error);
+        packetHandler_->read2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_MAX_TORQUE, max_torque, &error);
       break;
   }
 
@@ -413,22 +411,22 @@ bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, DynamixelSeriesTyp
     case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_TORQUE_ENABLE, &data, &error);
+        packetHandler_->read1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_TORQUE_ENABLE, &data, &error);
       break;
 
     case DXL_SERIES_X:
     case DXL_SERIES_MX:
       dxl_comm_result =
-        packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_TORQUE_ENABLE, &data, &error);
+        packetHandler_->read1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_TORQUE_ENABLE, &data, &error);
       break;
 
     case DXL_SERIES_P:
-      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_P_TORQUE_ENABLE, &data, &error);
+      dxl_comm_result = packetHandler_->read1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_TORQUE_ENABLE, &data, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->read1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_TORQUE_ENABLE, &data, &error);
+        packetHandler_->read1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_TORQUE_ENABLE, &data, &error);
       break;
   }
 
@@ -463,23 +461,23 @@ bool DynamixelInterfaceDriver::getTargetTorque(int servo_id, DynamixelSeriesType
     case DXL_SERIES_DX:
     case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
-      dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_GOAL_TORQUE,
+      dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_GOAL_TORQUE,
                                                       reinterpret_cast<uint16_t*>(target_torque), &error);
       break;
 
     case DXL_SERIES_X:
     case DXL_SERIES_MX:
-      dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_GOAL_CURRENT,
+      dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_GOAL_CURRENT,
                                                       reinterpret_cast<uint16_t*>(target_torque), &error);
       break;
 
     case DXL_SERIES_P:
-      dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_REG_P_GOAL_CURRENT,
+      dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_GOAL_CURRENT,
                                                       reinterpret_cast<uint16_t*>(target_torque), &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
-      dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_GOAL_TORQUE,
+      dxl_comm_result = packetHandler_->read2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_GOAL_TORQUE,
                                                       reinterpret_cast<uint16_t*>(target_torque), &error);
       break;
   }
@@ -510,7 +508,7 @@ bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint16_t address, uin
   // resize output vector for data
   response->resize(length);
 
-  dxl_comm_result = packetHandler_->readTxRx(portHandler_, servo_id, address, length, response->data(), &error);
+  dxl_comm_result = packetHandler_->readTxRx(portHandler_.get(), servo_id, address, length, response->data(), &error);
 
   // check return value
   if (dxl_comm_result == COMM_SUCCESS)
@@ -1013,7 +1011,7 @@ bool DynamixelInterfaceDriver::bulkRead(std::unordered_map<int, SyncData*> &read
   bool success = false;
 
   // Initialize GroupSyncRead instance
-  dynamixel::GroupBulkRead GroupBulkRead(portHandler_, packetHandler_);
+  dynamixel::GroupBulkRead GroupBulkRead(portHandler_.get(), packetHandler_.get());
 
   // add all dynamixels to sync read
   for (auto &it : read_data)
@@ -1078,7 +1076,7 @@ bool DynamixelInterfaceDriver::syncRead(std::unordered_map<int, SyncData*> &read
   }
 
   // Initialize GroupSyncRead instance
-  dynamixel::GroupSyncRead GroupSyncRead(portHandler_, packetHandler_, address, length);
+  dynamixel::GroupSyncRead GroupSyncRead(portHandler_.get(), packetHandler_.get(), address, length);
 
   // add all dynamixels to sync read
   for (auto &it : read_data)
@@ -1185,13 +1183,13 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
 
         if (success && (model_num != 30))
         {
-          dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_OPERATING_MODE,
+          dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_OPERATING_MODE,
                                                            operating_mode, &error);
         }
       }
       else
       {
-        dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_OPERATING_MODE,
+        dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_OPERATING_MODE,
                                                          operating_mode, &error);
       }
       break;
@@ -1199,14 +1197,14 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
     case DXL_SERIES_P:
 
       dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_P_OPERATING_MODE, operating_mode, &error);
+        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_OPERATING_MODE, operating_mode, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
 
       if (operating_mode != DXL_MODE_PWM_CONTROL)
       {
-        dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_OPERATING_MODE,
+        dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_OPERATING_MODE,
                                                          operating_mode, &error);
       }
       break;
@@ -1263,23 +1261,23 @@ bool DynamixelInterfaceDriver::setMinAngleLimit(int servo_id, DynamixelSeriesTyp
     case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_CW_ANGLE_LIMIT, (int16_t)angle, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_CW_ANGLE_LIMIT, (int16_t)angle, &error);
       break;
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_MIN_POSITION_LIMIT, angle, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_MIN_POSITION_LIMIT, angle, &error);
       break;
 
     case DXL_SERIES_P:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_P_MIN_POSITION_LIMIT, angle, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_MIN_POSITION_LIMIT, angle, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_MIN_ANGLE_LIMIT, angle, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_MIN_ANGLE_LIMIT, angle, &error);
       break;
   }
 
@@ -1312,23 +1310,23 @@ bool DynamixelInterfaceDriver::setMaxAngleLimit(int servo_id, DynamixelSeriesTyp
     case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_CCW_ANGLE_LIMIT, (int16_t)angle, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_CCW_ANGLE_LIMIT, (int16_t)angle, &error);
       break;
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_MAX_POSITION_LIMIT, angle, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_MAX_POSITION_LIMIT, angle, &error);
       break;
 
     case DXL_SERIES_P:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_P_MAX_POSITION_LIMIT, angle, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_MAX_POSITION_LIMIT, angle, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_MAX_ANGLE_LIMIT, angle, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_MAX_ANGLE_LIMIT, angle, &error);
       break;
   }
 
@@ -1362,28 +1360,28 @@ bool DynamixelInterfaceDriver::setMaxTorque(int servo_id, DynamixelSeriesType ty
     case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_MAX_TORQUE, max_torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_MAX_TORQUE, max_torque, &error);
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_TORQUE_LIMIT, max_torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_TORQUE_LIMIT, max_torque, &error);
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_CURRENT_LIMIT, max_torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_CURRENT_LIMIT, max_torque, &error);
       break;
 
     case DXL_SERIES_P:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_P_CURRENT_LIMIT, max_torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_CURRENT_LIMIT, max_torque, &error);
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_P_GOAL_CURRENT, max_torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_GOAL_CURRENT, max_torque, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_MAX_TORQUE, max_torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_MAX_TORQUE, max_torque, &error);
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_GOAL_TORQUE, max_torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_GOAL_TORQUE, max_torque, &error);
       break;
   }
 
@@ -1421,17 +1419,17 @@ bool DynamixelInterfaceDriver::setMaxVelocity(int servo_id, DynamixelSeriesType 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_VELOCITY_LIMIT, max_vel, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_VELOCITY_LIMIT, max_vel, &error);
       break;
 
     case DXL_SERIES_P:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_P_VELOCITY_LIMIT, max_vel, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_VELOCITY_LIMIT, max_vel, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_VELOCITY_LIMIT, max_vel, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_VELOCITY_LIMIT, max_vel, &error);
       break;
   }
 
@@ -1465,23 +1463,23 @@ bool DynamixelInterfaceDriver::setTorqueEnabled(int servo_id, DynamixelSeriesTyp
     case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_TORQUE_ENABLE, (uint8_t)on, &error);
+        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_TORQUE_ENABLE, (uint8_t)on, &error);
       break;
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_TORQUE_ENABLE, (uint8_t)on, &error);
+        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_TORQUE_ENABLE, (uint8_t)on, &error);
       break;
 
     case DXL_SERIES_P:
       dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_P_TORQUE_ENABLE, (uint8_t)on, &error);
+        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_TORQUE_ENABLE, (uint8_t)on, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_TORQUE_ENABLE, (uint8_t)on, &error);
+        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_TORQUE_ENABLE, (uint8_t)on, &error);
       break;
   }
 
@@ -1512,7 +1510,7 @@ bool DynamixelInterfaceDriver::setTorqueControlEnabled(int servo_id, DynamixelSe
   getModelNumber(servo_id, &model_num);
   if ((model_num == 310) || (model_num == 320))  // No torque control on MX-28
   {
-    dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_TORQUE_CONTROL_ENABLE,
+    dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_TORQUE_CONTROL_ENABLE,
                                                      (uint8_t)(on), &error);
   }
   else
@@ -1621,22 +1619,22 @@ bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, Dynamix
 
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_P_GAIN, (uint8_t)(gain & 0x00FF), &error);
+        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_P_GAIN, (uint8_t)(gain & 0x00FF), &error);
       break;
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_POSITION_P_GAIN, gain, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_POSITION_P_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_P:
-      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_P_POSITION_P_GAIN, gain, &error);
+      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_POSITION_P_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_POSITION_P_GAIN, gain, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_POSITION_P_GAIN, gain, &error);
       break;
   }
 
@@ -1673,17 +1671,17 @@ bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, DynamixelSe
 
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_I_GAIN, (uint8_t)(gain & 0x00FF), &error);
+        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_I_GAIN, (uint8_t)(gain & 0x00FF), &error);
       break;
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_POSITION_I_GAIN, gain, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_POSITION_I_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_P:
-      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_P_POSITION_I_GAIN, gain, &error);
+      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_POSITION_I_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
@@ -1723,17 +1721,17 @@ bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, Dynamixel
 
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_D_GAIN, (uint8_t)(gain & 0x00FF), &error);
+        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_D_GAIN, (uint8_t)(gain & 0x00FF), &error);
       break;
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_POSITION_D_GAIN, gain, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_POSITION_D_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_P:
-      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_P_POSITION_D_GAIN, gain, &error);
+      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_POSITION_D_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
@@ -1826,16 +1824,16 @@ bool DynamixelInterfaceDriver::setVelocityProportionalGain(int servo_id, Dynamix
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_VELOCITY_P_GAIN, gain, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_VELOCITY_P_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_P:
-      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_P_VELOCITY_P_GAIN, gain, &error);
+      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_VELOCITY_P_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_VELOCITY_P_GAIN, gain, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_VELOCITY_P_GAIN, gain, &error);
       break;
   }
 
@@ -1873,16 +1871,16 @@ bool DynamixelInterfaceDriver::setVelocityIntegralGain(int servo_id, DynamixelSe
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_VELOCITY_I_GAIN, gain, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_VELOCITY_I_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_P:
-      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_P_VELOCITY_I_GAIN, gain, &error);
+      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_VELOCITY_I_GAIN, gain, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_VELOCITY_I_GAIN, gain, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_VELOCITY_I_GAIN, gain, &error);
       break;
   }
 
@@ -1916,23 +1914,23 @@ bool DynamixelInterfaceDriver::setProfileVelocity(int servo_id, DynamixelSeriesT
     case DXL_SERIES_EX:
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_MOVING_SPEED, (uint16_t)velocity, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_MOVING_SPEED, (uint16_t)velocity, &error);
       return false;
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_PROFILE_VELOCITY, velocity, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_PROFILE_VELOCITY, velocity, &error);
       break;
 
     case DXL_SERIES_P:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_P_PROFILE_VELOCITY, velocity, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_PROFILE_VELOCITY, velocity, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write4ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_GOAL_VELOCITY, velocity, &error);
+        packetHandler_->write4ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_GOAL_VELOCITY, velocity, &error);
       break;
   }
 
@@ -1967,22 +1965,22 @@ bool DynamixelInterfaceDriver::setTorque(int servo_id, DynamixelSeriesType type,
 
     case DXL_SERIES_LEGACY_MX:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_GOAL_TORQUE, torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_GOAL_TORQUE, torque, &error);
       return false;
 
     case DXL_SERIES_MX:
     case DXL_SERIES_X:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_STANDARD_GOAL_CURRENT, torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_STANDARD_GOAL_CURRENT, torque, &error);
       break;
 
     case DXL_SERIES_P:
-      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_P_GOAL_CURRENT, torque, &error);
+      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_P_GOAL_CURRENT, torque, &error);
       break;
 
     case DXL_SERIES_LEGACY_PRO:
       dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_, servo_id, DXL_REG_LEGACY_PRO_GOAL_TORQUE, torque, &error);
+        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, DXL_REG_LEGACY_PRO_GOAL_TORQUE, torque, &error);
       break;
   }
 
@@ -2010,7 +2008,7 @@ bool DynamixelInterfaceDriver::writeRegisters(int servo_id, uint16_t address, ui
   int dxl_comm_result;
 
   // Read address and size always depends on servo series
-  dxl_comm_result = packetHandler_->writeTxRx(portHandler_, servo_id, address, length, data, &error);
+  dxl_comm_result = packetHandler_->writeTxRx(portHandler_.get(), servo_id, address, length, data, &error);
 
   // check return value
   if (dxl_comm_result == COMM_SUCCESS)
@@ -2178,7 +2176,7 @@ bool DynamixelInterfaceDriver::syncWrite(std::unordered_map<int, SyncData> &writ
   if (use_group_write_)
   {
     // Initialize GroupSyncWrite instance
-    dynamixel::GroupSyncWrite groupSyncWrite(portHandler_, packetHandler_, address, length);
+    dynamixel::GroupSyncWrite groupSyncWrite(portHandler_.get(), packetHandler_.get(), address, length);
 
     // Add parameters
     for (auto &it : write_data)
