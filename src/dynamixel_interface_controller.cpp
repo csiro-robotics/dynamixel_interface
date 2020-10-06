@@ -884,10 +884,8 @@ void DynamixelInterfaceController::loop(void)
     num_servos = num_servos + dynamixel_ports_[i].joints.size();
     reads[i] = sensor_msgs::JointState();
 
-    std::thread readThread(&DynamixelInterfaceController::multiThreadedIO, this, std::ref(dynamixel_ports_[i]),
+    threads.emplace_back(&DynamixelInterfaceController::multiThreadedIO, this, std::ref(dynamixel_ports_[i]),
                            std::ref(reads[i]), std::ref(dataports_reads[i]), std::ref(diags_reads[i]), write_ready_);
-
-    threads.push_back(move(readThread));
   }
 
   // get messages for the first port
