@@ -95,8 +95,19 @@ namespace dynamixel_interface
 DynamixelInterfaceDriver::DynamixelInterfaceDriver(const std::string &device, int baud, bool use_legacy_protocol,
                                                    bool use_group_read, bool use_group_write)
 {
-  ROS_INFO("Device is '%s' with baud rate '%d', using protocol %d", device.c_str(), baud,
-           static_cast<uint8_t>(use_legacy_protocol) + 1);
+  ROS_INFO("Device is '%s' with baud rate '%d'", device.c_str(), baud);
+  if (use_legacy_protocol)
+  {
+    ROS_INFO("Using legacy protocol");
+  }
+  if (use_group_read)
+  {
+    ROS_INFO("Using group read methods");
+  }
+  if (use_group_write)
+  {
+    ROS_INFO("Using group write methods");
+  }
 
   // Initialize PortHandler instance
   // Set the port path
