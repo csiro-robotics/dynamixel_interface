@@ -82,65 +82,62 @@
 #ifndef DYNAMIXEL_INTERFACE_CONTROLLER_H_
 #define DYNAMIXEL_INTERFACE_CONTROLLER_H_
 
-#include <string>
-#include <mutex>
-#include <map>
 #include <algorithm>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <string>
 
 #include <XmlRpcValue.h>
 
+#include <ros/callback_queue.h>
 #include <ros/ros.h>
 #include <ros/spinner.h>
-#include <ros/callback_queue.h>
 #include <sensor_msgs/JointState.h>
 
 #include <dynamixel_interface/dynamixel_interface_driver.h>
 
-#include "dynamixel_interface/DataPort.h"
-#include "dynamixel_interface/DataPorts.h"
-#include "dynamixel_interface/ServoDiag.h"
-#include "dynamixel_interface/ServoDiags.h"
+#include <dynamixel_interface/DataPort.h>
+#include <dynamixel_interface/DataPorts.h>
+#include <dynamixel_interface/ServoDiag.h>
+#include <dynamixel_interface/ServoDiags.h>
 
 namespace dynamixel_interface
 {
-
 /// Struct that describes each servo's place in the system including which joint it corresponds to.
-typedef struct
+struct DynamixelInfo
 {
+  int id;                  /// The unique (per port) ID of the motor
+  std::string joint_name;  /// The unique (globally) name of the joint
 
-  int id; /// The unique (per port) ID of the motor
-  std::string joint_name; /// The unique (globally) name of the joint
+  double max_vel;       /// Motor maximum joint velocity (rad/s)
+  double torque_limit;  /// Motor maximum torque limit (%rated max)
 
-  double max_vel; /// Motor maximum joint velocity (rad/s)
-  double torque_limit; /// Motor maximum torque limit (%rated max)
+  int zero_pos;  /// Motor initial position (in raw encoder values). This value defines the 0 radian position for the motor
+  int min_pos;   /// Motor minimum encoder value. Note that if min > max, the motor direction is reversed
+  int max_pos;   /// Motor maximum encoder value. Note that if min > max, the motor direction is reversed
 
-  int init; /// Motor initial position (in raw encoder values). This value defines the 0 radian position for the motor
-  int min; /// Motor minimum encoder value. Note that if min > max, the motor direction is reversed
-  int max; /// Motor maximum encoder value. Note that if min > max, the motor direction is reversed
+  const DynamixelSpec *model_spec;  /// Motor model specification including encoder counts and unit conversion factors
 
-  const DynamixelSpec* model_spec; /// Motor model specification including encoder counts and unit conversion factors
-
-  bool torque_enabled; /// Motor enable flag
-  DynamixelControlMode current_mode; /// control mode (position, velocity, torque)
-  uint8_t hardware_status; /// current motor status, used for hardware error reporting
-
-} DynamixelInfo;
+  bool torque_enabled;                /// Motor enable flag
+  DynamixelControlMode current_mode;  /// control mode (position, velocity, torque)
+  uint8_t hardware_status;            /// current motor status, used for hardware error reporting
+};
 
 /// Struct which stores information about each port in use and which joints use that port
-typedef struct
+struct PortInfo
 {
-  std::string port_name; /// User defined port name
+  std::string port_name;  /// User defined port name
 
-  std::string device; /// Serial device name
-  int baudrate; /// Serial baud rate
+  std::string device;  /// Serial device name
+  int baudrate;        /// Serial baud rate
 
-  bool use_legacy_protocol; /// boolean indicating if legacy protocol (for older series dynamixels) is in use
+  bool use_legacy_protocol;  /// boolean indicating if legacy protocol (for older series dynamixels) is in use
 
-  DynamixelInterfaceDriver *driver; /// The driver object
+  DynamixelInterfaceDriver *driver;  /// The driver object
 
-  std::unordered_map<std::string, DynamixelInfo> joints; /// map of joint information by name
-
-} PortInfo;
+  std::unordered_map<std::string, DynamixelInfo> joints;  /// map of joint information by name
+};
 
 /// This class forms a ROS Node that provides an interface with the dynamixel series of servos.
 /// The controller functions on a timer based callback for updating the motor states. Commands are
@@ -151,7 +148,6 @@ typedef struct
 class DynamixelInterfaceController
 {
 public:
-
   /// Constructor, loads the motor configuration information from the specified yaml file and intialises
   /// The motor states.
   DynamixelInterfaceController();
@@ -161,14 +157,13 @@ public:
 
   /// Gets the target loop rate for the controller
   /// @returns the target loop rate for the controller (Hz)
-  inline double getLoopRate(void) {return loop_rate_;};
+  inline double getLoopRate(void) { return loop_rate_; };
 
   /// main loop for performing IO, handles the creation and joining of IO threads for each port, so that IO for multiple
   /// usb devices can be threaded.
   void loop(void);
 
 private:
-
   /// Parses the information in the yaml file for each port
   /// @param[in] ports the xml structure to be parsed
   void parsePortInformation(XmlRpc::XmlRpcValue ports);
@@ -189,15 +184,13 @@ private:
   /// @param[out] dataport_msg the DataPorts msg this thread reads dataport data into
   /// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
   /// @param[in] perform_write whether we are writing data this iteration
-  void multiThreadedIO(PortInfo &port, sensor_msgs::JointState &read_msg,
-                        dynamixel_interface::DataPorts &dataport_msg,
-                        dynamixel_interface::ServoDiags &status_msg,
-                        bool perform_write);
+  void multiThreadedIO(PortInfo &port, sensor_msgs::JointState &read_msg, dynamixel_interface::DataPorts &dataport_msg,
+                       dynamixel_interface::ServoDiags &status_msg, bool perform_write) const;
 
   /// Function called in each thread to perform a write on a port
   /// @param[in] port_num index used to retrieve port information from port list
   /// @param[in] joint_commands message cointaining the commands for each joint
-  void multiThreadedWrite(PortInfo &port, sensor_msgs::JointState joint_commands);
+  void multiThreadedWrite(PortInfo &port, sensor_msgs::JointState joint_commands) const;
 
   /// Function in thread to perform read on a port.
   /// @param[in] port the port for this thread to perform IO on
@@ -205,53 +198,51 @@ private:
   /// @param[out] dataport_msg the DataPorts msg this thread reads dataport data into
   /// @param[out] status_msgs the ServoDiags msg this thread reads diagnostic data into
   void multiThreadedRead(PortInfo &port, sensor_msgs::JointState &read_msg,
-                          dynamixel_interface::DataPorts &dataports_msg,
-                          dynamixel_interface::ServoDiags &diags_msg);
+                         dynamixel_interface::DataPorts &dataports_msg,
+                         dynamixel_interface::ServoDiags &diags_msg) const;
 
-  ros::NodeHandle *nh_; /// Handler for the ROS Node
+  ros::NodeHandle *nh_;  /// Handler for the ROS Node
 
-  double loop_rate_; /// Desired loop rate (joint states are published at this rate)
+  double loop_rate_;  /// Desired loop rate (joint states are published at this rate)
 
-  double diagnostics_rate_;      /// Desired rate at which servo diagnostic information is published
-  bool read_diagnostics_;        /// Bool for telling threads to read diagnostics data
-  uint diagnostics_counter_ = 0; /// Counter for tracking diagnostics rate
-  uint diagnostics_iters_ = 0;   /// publish when diagnostic_counter_ == this
+  double diagnostics_rate_;       /// Desired rate at which servo diagnostic information is published
+  bool read_diagnostics_;         /// Bool for telling threads to read diagnostics data
+  uint diagnostics_counter_ = 0;  /// Counter for tracking diagnostics rate
+  uint diagnostics_iters_ = 0;    /// publish when diagnostic_counter_ == this
 
-  volatile bool shutting_down_; /// Indicates to callbacks that the controller is shutting down
+  bool stop_motors_on_shutdown_;  /// Indicates if the motors should be turned off when the controller stops
 
-  bool stop_motors_on_shutdown_; /// Indicates if the motors should be turned off when the controller stops
+  bool ignore_input_velocity_;  /// can set driver to ignore profile velocity commands in position mode
 
-  bool ignore_input_velocity_; /// can set driver to ignore profile velocity commands in position mode
+  double dataport_rate_;       /// Rate at which the pro external dataport is read
+  bool read_dataport_;         /// Bool for telling threads to read dataport data
+  uint dataport_counter_ = 0;  /// counter for tracking dataport rate
+  uint dataport_iters_ = 0;    /// publish when dataport_counter_ == this
 
-  double dataport_rate_;      /// Rate at which the pro external dataport is read
-  bool read_dataport_;        /// Bool for telling threads to read dataport data
-  uint dataport_counter_ = 0; /// counter for tracking dataport rate
-  uint dataport_iters_ = 0;   /// publish when dataport_counter_ == this
+  double global_max_vel_;       /// global joint speed limit
+  double global_torque_limit_;  /// global joint torque limit
 
-  double global_max_vel_;  /// global joint speed limit
-  double global_torque_limit_; /// global joint torque limit
+  sensor_msgs::JointState write_msg_;  /// Stores the last message received from the write command topic
 
-  sensor_msgs::JointState write_msg_; /// Stores the last message received from the write command topic
+  std::mutex write_mutex_;  /// Mutex for write_msg, as there are potentially multiple threads
 
-  std::mutex write_mutex_; /// Mutex for write_msg, as there are potentially multiple threads
+  bool write_ready_;  /// Booleans indicating if we have received commands
+  bool first_write_;  /// Indicate if write has occured
 
-  bool write_ready_; /// Booleans indicating if we have received commands
-  bool first_write_; /// Indicate if write has occured
+  DynamixelControlMode control_type_;  /// method of control (position/velocity/torque)
 
-  DynamixelControlMode control_type_; /// method of control (position/velocity/torque)
+  std::vector<PortInfo> dynamixel_ports_;  /// method of control (position/velocity/torque)
 
-  std::vector<PortInfo> dynamixel_ports_; /// method of control (position/velocity/torque)
+  ros::Publisher joint_state_publisher_;    /// Publishes joint states from reads
+  ros::Publisher diagnostics_publisher_;    /// Publishes joint states from reads
+  ros::Subscriber joint_state_subscriber_;  /// Gets joint states for writes
+  ros::Publisher dataport_publisher_;       /// Publishes the data from the external ports on dynamixel_pros
 
-  ros::Publisher joint_state_publisher_;   /// Publishes joint states from reads
-  ros::Publisher diagnostics_publisher_;   /// Publishes joint states from reads
-  ros::Subscriber joint_state_subscriber_; /// Gets joint states for writes
-  ros::Publisher dataport_publisher_;      /// Publishes the data from the external ports on dynamixel_pros
+  ros::Timer broadcast_timer_;  /// Timer that controls the rate of the IO callback
 
-  ros::Timer broadcast_timer_; /// Timer that controls the rate of the IO callback
-
-  ros::Publisher debug_publisher_; /// Debug message publisher
+  ros::Publisher debug_publisher_;  /// Debug message publisher
 };
 
-}
+}  // namespace dynamixel_interface
 
-#endif //DYNAMIXEL_INTERFACE_CONTROLLER_H_
+#endif  // DYNAMIXEL_INTERFACE_CONTROLLER_H_

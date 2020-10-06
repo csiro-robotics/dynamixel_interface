@@ -36,42 +36,42 @@ ports:
         #
         # The three values below are mandatory, they define the orientation and zeroing of the dynamixel:
         #
-        init: 2048              # initial (0 rad) servo position (in raw encoder count)
-        min: 0                  # minimum servo position (in raw encoder count)
-        max: 4095               # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
+        zero_pos: 2048              # 0 rad servo position (in raw encoder count)
+        min_pos: 0                  # minimum servo position (in raw encoder count)
+        max_pos: 4095               # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
         #
         # The below arguments are all optional and override the global values:
         #
-        max_vel: 5.0        # maximum joint speed (rad/s) (in position or velocity control)
+        max_pos_vel: 5.0        # maximum joint speed (rad/s) (in position or velocity control)
         torque_limit: 1.0       # maximum motor torque for all modes, given as a fraction of rated max (0-1)
 
       - id: 2
         joint_name: joint_2
-        init: 2048
-        min: 0
-        max: 4095
+        zero_pos: 2048
+        min_pos: 0
+        max_pos: 4095
         #
         # This servo doesn't have any optional values defined, the global defaults will be used
         #
 
   # more ports can be defined in the same manner as above, each port can even have a different baudrate and protcol
-  - name: Port_2
-    device: /dev/ttyUSB1
-    baudrate: 115200
-    use_legacy_protocol: true
-    group_read_enabled: true
-    group_write_enabled: true
-    servos:
-      - id: 1               # id only needs to be unique for each port and so id 1 can be reused here
-        joint_name: joint_3 # name DOES have to be unique though, so we continue the naming scheme
-        init: 512
-        min: 0
-        max: 1023
+  # - name: Port_2
+  #   device: /dev/ttyUSB1
+  #   baudrate: 115200
+  #   use_legacy_protocol: true
+  #   group_read_enabled: true
+  #   group_write_enabled: true
+  #   servos:
+  #     - id: 1               # id only needs to be unique for each port and so id 1 can be reused here
+  #       joint_name: joint_3 # name DOES have to be unique though, so we continue the namin_posg scheme
+  #       zero_pos: 512
+  #       min_pos: 0
+  #       max_pos: 1023
 
-      - id: 2
-        joint_name: joint_4
-        init: 512
-        min: 0
-        max: 1023
+  #     - id: 2
+  #       joint_name: joint_4
+  #       zero_pos: 512
+  #       min_pos: 0
+  #       max_pos: 1023
 
 # --------------------------------------------------------------------------- # #

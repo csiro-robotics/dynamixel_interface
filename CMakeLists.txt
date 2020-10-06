@@ -21,6 +21,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 find_package(catkin REQUIRED COMPONENTS
   dynamixel_sdk
   roscpp
+  xmlrpcpp
   roslib
   message_generation
   sensor_msgs
@@ -65,7 +66,7 @@ generate_messages(
 catkin_package(
    INCLUDE_DIRS include
 #  LIBRARIES dynamixel_interface_controller
-   CATKIN_DEPENDS roscpp roslib sensor_msgs std_msgs dynamixel_sdk message_runtime
+   CATKIN_DEPENDS roscpp roslib xmlrpcpp sensor_msgs std_msgs dynamixel_sdk message_runtime
 #  DEPENDS system_lib
 )
 
@@ -75,30 +76,40 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-  ${yaml-cpp_INCLUDE_DIRS}
-)
-
-set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
-
 add_library(dynamixel_interface_driver src/dynamixel_interface_driver.cpp)
 add_dependencies(dynamixel_interface_driver ${dynamixel_interface_EXPORTED_TARGETS})
-target_link_libraries(
-  dynamixel_interface_driver
-  yaml-cpp
-	${catkin_LIBRARIES}
-  ${yaml-cpp_LIBRARIES}
-)
+target_include_directories(dynamixel_interface_driver
+  PRIVATE
+    include
+  )
+target_include_directories(dynamixel_interface_driver SYSTEM
+  PRIVATE
+    "${catkin_INCLUDE_DIRS}"
+    "${yaml-cpp_INCLUDE_DIRS}"
+  )
+target_link_libraries(dynamixel_interface_driver
+  PRIVATE
+    yaml-cpp
+    ${catkin_LIBRARIES}
+    ${yaml-cpp_LIBRARIES}
+  )
 
 add_executable(dynamixel_interface_controller_node src/dynamixel_interface_controller.cpp src/dynamixel_interface_driver.cpp)
 add_dependencies(dynamixel_interface_controller_node ${dynamixel_interface_EXPORTED_TARGETS} dynamixel_interface_generate_messages_cpp)
-target_link_libraries(
-  dynamixel_interface_controller_node
-  yaml-cpp
-	${catkin_LIBRARIES}
-  ${yaml-cpp_LIBRARIES}
+target_include_directories(dynamixel_interface_controller_node
+  PRIVATE
+    include
+)
+target_include_directories(dynamixel_interface_controller_node SYSTEM
+  PRIVATE
+    "${catkin_INCLUDE_DIRS}"
+    "${yaml-cpp_INCLUDE_DIRS}"
+)
+target_link_libraries(dynamixel_interface_controller_node
+  PRIVATE
+    yaml-cpp
+    ${catkin_LIBRARIES}
+    ${yaml-cpp_LIBRARIES}
 )
 
 

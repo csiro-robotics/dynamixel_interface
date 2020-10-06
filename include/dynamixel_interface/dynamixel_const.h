@@ -93,7 +93,7 @@ namespace dynamixel_interface
 {
 
 /// Dynamixel types
-typedef enum
+enum DynamixelSeriesType
 {
   DXL_SERIES_AX = 0,
   DXL_SERIES_RX = 1,
@@ -105,13 +105,13 @@ typedef enum
   DXL_SERIES_LEGACY_PRO = 7,
   DXL_SERIES_P = 8,
   DXL_SERIES_UNKNOWN = 9
-} DynamixelSeriesType;
+};
 
 /// Legacy control table, for older dynamixels:
 /// - MX (1.0)
 /// - AX
 /// - RX
-typedef enum
+enum DynamixelLegacyRegisterTable
 {
   // EEPROM
   DXL_REG_LEGACY_MODEL_NUMBER = 0,
@@ -165,13 +165,13 @@ typedef enum
   DXL_REG_LEGACY_TORQUE_CONTROL_ENABLE = 70,
   DXL_REG_LEGACY_GOAL_TORQUE = 71,
   DXL_REG_LEGACY_GOAL_ACCELERATION = 73,
-} DynamixelLegacyRegisterTable;
+};
 
 
 /// Standard control table, for newer models of dynamixels supporting protocol 2.0:
 /// - MX (2.0)
 /// - X (2.0) (excepting the XL-320, which has a unique table)
-typedef enum
+enum DynamixelStandardRegisterTable
 {
   // EEPROM
   DXL_REG_STANDARD_MODEL_NUMBER = 0,
@@ -236,12 +236,12 @@ typedef enum
   DXL_REG_STANDARD_DATAPORT_3 = 156,
   DXL_REG_STANDARD_INDIRECT_ADDRESS_1 = 168,
   DXL_REG_STANDARD_INDIRECT_DATA_1 = 224,
-} DynamixelStandardRegisterTable;
+};
 
 /// Control table for Dynamixel P series (new pro)
 /// - Dynamixel-P
 /// - Dynamixel PRO+, sometimes listed as PRO(A)
-typedef enum
+enum DynamixelProRegisterTable
 {
   // EEPROM
   DXL_REG_P_MODEL_NUMBER = 0,
@@ -310,11 +310,11 @@ typedef enum
   DXL_REG_P_DATAPORT_3 = 604,
   DXL_REG_P_DATAPORT_4 = 606,
   DXL_REG_P_INDIRECT_DATA_1 = 634
-} DynamixelProRegisterTable;
+};
 
 
 /// Control table/register addresses for each series of dynamixel
-typedef enum
+enum DynamixelLegacyProRegisterTable
 {
   // EEPROM
   DXL_REG_LEGACY_PRO_MODEL_NUMBER = 0,
@@ -361,12 +361,12 @@ typedef enum
   DXL_REG_LEGACY_PRO_MOVING = 610,
   DXL_REG_LEGACY_PRO_RETURN_LEVEL = 891,
   DXL_REG_LEGACY_PRO_HARDWARE_ERROR_STATUS = 892,
-} DynamixelLegacyProRegisterTable;
+};
 
 
 /// The different control modes available on the dynamixel servos. The values chosen for each type reflect those used
 /// on the motors themselves.
-typedef enum
+enum DynamixelControlMode
 {
   UNKNOWN  = -1,
 
@@ -379,11 +379,11 @@ typedef enum
 
   DXL_MODE_PWM_CONTROL = 16
 
-} DynamixelControlMode;
+};
 
 
 /// Instruction codes for various commands
-typedef enum
+enum DynamixelInstruction
 {
   DXL_INST_PING = 1,
   DXL_INST_READ_DATA = 2,
@@ -397,11 +397,11 @@ typedef enum
 
   DXL_INST_BROADCAST = 254,
 
-} DynamixelInstruction;
+};
 
 
 /// Error return codes
-typedef enum
+enum DynamixelErrorCode
 {
   DXL_ERROR_NO_ERROR = 0,
   // Common error codes
@@ -417,7 +417,7 @@ typedef enum
   DXL_ERROR_LEGACY_RANGE = 8,
   DXL_ERROR_LEGACY_ANGLE_LIMIT = 2,
 
-} DynamixelErrorCode;
+};
 
 }
 
