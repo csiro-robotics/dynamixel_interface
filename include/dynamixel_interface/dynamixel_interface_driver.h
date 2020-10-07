@@ -99,46 +99,46 @@ namespace dynamixel_interface
 /// Struct that describes the dynamixel motor's static and physical properties
 struct DynamixelSpec
 {
-  std::string name;                /// The Model Name
-  uint16_t model_number;           /// Model number (e.g 29 = MX-28)
-  DynamixelSeriesType type;        /// Model type (e.g MX, AX, Pro)
-  bool external_ports;             /// If this model has data ports
-  int encoder_cpr;                 /// Motor encoder counts per revolution
-  double encoder_range_deg;        /// Motor encoder range in degrees
-  double velocity_radps_to_reg;    /// Conversion factor from velocity in radians/sec to register counts
-  double effort_reg_max;           /// Max possible value for effort register
-  double effort_reg_to_mA;         /// Conversion factor from register values to current in mA
+  std::string name;                ///< The Model Name
+  uint16_t model_number;           ///< Model number (e.g 29 = MX-28)
+  DynamixelSeriesType type;        ///< Model type (e.g MX, AX, Pro)
+  bool external_ports;             ///< If this model has data ports
+  int encoder_cpr;                 ///< Motor encoder counts per revolution
+  double encoder_range_deg;        ///< Motor encoder range in degrees
+  double velocity_radps_to_reg;    ///< Conversion factor from velocity in radians/sec to register counts
+  double effort_reg_max;           ///< Max possible value for effort register
+  double effort_reg_to_mA;         ///< Conversion factor from register values to current in mA
 };
 
 
 /// Basic struct for representing dynamixel data exchange
 struct SyncData
 {
-  int id; /// id of dynamixel
-  DynamixelSeriesType type; /// type of dynamixel
-  bool success; /// bool indicating comms success
-  std::vector<uint8_t> data; /// IO data array
+  int id; ///< id of dynamixel
+  DynamixelSeriesType type; ///< type of dynamixel
+  bool success; ///< bool indicating comms success
+  std::vector<uint8_t> data; ///< IO data array
 };
 
 /// data struct used with getBulkState() to retrieve physical state
 struct DynamixelState : SyncData
 {
-  int32_t position; /// position register value, units differ by series
-  int32_t velocity; /// velocity register value, units differ by series
-  int32_t effort;   /// effort register value, units differ by series
+  int32_t position; ///< position register value, units differ by series
+  int32_t velocity; ///< velocity register value, units differ by series
+  int32_t effort;   ///< effort register value, units differ by series
 };
 
 /// data struct used with getBulkDiagnosticInfo() to retrieve diagnostics
 struct DynamixelDiagnostic : SyncData
 {
-  int32_t voltage;     /// voltage register value, usually units of 0.1V
-  int32_t temperature; /// temperature register value, usually units of 0.1C
+  int32_t voltage;     ///< voltage register value, usually units of 0.1V
+  int32_t temperature; ///< temperature register value, usually units of 0.1C
 };
 
 /// data struct used with getBulkDataportInfo() to retrieve dataport values
 struct DynamixelDataport : SyncData
 {
-  std::array<uint16_t, 4> port_values; /// values from dataports, units differ by series and dataport setting
+  std::array<uint16_t, 4> port_values; ///< values from dataports, units differ by series and dataport setting
 };
 
 /// Provides the handling of the low level communications between the
@@ -497,19 +497,19 @@ private:
   bool syncWrite(std::unordered_map<int, SyncData> &write_data, uint16_t address, uint16_t length) const;
 
 private:
-  std::unique_ptr<dynamixel::PortHandler> portHandler_;      /// The port handler object. The dynamixel sdk serial object.
-  std::unique_ptr<dynamixel::PacketHandler> packetHandler_;  /// packet handler. Provides raw response deconstruction.
+  std::unique_ptr<dynamixel::PortHandler> portHandler_;      ///< The port handler object. The dynamixel sdk serial object.
+  std::unique_ptr<dynamixel::PacketHandler> packetHandler_;  ///< packet handler. Provides raw response deconstruction.
 
-  bool use_legacy_protocol_;  /// if we are using legacy 1.0 protocol or newer 2.0 protocol (depends on model support)
+  bool use_legacy_protocol_;  ///< if we are using legacy 1.0 protocol or newer 2.0 protocol (depends on model support)
 
-  bool use_group_read_;   /// using monolothic bulkRead or syncRead for bulk data exchange
-  bool use_group_write_;  /// using monolothic syncWrite for bulk data exchange
+  bool use_group_read_;   ///< using monolothic bulkRead or syncRead for bulk data exchange
+  bool use_group_write_;  ///< using monolothic syncWrite for bulk data exchange
 
-  uint8_t single_read_fallback_counter_;  /// indicates group comm failure fallback interval
+  uint8_t single_read_fallback_counter_;  ///< indicates group comm failure fallback interval
 
-  std::unordered_map<uint16_t, const DynamixelSpec> model_specs_;  /// map of model numbers to motor specifications
+  std::unordered_map<uint16_t, const DynamixelSpec> model_specs_;  ///< map of model numbers to motor specifications
 
-  std::unordered_map<int, std::vector<uint8_t>> raw_read_map_;  /// map to store raw reads into
+  std::unordered_map<int, std::vector<uint8_t>> raw_read_map_;  ///< map to store raw reads into
 };
 
 }  // namespace dynamixel_interface
