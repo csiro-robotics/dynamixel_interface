@@ -435,31 +435,31 @@ public:
     std::string series_name = "undefined";
     switch (type)
     {
-      case DXL_SERIES_AX:
+      case kSeriesAX:
         series_name = "AX";
         break;
-      case DXL_SERIES_RX:
+      case kSeriesRX:
         series_name = "RX";
         break;
-      case DXL_SERIES_DX:
+      case kSeriesDX:
         series_name = "DX";
         break;
-      case DXL_SERIES_EX:
+      case kSeriesEX:
         series_name = "EX";
         break;
-      case DXL_SERIES_LEGACY_MX:
+      case kSeriesLegacyMX:
         series_name = "Legacy MX";
         break;
-      case DXL_SERIES_MX:
+      case kSeriesMX:
         series_name = "MX";
         break;
-      case DXL_SERIES_X:
+      case kSeriesX:
         series_name = "X";
         break;
-      case DXL_SERIES_P:
+      case kSeriesP:
         series_name = "P";
         break;
-      case DXL_SERIES_LEGACY_PRO:
+      case kSeriesLegacyPro:
         series_name = "Legacy Pro";
         break;
     }

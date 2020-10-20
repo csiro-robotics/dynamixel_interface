@@ -167,15 +167,15 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   // Set control mode for this run
   if (mode == "position")
   {
-    control_type_ = DXL_MODE_POSITION_CONTROL;
+    control_type_ = kModePositionControl;
   }
   else if (mode == "velocity")
   {
-    control_type_ = DXL_MODE_VELOCITY_CONTROL;
+    control_type_ = kModeVelocityControl;
   }
   else if (mode == "effort")
   {
-    control_type_ = DXL_MODE_TORQUE_CONTROL;
+    control_type_ = kModeTorqueControl;
   }
   else
   {
@@ -388,12 +388,12 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
         {
           switch (type_check)
           {
-            case DXL_SERIES_AX:
-            case DXL_SERIES_RX:
-            case DXL_SERIES_DX:
-            case DXL_SERIES_EX:
-            case DXL_SERIES_LEGACY_MX:
-              if (it.second.model_spec->type > DXL_SERIES_LEGACY_MX)
+            case kSeriesAX:
+            case kSeriesRX:
+            case kSeriesDX:
+            case kSeriesEX:
+            case kSeriesLegacyMX:
+              if (it.second.model_spec->type > kSeriesLegacyMX)
               {
                 ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
                           "Have both %s and %s.",
@@ -403,9 +403,9 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
               }
               break;
 
-            case DXL_SERIES_X:
-            case DXL_SERIES_MX:
-              if ((it.second.model_spec->type != DXL_SERIES_X) && (it.second.model_spec->type != DXL_SERIES_MX))
+            case kSeriesX:
+            case kSeriesMX:
+              if ((it.second.model_spec->type != kSeriesX) && (it.second.model_spec->type != kSeriesMX))
               {
                 ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
                           "Have both %s and %s.",
@@ -415,8 +415,8 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
               }
               break;
 
-            case DXL_SERIES_P:
-              if (it.second.model_spec->type != DXL_SERIES_P)
+            case kSeriesP:
+              if (it.second.model_spec->type != kSeriesP)
               {
                 ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
                           "Have both %s and %s.",
@@ -426,8 +426,8 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
               }
               break;
 
-            case DXL_SERIES_LEGACY_PRO:
-              if (it.second.model_spec->type != DXL_SERIES_LEGACY_PRO)
+            case kSeriesLegacyPro:
+              if (it.second.model_spec->type != kSeriesLegacyPro)
               {
                 ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
                           "Have both %s and %s.",
@@ -643,16 +643,16 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
                  port.driver->getSeriesName(info.model_spec->type).c_str(), info.model_spec->name.c_str());
 
         // Only support effort control on newer spec dynamixels
-        if (control_type_ == DXL_MODE_TORQUE_CONTROL)
+        if (control_type_ == kModeTorqueControl)
         {
           switch (info.model_spec->type)
           {
-            case DXL_SERIES_AX:
-            case DXL_SERIES_RX:
-            case DXL_SERIES_DX:
-            case DXL_SERIES_EX:
-            case DXL_SERIES_LEGACY_MX:
-            case DXL_SERIES_LEGACY_PRO:
+            case kSeriesAX:
+            case kSeriesRX:
+            case kSeriesDX:
+            case kSeriesEX:
+            case kSeriesLegacyMX:
+            case kSeriesLegacyPro:
               ROS_ERROR("Effort Control not supported for legacy series dynamixels!");
               ros::shutdown();
           }
@@ -677,7 +677,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
         }
 
         // set velocity limits for the motor
-        if (info.model_spec->type > DXL_SERIES_LEGACY_MX)
+        if (info.model_spec->type > kSeriesLegacyMX)
         {
           if (!port.driver->setMaxVelocity(info.id, info.model_spec->type,
                                            (int)(info.max_vel * info.model_spec->velocity_radps_to_reg)))
@@ -687,7 +687,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
         }
 
         // angle limits are only relevant in position control mode
-        if (control_type_ == DXL_MODE_POSITION_CONTROL)
+        if (control_type_ == kModePositionControl)
         {
           // set angle limits & direction
           if (info.min_pos > info.max_pos)
@@ -841,7 +841,7 @@ void DynamixelInterfaceController::loop(void)
         }
 
         // if in position control mode we enable the default join movement speed (profile velocity)
-        if (control_type_ == DXL_MODE_POSITION_CONTROL)
+        if (control_type_ == kModePositionControl)
         {
           int regVal =
             static_cast<int>((static_cast<double>(it.second.max_vel) * it.second.model_spec->velocity_radps_to_reg));
@@ -1011,17 +1011,17 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
   bool has_eff = false;
 
   // figure out which values have been specified
-  if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == DXL_MODE_POSITION_CONTROL))
+  if ((joint_commands.position.size() == joint_commands.name.size()) && (control_type_ == kModePositionControl))
   {
     has_pos = true;
   }
   if ((joint_commands.velocity.size() == joint_commands.name.size()) &&
-      ((control_type_ == DXL_MODE_VELOCITY_CONTROL) ||
-       (control_type_ == DXL_MODE_POSITION_CONTROL && !ignore_input_velocity_)))
+      ((control_type_ == kModeVelocityControl) ||
+       (control_type_ == kModePositionControl && !ignore_input_velocity_)))
   {
     has_vel = true;
   }
-  if ((joint_commands.effort.size() == joint_commands.name.size()) && (control_type_ == DXL_MODE_TORQUE_CONTROL))
+  if ((joint_commands.effort.size() == joint_commands.name.size()) && (control_type_ == kModeTorqueControl))
   {
     has_eff = true;
   }
@@ -1052,7 +1052,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
     DynamixelInfo *info = &port.joints[joint_commands.name[i]];
 
     // calculate the position register value for the motor
-    if ((has_pos) && (control_type_ == DXL_MODE_POSITION_CONTROL))
+    if ((has_pos) && (control_type_ == kModePositionControl))
     {
       // used to bound positions to limits
       int up_lim, dn_lim;
@@ -1084,7 +1084,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
         // push motor encoder value onto list
         write_data.id = info->id;
         write_data.type = info->model_spec->type;
-        if (write_data.type <= DXL_SERIES_LEGACY_MX)
+        if (write_data.type <= kSeriesLegacyMX)
         {
           write_data.data.resize(2);
           *(reinterpret_cast<uint16_t*>(write_data.data.data())) = static_cast<uint16_t>(pos);
@@ -1100,7 +1100,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
     }
 
     // calculate the velocity register value for the motor
-    if (has_vel && (control_type_ != DXL_MODE_TORQUE_CONTROL))
+    if (has_vel && (control_type_ != kModeTorqueControl))
     {
       // get rad/s value from message
       double rad_s_vel = joint_commands.velocity[i];
@@ -1116,12 +1116,12 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       // to set the profile velocity (how fast the motor moves to the specified position)
       // we also need to take an absolute value as each motor series handles negative inputs
       // differently
-      if ((control_type_ == DXL_MODE_VELOCITY_CONTROL) && (info->min_pos > info->max_pos))
+      if ((control_type_ == kModeVelocityControl) && (info->min_pos > info->max_pos))
       {
         // The old dynamixel series use a different method of representing velocity values. They define the value in the
         // register as a signed 10-bit value, with the first 9 bits representing magnitude and the 10th bit representing
         // the sign.
-        if (info->model_spec->type <= DXL_SERIES_LEGACY_MX)
+        if (info->model_spec->type <= kSeriesLegacyMX)
         {
           vel = std::abs(vel) + 1024;
         }
@@ -1130,7 +1130,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
           vel = -vel;
         }
       }
-      else if (control_type_ == DXL_MODE_POSITION_CONTROL)
+      else if (control_type_ == kModePositionControl)
       {
         vel = std::abs(vel);
       }
@@ -1138,7 +1138,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       // push motor encoder value onto list
       write_data.id = info->id;
       write_data.type = info->model_spec->type;
-      if (write_data.type <= DXL_SERIES_LEGACY_MX)
+      if (write_data.type <= kSeriesLegacyMX)
       {
         write_data.data.resize(2);
         *(reinterpret_cast<uint16_t*>(write_data.data.data())) = static_cast<uint16_t>(vel);
@@ -1152,7 +1152,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       velocities[info->id] = write_data;
     }
 
-    if (has_eff && (control_type_ == DXL_MODE_TORQUE_CONTROL))
+    if (has_eff && (control_type_ == kModeTorqueControl))
     {
       double input_effort = joint_commands.effort[i];
 
@@ -1182,7 +1182,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
 
   // use the multi-motor write functions to reduce the bandwidth required to command
   // all the motors
-  if (control_type_ == DXL_MODE_POSITION_CONTROL)
+  if (control_type_ == kModePositionControl)
   {
     // set the profile velocities if they have been defined
     if ((has_vel) && (!ignore_input_velocity_))
@@ -1201,7 +1201,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       }
     }
   }
-  else if ((control_type_ == DXL_MODE_VELOCITY_CONTROL) && has_vel)
+  else if ((control_type_ == kModeVelocityControl) && has_vel)
   {
     // set the velocity values for each motor
     if (!port.driver->setMultiVelocity(velocities))
@@ -1209,7 +1209,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       ROS_ERROR("Failed to set velocities on port %s!", port.port_name.c_str());
     }
   }
-  else if ((control_type_ == DXL_MODE_TORQUE_CONTROL) && has_eff)
+  else if ((control_type_ == kModeTorqueControl) && has_eff)
   {
     // set the effort values for each motor
     if (!port.driver->setMultiTorque(efforts))
@@ -1291,7 +1291,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
       int raw_vel = state_map[it.second.id].velocity;
 
       // handle the sign of the value based on the motor series
-      if (it.second.model_spec->type <= DXL_SERIES_LEGACY_MX)
+      if (it.second.model_spec->type <= kSeriesLegacyMX)
       {
         // The old dynamixel series use a different method of representing effort values. They define the value in the
         // register as a signed 10-bit value, with the first 9 bits representing magnitude and the 10th bit representing
@@ -1321,7 +1321,7 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
       // TORQUE EFFORT VALUE
       double effort = 0;
 
-      if (it.second.model_spec->type <= DXL_SERIES_LEGACY_MX)
+      if (it.second.model_spec->type <= kSeriesLegacyMX)
       {
         // The old dynamixel series use a different method of representing effort values. They define the value in the
         // register as a signed 10-bit value, with the first 9 bits representing magnitude and the 10th bit representing
