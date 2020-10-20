@@ -155,6 +155,20 @@ public:
   /// Destructor, deletes the objects holding the serial ports and disables the motors if required
   ~DynamixelInterfaceController();
 
+  /// Parses param information from the rosparam server
+  /// @returns true if all params parsed successfully, false otherwise
+  bool parseParameters(void);
+
+  /// Initialises the controller, performing the following steps:
+  /// - for each port:
+  ///   - Initialise driver
+  ///   - for each dynamixel
+  //      - check response on bus
+  ///     - load model information
+  ///     - validate compatibility with port
+  /// @returns true on successful initialisation, false otherwise
+  bool initialise();
+
   /// Gets the target loop rate for the controller
   /// @returns the target loop rate for the controller (Hz)
   inline double getLoopRate(void) { return loop_rate_; };
@@ -166,12 +180,23 @@ public:
 private:
   /// Parses the information in the yaml file for each port
   /// @param[in] ports the xml structure to be parsed
-  void parsePortInformation(XmlRpc::XmlRpcValue ports);
+  /// @returns true if all params parsed false otherwise
+  bool parsePortInformation(XmlRpc::XmlRpcValue ports);
 
   /// Parses the information in the yaml file for each servo
   /// @param[in] port the port object to parse the servo info into
   /// @param[in] servos the xml structure to be parsed
-  void parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos);
+  /// @returns true if all params parsed, false otherwise
+  bool parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos);
+
+  /// Initialises the port, opening the driver, and validating all dynamixels
+  /// @returns true on successful initialisation, false otherwise
+  bool initialisePort(PortInfo &port);
+
+  /// Initialises the dynamixel. Pings the given id to make sure it exists, then loads it's model information and sets
+  /// up the relevant registers
+  /// @returns true on successful initialisation, false otherwise
+  bool initialiseDynamixel(PortInfo &port, DynamixelInfo &dynamixel);
 
   /// Callback for recieving a command from the /desired_joint_state topic. The function atomically updates the class
   /// member variable containing the latest message and sets a flag indicating a new message has been received
@@ -207,8 +232,8 @@ private:
 
   sensor_msgs::JointState write_msg_;  ///< Stores the last message received from the write command topic
 
-  std::mutex write_mutex_;  ///< Mutex for write_msg, as there are potentially multiple threads
-  bool write_ready_;        ///< Booleans indicating if we have received commands
+  std::mutex write_mutex_;    ///< Mutex for write_msg, as there are potentially multiple threads
+  bool write_ready_ = false;  ///< Booleans indicating if we have received commands
 
   ros::Subscriber joint_state_subscriber_;  ///< Gets joint states for writes
 
@@ -231,7 +256,7 @@ private:
 
   DynamixelControlMode control_type_;  /// method of control (position/velocity/torque)
 
-  bool first_write_;              ///< Indicate if write has occured
+  bool first_write_ = false;      ///< Indicate if write has occured
   bool stop_motors_on_shutdown_;  ///< Indicates if the motors should be turned off when the controller stops
   bool ignore_input_velocity_;    ///< can set driver to ignore profile velocity commands in position mode
 
@@ -241,6 +266,9 @@ private:
   double loop_rate_;         ///< Desired loop rate (joint states are published at this rate)
   double diagnostics_rate_;  ///< Desired rate at which servo diagnostic information is published
   double dataport_rate_;     ///< Rate at which the pro external dataport is read
+
+  bool parameters_parsed_ = false;  ///< Bool indicating if we have parsed parameters
+  bool initialised_ = false;        ///< Bool indicating if we are ready for operation
 };
 
 }  // namespace dynamixel_interface

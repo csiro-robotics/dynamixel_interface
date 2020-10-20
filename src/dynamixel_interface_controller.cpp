@@ -104,7 +104,32 @@ namespace dynamixel_interface
 DynamixelInterfaceController::DynamixelInterfaceController()
 {
   nh_ = std::make_unique<ros::NodeHandle>();
+}
 
+
+/// Destructor, deletes the objects holding the serial ports and disables the motors if required
+DynamixelInterfaceController::~DynamixelInterfaceController()
+{
+  ROS_INFO("shutting_down dynamixel_interface_controller");
+
+  if (stop_motors_on_shutdown_)
+  {
+    for (int i = 0; i < dynamixel_ports_.size(); i++)
+    {
+      // Turn off all the motors
+      for (auto &it : dynamixel_ports_[i].joints)
+      {
+        dynamixel_ports_[i].driver->setTorqueEnabled(it.second.id, it.second.model_spec->type, 0);
+        ROS_INFO("Torque disabled on %s joint\n", it.first.c_str());
+      }
+    }
+  }
+}
+
+/// Parses param information from the rosparam server
+/// @returns true if all params parsed successfully, false otherwise
+bool DynamixelInterfaceController::parseParameters(void)
+{
   // Stores config variables only used in init function
   std::string mode;
   std::string node_name = ros::this_node::getName();
@@ -129,7 +154,8 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   if (loop_rate_ <= 0)
   {
     ROS_ERROR("Loop rate must be > 0!");
-    ros::shutdown();
+    return false;
+    ;
   }
 
   if (diagnostics_rate_ < 0)
@@ -180,12 +206,8 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   else
   {
     ROS_ERROR("Control Mode Not Supported!");
-    ros::shutdown();
+    return false;
   }
-
-  // Initialise write state variables
-  write_ready_ = false;
-  first_write_ = true;
 
   // Attempt to parse information for each device (port)
   if (ros::param::has("~ports"))
@@ -199,13 +221,13 @@ DynamixelInterfaceController::DynamixelInterfaceController()
     if (dynamixel_ports_.size() == 0)
     {
       ROS_ERROR("No valid ports found, shutting_down...");
-      ros::shutdown();
+      return false;
     }
   }
   else
   {
     ROS_ERROR("No port details loaded to param server");
-    ros::shutdown();
+    return false;
   }
 
   if (diagnostics_rate_ > 0)
@@ -224,37 +246,20 @@ DynamixelInterfaceController::DynamixelInterfaceController()
   joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("desired_joint_states", 1,
                                                                     &DynamixelInterfaceController::jointStateCallback,
                                                                     this, ros::TransportHints().tcpNoDelay());
+  parameters_parsed_ = true;
+  return true;
 }
 
-
-/// Destructor, deletes the objects holding the serial ports and disables the motors if required
-DynamixelInterfaceController::~DynamixelInterfaceController()
-{
-  ROS_INFO("shutting_down dynamixel_interface_controller");
-
-  if (stop_motors_on_shutdown_)
-  {
-    for (int i = 0; i < dynamixel_ports_.size(); i++)
-    {
-      // Turn off all the motors
-      for (auto &it : dynamixel_ports_[i].joints)
-      {
-        dynamixel_ports_[i].driver->setTorqueEnabled(it.second.id, it.second.model_spec->type, 0);
-        ROS_INFO("Torque disabled on %s joint\n", it.first.c_str());
-      }
-    }
-  }
-}
 
 /// Parses the information in the yaml file for each port
 /// @param[in] ports the xml structure to be parsed
-void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue ports)
+bool DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue ports)
 {
   // If there is no servos array in the param server, return
   if (ports.getType() != XmlRpc::XmlRpcValue::TypeArray)
   {
     ROS_ERROR("Invalid/missing device information on the param server");
-    ros::shutdown();
+    return false;
   }
 
   // number of ports defined
@@ -275,7 +280,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (ports[i].getType() != XmlRpc::XmlRpcValue::TypeStruct)
     {
       ROS_ERROR("Invalid/Missing info-struct for servo index %d", i);
-      ros::shutdown();
+      return false;
     }
 
 
@@ -283,7 +288,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (ports[i]["name"].getType() != XmlRpc::XmlRpcValue::TypeString)
     {
       ROS_ERROR("Invalid/Missing port name for port %d", i);
-      ros::shutdown();
+      return false;
     }
     else
     {
@@ -295,7 +300,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (ports[i]["device"].getType() != XmlRpc::XmlRpcValue::TypeString)
     {
       ROS_ERROR("Invalid/Missing device name for port %d", i);
-      ros::shutdown();
+      return false;
     }
     else
     {
@@ -306,7 +311,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (ports[i]["baudrate"].getType() != XmlRpc::XmlRpcValue::TypeInt)
     {
       ROS_ERROR("Invalid/Missing baudrate for port %d", i);
-      ros::shutdown();
+      return false;
     }
     else
     {
@@ -317,7 +322,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (ports[i]["use_legacy_protocol"].getType() != XmlRpc::XmlRpcValue::TypeBoolean)
     {
       ROS_ERROR("Invalid/Missing use_legacy_protocol option for port %d", i);
-      ros::shutdown();
+      return false;
     }
     else
     {
@@ -328,7 +333,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (ports[i]["group_read_enabled"].getType() != XmlRpc::XmlRpcValue::TypeBoolean)
     {
       ROS_ERROR("Invalid/Missing group_read_enabled option for port %d", i);
-      ros::shutdown();
+      return false;
     }
     else
     {
@@ -339,7 +344,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (ports[i]["group_write_enabled"].getType() != XmlRpc::XmlRpcValue::TypeBoolean)
     {
       ROS_ERROR("Invalid/Missing group_write_enabled option for port %d", i);
-      ros::shutdown();
+      return false;
     }
     else
     {
@@ -349,9 +354,9 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
 
     /************************* Driver initialisation *********************/
 
-    // Attempt to start driver
-    port.driver = std::unique_ptr<DynamixelInterfaceDriver>(new DynamixelInterfaceDriver(port.device, port.baudrate, port.use_legacy_protocol, use_group_read,
-                                               use_group_write));
+    // Create driver
+    port.driver = std::unique_ptr<DynamixelInterfaceDriver>(new DynamixelInterfaceDriver(
+      port.device, port.baudrate, port.use_legacy_protocol, use_group_read, use_group_write));
 
     /************************* Dynamixel initialisation *********************/
 
@@ -361,7 +366,7 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     if (ports[i]["servos"].getType() != XmlRpc::XmlRpcValue::TypeArray)
     {
       ROS_ERROR("Invalid/missing servo information on the param server");
-      ros::shutdown();
+      return false;
     }
     else
     {
@@ -373,73 +378,6 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     // add port only if dynamixels were found
     if (port.joints.size() > 0)
     {
-      DynamixelSeriesType type_check;
-      bool first_dynamixel = true;
-
-      // check type safety of bus
-      for (auto &it : port.joints)
-      {
-        if (first_dynamixel)
-        {
-          type_check = it.second.model_spec->type;
-          first_dynamixel = false;
-        }
-        else
-        {
-          switch (type_check)
-          {
-            case kSeriesAX:
-            case kSeriesRX:
-            case kSeriesDX:
-            case kSeriesEX:
-            case kSeriesLegacyMX:
-              if (it.second.model_spec->type > kSeriesLegacyMX)
-              {
-                ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
-                          "Have both %s and %s.",
-                          port.driver->getSeriesName(type_check).c_str(),
-                          port.driver->getSeriesName(it.second.model_spec->type).c_str());
-                ros::shutdown();
-              }
-              break;
-
-            case kSeriesX:
-            case kSeriesMX:
-              if ((it.second.model_spec->type != kSeriesX) && (it.second.model_spec->type != kSeriesMX))
-              {
-                ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
-                          "Have both %s and %s.",
-                          port.driver->getSeriesName(type_check).c_str(),
-                          port.driver->getSeriesName(it.second.model_spec->type).c_str());
-                ros::shutdown();
-              }
-              break;
-
-            case kSeriesP:
-              if (it.second.model_spec->type != kSeriesP)
-              {
-                ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
-                          "Have both %s and %s.",
-                          port.driver->getSeriesName(type_check).c_str(),
-                          port.driver->getSeriesName(it.second.model_spec->type).c_str());
-                ros::shutdown();
-              }
-              break;
-
-            case kSeriesLegacyPro:
-              if (it.second.model_spec->type != kSeriesLegacyPro)
-              {
-                ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
-                          "Have both %s and %s.",
-                          port.driver->getSeriesName(type_check).c_str(),
-                          port.driver->getSeriesName(it.second.model_spec->type).c_str());
-                ros::shutdown();
-              }
-              break;
-          }
-        }
-      }
-
       ROS_INFO("Adding port %s to loop", port.port_name.c_str());
       // add port information to server
       dynamixel_ports_.emplace_back(std::move(port));
@@ -447,15 +385,17 @@ void DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
     else
     {
       ROS_ERROR("No dynamixels found on %s (%s)!", port.device.c_str(), port.port_name.c_str());
-      ros::shutdown();
+      return false;
     }
   }
+
+  return true;
 }
 
 /// Parses the information in the yaml file for each servo
 /// @param[in] port the port object to parse the servo info into
 /// @param[in] servos the xml structure to be parsed
-void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos)
+bool DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos)
 {
   // number of servos defined
   int num_servos = servos.size();
@@ -470,14 +410,14 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     if (servos[i].getType() != XmlRpc::XmlRpcValue::TypeStruct)
     {
       ROS_ERROR("Invalid/Missing info-struct for servo index %d", i);
-      ros::shutdown();
+      return false;
     }
 
     // get joint id
     if (servos[i]["id"].getType() != XmlRpc::XmlRpcValue::TypeInt)
     {
       ROS_ERROR("Invalid/Missing id for servo index %d", i);
-      ros::shutdown();
+      return false;
     }
     else
     {
@@ -489,7 +429,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     if (servos[i]["joint_name"].getType() != XmlRpc::XmlRpcValue::TypeString)
     {
       ROS_ERROR("Invalid/Missing joint name for servo index %d, id: %d", i, info.id);
-      ros::shutdown();
+      return false;
     }
     else
     {
@@ -501,7 +441,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
       if (port.joints.find(info.joint_name) != port.joints.end())
       {
         ROS_ERROR("Cannot have multiple joints with the same name [%s]", info.joint_name.c_str());
-        ros::shutdown();
+        return false;
       }
       else
       {
@@ -510,7 +450,7 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
           if (dynamixel_ports_[j].joints.find(info.joint_name) != dynamixel_ports_[j].joints.end())
           {
             ROS_ERROR("Cannot have multiple joints with the same name [%s]", info.joint_name.c_str());
-            ros::shutdown();
+            return false;
           }
         }
       }
@@ -519,8 +459,8 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     // get joint zero position
     if (servos[i]["zero_pos"].getType() != XmlRpc::XmlRpcValue::TypeInt)
     {
-      ROS_WARN("Invalid/Missing zero position for servo index %d, id: %d", i, info.id);
-      ros::shutdown();
+      ROS_ERROR("Invalid/Missing zero position for servo index %d, id: %d", i, info.id);
+      return false;
     }
     else
     {
@@ -531,8 +471,8 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     // get joint default min position
     if (servos[i]["min_pos"].getType() != XmlRpc::XmlRpcValue::TypeInt)
     {
-      ROS_WARN("Invalid/Missing min position for servo index %d, id: %d", i, info.id);
-      ros::shutdown();
+      ROS_ERROR("Invalid/Missing min position for servo index %d, id: %d", i, info.id);
+      return false;
     }
     else
     {
@@ -542,8 +482,8 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
     // get joint default max position
     if (servos[i]["max_pos"].getType() != XmlRpc::XmlRpcValue::TypeInt)
     {
-      ROS_WARN("Invalid/Missing max position for servo index %d, id: %d", i, info.id);
-      ros::shutdown();
+      ROS_ERROR("Invalid/Missing max position for servo index %d, id: %d", i, info.id);
+      return false;
     }
     else
     {
@@ -579,155 +519,296 @@ void DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
       }
     }
 
-    // sleep to make sure the bus is clear of comms
-    ros::Duration(0.2).sleep();
+    // store current control mode
+    info.current_mode = control_type_;
 
-    // Ping the servo to make sure that we can actually connect to it
-    // and that it is alive and well on our bus, if not, sleep and try again
-    // if all retry's fail, throw an error
-    bool ping_success = true;
-    int ping_count = 0;
-    while (!port.driver->ping(info.id))
+    // add joint to port
+    port.joints[info.joint_name] = info;
+  }
+
+  return true;
+}
+
+
+/// Initialises the controller, performing the following steps:
+/// - for each port:
+///   - Initialise driver
+///   - for each dynamixel
+//      - check response on bus
+///     - load model information
+///     - validate compatibility with port
+/// @returns true on successful initialisation, false otherwise
+bool DynamixelInterfaceController::initialise()
+{
+  if (!parameters_parsed_)
+  {
+    ROS_ERROR("Parameters not parsed yet, must be parsed before init");
+    return false;
+  }
+
+  for (auto &port : dynamixel_ports_)
+  {
+    if (!initialisePort(port))
     {
-      // increment ping count
-      ping_count++;
+      ROS_ERROR("Unable to initialised port %s", port.port_name.c_str());
+      return false;
+    }
+  }
 
-      ROS_WARN("Failed to ping id: %d, attempt %d, retrying...", info.id, ping_count);
-      // max number of retry's
-      if (ping_count > 5)
+  return true;
+}
+
+
+/// Initialises the port, opening the driver, and validating all dynamixels
+/// @returns true on successful initialisation, false otherwise
+bool DynamixelInterfaceController::initialisePort(PortInfo &port)
+{
+  DynamixelSeriesType type_check;
+  bool first_dynamixel = true;
+
+  // Attempt driver initialisation
+  if (!port.driver->initialise())
+  {
+    ROS_ERROR("Unable to initialise driver");
+    return false;
+  }
+
+  // first, initialise dynamixels
+  for (auto &it : port.joints)
+  {
+    if (!initialiseDynamixel(port, it.second))
+    {
+      ROS_ERROR("Unable to initialised dynamixel %s", it.second.joint_name.c_str());
+      return false;
+    }
+  }
+
+  // then, check type safety of bus
+  for (auto &it : port.joints)
+  {
+    if (first_dynamixel)
+    {
+      type_check = it.second.model_spec->type;
+      first_dynamixel = false;
+    }
+    else
+    {
+      switch (type_check)
       {
-        // unable to ping
-        ping_success = false;
-        break;
-      }
+        case kSeriesAX:
+        case kSeriesRX:
+        case kSeriesDX:
+        case kSeriesEX:
+        case kSeriesLegacyMX:
+          if (it.second.model_spec->type > kSeriesLegacyMX)
+          {
+            ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
+                      "Have both %s and %s.",
+                      port.driver->getSeriesName(type_check).c_str(),
+                      port.driver->getSeriesName(it.second.model_spec->type).c_str());
+            return false;
+          }
+          break;
 
-      // sleep and try again
-      ros::Duration(0.5).sleep();
+        case kSeriesX:
+        case kSeriesMX:
+          if ((it.second.model_spec->type != kSeriesX) && (it.second.model_spec->type != kSeriesMX))
+          {
+            ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
+                      "Have both %s and %s.",
+                      port.driver->getSeriesName(type_check).c_str(),
+                      port.driver->getSeriesName(it.second.model_spec->type).c_str());
+            return false;
+          }
+          break;
+
+        case kSeriesP:
+          if (it.second.model_spec->type != kSeriesP)
+          {
+            ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
+                      "Have both %s and %s.",
+                      port.driver->getSeriesName(type_check).c_str(),
+                      port.driver->getSeriesName(it.second.model_spec->type).c_str());
+            return false;
+          }
+          break;
+
+        case kSeriesLegacyPro:
+          if (it.second.model_spec->type != kSeriesLegacyPro)
+          {
+            ROS_ERROR("Type mismatch on bus, only dynamixel who share a common register table may share a bus! "
+                      "Have both %s and %s.",
+                      port.driver->getSeriesName(type_check).c_str(),
+                      port.driver->getSeriesName(it.second.model_spec->type).c_str());
+            return false;
+          }
+          break;
+      }
+    }
+  }
+
+  return true;
+}
+
+/// Initialises the dynamixel. Pings the given id to make sure it exists, then loads it's model information and sets
+/// up the relevant registers
+/// @returns true on successful initialisation, false otherwise
+bool DynamixelInterfaceController::initialiseDynamixel(PortInfo &port, DynamixelInfo &dynamixel)
+{
+  // sleep to make sure the bus is clear of comms
+  ros::Duration(0.2).sleep();
+
+  // Ping the servo to make sure that we can actually connect to it
+  // and that it is alive and well on our bus, if not, sleep and try again
+  // if all retry's fail, throw an error
+  bool ping_success = true;
+  int ping_count = 0;
+  while (!port.driver->ping(dynamixel.id))
+  {
+    // increment ping count
+    ping_count++;
+
+    ROS_WARN("Failed to ping id: %d, attempt %d, retrying...", dynamixel.id, ping_count);
+    // max number of retry's
+    if (ping_count > 5)
+    {
+      // unable to detect motor
+      ROS_ERROR("Cannot ping dynamixel id: %d", dynamixel.id);
+      return false;
     }
 
-    // only add if ping was successful
-    if (ping_success)
+    // sleep and try again
+    ros::Duration(0.5).sleep();
+  }
+
+  // only add if ping was successful
+  bool success = true;
+  uint16_t model_number = 0;
+  bool t_e;
+
+  if (!port.driver->getModelNumber(dynamixel.id, &model_number))
+  {
+    ROS_ERROR("Unable to retrieve model number for dynamixel id %d", dynamixel.id);
+    return false;
+  }
+  else if (model_number == 0)
+  {
+    ROS_ERROR("Invalid model number retrieved for dynamixel id %d", dynamixel.id);
+    return false;
+  }
+
+  // If valid motor, setup in operating mode
+  dynamixel.model_spec = port.driver->getModelSpec(model_number);
+  if (dynamixel.model_spec == nullptr)
+  {
+    ROS_ERROR("Failed to load model information for dynamixel id %d", dynamixel.id);
+    ROS_ERROR("Model Number: %d", model_number);
+    ROS_ERROR("Info is not in database");
+    return false;
+    ;
+  }
+
+  // check error status of dynamixel
+  uint8_t error_status = 0;
+  if (!port.driver->getErrorStatus(dynamixel.id, dynamixel.model_spec->type, &error_status))
+  {
+    ROS_WARN("Failed to check error status of dynamixel id %d", dynamixel.id);
+  }
+  else if (error_status)
+  {
+    ROS_WARN("Dynamixel %d returned error code %d", dynamixel.id, error_status);
+  }
+
+  dynamixel.torque_enabled = false;
+
+  // Display joint info
+  ROS_INFO("Joint Name: %s, ID: %d, Series: %s, Model: %s", dynamixel.joint_name.c_str(), dynamixel.id,
+           port.driver->getSeriesName(dynamixel.model_spec->type).c_str(), dynamixel.model_spec->name.c_str());
+
+  // Only support effort control on newer spec dynamixels
+  if (control_type_ == kModeTorqueControl)
+  {
+    switch (dynamixel.model_spec->type)
     {
-      bool success = true;
-      uint16_t model_number = 0;
-      bool t_e;
-      success = port.driver->getModelNumber(info.id, &model_number);
+      case kSeriesAX:
+      case kSeriesRX:
+      case kSeriesDX:
+      case kSeriesEX:
+      case kSeriesLegacyMX:
+      case kSeriesLegacyPro:
+        ROS_ERROR("Effort Control not supported for legacy series dynamixels!");
+        return false;
+    }
+  }
 
-      // If valid motor, setup in operating mode
-      if ((success) && (model_number))
+  // maintain torque state in motor
+  if (!port.driver->getTorqueEnabled(dynamixel.id, dynamixel.model_spec->type, &t_e))
+  {
+    ROS_ERROR("Unable to get torque_enable status for dynamixel id %d", dynamixel.id);
+    return false;
+  }
+  if (!port.driver->setTorqueEnabled(dynamixel.id, dynamixel.model_spec->type, 0))
+  {
+    ROS_ERROR("Unable to set torque_enable status for dynamixel id %d", dynamixel.id);
+    return false;
+  }
+
+  // set operating mode for the motor
+  if (!port.driver->setOperatingMode(dynamixel.id, dynamixel.model_spec->type, control_type_))
+  {
+    ROS_ERROR("Failed to set operating mode for dynamixel id %d", dynamixel.id);
+    return false;
+  }
+
+  // set torque limit for the motor
+  if (!port.driver->setMaxTorque(dynamixel.id, dynamixel.model_spec->type,
+                                 (int)(dynamixel.torque_limit * dynamixel.model_spec->effort_reg_max)))
+  {
+    ROS_ERROR("Failed to set torque limit for dynamixel id %d", dynamixel.id);
+    return false;
+  }
+
+  // set velocity limits for the motor
+  if (dynamixel.model_spec->type > kSeriesLegacyMX)
+  {
+    if (!port.driver->setMaxVelocity(dynamixel.id, dynamixel.model_spec->type,
+                                     (int)(dynamixel.max_vel * dynamixel.model_spec->velocity_radps_to_reg)))
+    {
+      ROS_ERROR("Failed to set velocity limit for dynamixel id %d", dynamixel.id);
+      return false;
+    }
+  }
+
+  // angle limits are only relevant in position control mode
+  if (control_type_ == kModePositionControl)
+  {
+    // set angle limits & direction
+    if (dynamixel.min_pos > dynamixel.max_pos)
+    {
+      if (!port.driver->setAngleLimits(dynamixel.id, dynamixel.model_spec->type, dynamixel.max_pos, dynamixel.min_pos))
       {
-        info.model_spec = port.driver->getModelSpec(model_number);
-        if (info.model_spec == nullptr)
-        {
-          ROS_ERROR("Failed to load model information for dynamixel id %d", info.id);
-          ROS_ERROR("Model Number: %d", model_number);
-          ROS_ERROR("Info is not in database");
-          ros::shutdown();
-        }
-
-        // check error status of dynamixel
-        uint8_t error_status = 0;
-        if (!port.driver->getErrorStatus(info.id, info.model_spec->type, &error_status))
-        {
-          ROS_WARN("Failed to check error status of dynamixel id %d", info.id);
-        }
-        else if (error_status)
-        {
-          ROS_WARN("Dynamixel %d returned error code %d", info.id, error_status);
-        }
-
-        info.torque_enabled = false;
-
-        // Display joint info
-        ROS_INFO("Joint Name: %s, ID: %d, Series: %s, Model: %s", info.joint_name.c_str(), info.id,
-                 port.driver->getSeriesName(info.model_spec->type).c_str(), info.model_spec->name.c_str());
-
-        // Only support effort control on newer spec dynamixels
-        if (control_type_ == kModeTorqueControl)
-        {
-          switch (info.model_spec->type)
-          {
-            case kSeriesAX:
-            case kSeriesRX:
-            case kSeriesDX:
-            case kSeriesEX:
-            case kSeriesLegacyMX:
-            case kSeriesLegacyPro:
-              ROS_ERROR("Effort Control not supported for legacy series dynamixels!");
-              ros::shutdown();
-          }
-        }
-
-        // maintain torque state in motor
-        port.driver->getTorqueEnabled(info.id, info.model_spec->type, &t_e);
-        port.driver->setTorqueEnabled(info.id, info.model_spec->type, 0);
-
-        // set operating mode for the motor
-        if (!port.driver->setOperatingMode(info.id, info.model_spec->type, control_type_))
-        {
-          ROS_WARN("Failed to set operating mode for %s motor (id %d)", info.joint_name.c_str(), info.id);
-          ros::shutdown();
-        }
-
-        // set torque limit for the motor
-        if (!port.driver->setMaxTorque(info.id, info.model_spec->type,
-                                       (int)(info.torque_limit * info.model_spec->effort_reg_max)))
-        {
-          ROS_WARN("Failed to set torque limit for %s motor (id %d)", info.joint_name.c_str(), info.id);
-        }
-
-        // set velocity limits for the motor
-        if (info.model_spec->type > kSeriesLegacyMX)
-        {
-          if (!port.driver->setMaxVelocity(info.id, info.model_spec->type,
-                                           (int)(info.max_vel * info.model_spec->velocity_radps_to_reg)))
-          {
-            ROS_WARN("Failed to set velocity limit for %s motor (id %d)", info.joint_name.c_str(), info.id);
-          }
-        }
-
-        // angle limits are only relevant in position control mode
-        if (control_type_ == kModePositionControl)
-        {
-          // set angle limits & direction
-          if (info.min_pos > info.max_pos)
-          {
-            if (!port.driver->setAngleLimits(info.id, info.model_spec->type, info.max_pos, info.min_pos))
-            {
-              ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(), info.id);
-            }
-          }
-          else
-          {
-            if (!port.driver->setAngleLimits(info.id, info.model_spec->type, info.min_pos, info.max_pos))
-            {
-              ROS_WARN("Failed to set angle limits for %s motor (id %d)", info.joint_name.c_str(), info.id);
-            }
-          }
-        }
-
-        // preserve torque enable state
-        port.driver->setTorqueEnabled(info.id, info.model_spec->type, t_e);
-
-        // store current control mode
-        info.current_mode = control_type_;
-
-        // add joint to port
-        port.joints[info.joint_name] = info;
-      }
-      else
-      {
-        // can detect but cannot communicate, possibly serial error
-        ROS_ERROR("Failed to retrieve model number for id %d", info.id);
-        ros::shutdown();
+        ROS_ERROR("Failed to set angle limits for dynamixel id %d", dynamixel.id);
+        return false;
       }
     }
     else
     {
-      // unable to detect motor
-      ROS_ERROR("Cannot ping dynamixel id: %d", info.id);
+      if (!port.driver->setAngleLimits(dynamixel.id, dynamixel.model_spec->type, dynamixel.min_pos, dynamixel.max_pos))
+      {
+        ROS_ERROR("Failed to set angle limits for dynamixel id %d", dynamixel.id);
+        return false;
+      }
     }
   }
+
+  // preserve torque enable state
+  if (!port.driver->setTorqueEnabled(dynamixel.id, dynamixel.model_spec->type, t_e))
+  {
+    ROS_ERROR("Unable to reset torque_enable status for dynamixel id %d", dynamixel.id);
+    return false;
+  }
+
+  return true;
 }
 
 /// Callback for recieving a command from the /desired_joint_state topic. The function atomically updates the class
@@ -810,6 +891,12 @@ void DynamixelInterfaceController::jointStateCallback(const sensor_msgs::JointSt
 /// usb devices can be threaded.
 void DynamixelInterfaceController::loop(void)
 {
+  // wait until init
+  if (!initialised_)
+  {
+    return;
+  }
+
   // don't access the driver after its been cleaned up
   int num_servos = 0;
   std::vector<std::thread> threads;
@@ -885,7 +972,7 @@ void DynamixelInterfaceController::loop(void)
     reads[i] = sensor_msgs::JointState();
 
     threads.emplace_back(&DynamixelInterfaceController::multiThreadedIO, this, std::ref(dynamixel_ports_[i]),
-                           std::ref(reads[i]), std::ref(dataports_reads[i]), std::ref(diags_reads[i]), write_ready_);
+                         std::ref(reads[i]), std::ref(dataports_reads[i]), std::ref(diags_reads[i]), write_ready_);
   }
 
   // get messages for the first port
@@ -1016,8 +1103,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
     has_pos = true;
   }
   if ((joint_commands.velocity.size() == joint_commands.name.size()) &&
-      ((control_type_ == kModeVelocityControl) ||
-       (control_type_ == kModePositionControl && !ignore_input_velocity_)))
+      ((control_type_ == kModeVelocityControl) || (control_type_ == kModePositionControl && !ignore_input_velocity_)))
   {
     has_vel = true;
   }
@@ -1430,20 +1516,3 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
 }
 
 }  // namespace dynamixel_interface
-
-/// Main loop. intialises controller and starts timer and ROS callback handling
-int main(int argc, char **argv)
-{
-  ros::init(argc, argv, "dynamixel_interface_controller");
-
-  dynamixel_interface::DynamixelInterfaceController controller;
-
-  ros::Rate loop_rate(controller.getLoopRate());
-
-  while (ros::ok())
-  {
-    controller.loop();
-    ros::spinOnce();
-    loop_rate.sleep();
-  }
-}
