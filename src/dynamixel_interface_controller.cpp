@@ -130,6 +130,13 @@ DynamixelInterfaceController::~DynamixelInterfaceController()
 /// @returns true if all params parsed successfully, false otherwise
 bool DynamixelInterfaceController::parseParameters(void)
 {
+  /// don't parse parameters during operation
+  if (parameters_parsed_)
+  {
+    ROS_ERROR("Parameters already parsed");
+    return false;
+  }
+
   // Stores config variables only used in init function
   std::string mode;
   std::string node_name = ros::this_node::getName();
@@ -254,6 +261,13 @@ bool DynamixelInterfaceController::parseParameters(void)
 /// @param[in] ports the xml structure to be parsed
 bool DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue ports)
 {
+  /// don't parse parameters during operation
+  if (parameters_parsed_)
+  {
+    ROS_ERROR("Parameters already parsed");
+    return false;
+  }
+
   // If there is no servos array in the param server, return
   if (ports.getType() != XmlRpc::XmlRpcValue::TypeArray)
   {
@@ -400,6 +414,13 @@ bool DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
 /// @param[in] servos the xml structure to be parsed
 bool DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos)
 {
+  /// don't parse parameters during operation
+  if (parameters_parsed_)
+  {
+    ROS_ERROR("Parameters already parsed");
+    return false;
+  }
+
   // number of servos defined
   int num_servos = servos.size();
 
@@ -544,9 +565,15 @@ bool DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
 /// @returns true on successful initialisation, false otherwise
 bool DynamixelInterfaceController::initialise()
 {
+  // don't initialise if we have no parameters or are already running
   if (!parameters_parsed_)
   {
     ROS_ERROR("Parameters not parsed yet, must be parsed before init");
+    return false;
+  }
+  else if (initialised_)
+  {
+    ROS_ERROR("Already initialised");
     return false;
   }
 
@@ -574,6 +601,18 @@ bool DynamixelInterfaceController::initialise()
 /// @returns true on successful initialisation, false otherwise
 bool DynamixelInterfaceController::initialisePort(PortInfo &port)
 {
+  // don't initialise if we have no parameters or are already running
+  if (!parameters_parsed_)
+  {
+    ROS_ERROR("Parameters not parsed yet, must be parsed before init");
+    return false;
+  }
+  else if (initialised_)
+  {
+    ROS_ERROR("Already initialised");
+    return false;
+  }
+
   DynamixelSeriesType type_check;
   bool first_dynamixel = true;
 
@@ -666,6 +705,18 @@ bool DynamixelInterfaceController::initialisePort(PortInfo &port)
 /// @returns true on successful initialisation, false otherwise
 bool DynamixelInterfaceController::initialiseDynamixel(PortInfo &port, DynamixelInfo &dynamixel)
 {
+  // don't initialise if we have no parameters or are already running
+  if (!parameters_parsed_)
+  {
+    ROS_ERROR("Parameters not parsed yet, must be parsed before init");
+    return false;
+  }
+  else if (initialised_)
+  {
+    ROS_ERROR("Already initialised");
+    return false;
+  }
+
   // sleep to make sure the bus is clear of comms
   ros::Duration(0.2).sleep();
 

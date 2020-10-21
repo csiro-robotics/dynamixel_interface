@@ -184,17 +184,20 @@ private:
   bool parsePortInformation(XmlRpc::XmlRpcValue ports);
 
   /// Parses the information in the yaml file for each servo
-  /// @param[in] port the port object to parse the servo info into
-  /// @param[in] servos the xml structure to be parsed
+  /// @param[out] port the port object to parse the servo info into
+  /// @param[out] servos the xml structure to be parsed
   /// @returns true if all params parsed, false otherwise
   bool parseServoInformation(PortInfo &port, XmlRpc::XmlRpcValue servos);
 
   /// Initialises the port, opening the driver, and validating all dynamixels
+  /// @param[in] port the port object to initialise
   /// @returns true on successful initialisation, false otherwise
   bool initialisePort(PortInfo &port);
 
   /// Initialises the dynamixel. Pings the given id to make sure it exists, then loads it's model information and sets
   /// up the relevant registers
+  /// @param[in] port the port for this dynamixel
+  /// @param[in] dynamixel the dynamixel to intialise
   /// @returns true on successful initialisation, false otherwise
   bool initialiseDynamixel(PortInfo &port, DynamixelInfo &dynamixel);
 
