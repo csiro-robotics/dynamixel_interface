@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   dynamixel_interface::DynamixelInterfaceController controller;
 
   // parse params
-  if (controller.parseParameters())
+  if (!controller.parseParameters())
   {
     return 1;
   }

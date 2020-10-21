@@ -137,8 +137,6 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(const std::string &device, in
     packetHandler_ = std::unique_ptr<dynamixel::PacketHandler>(dynamixel::PacketHandler::getPacketHandler(2.0));
   }
 
-  // Open and configure port
-  initialise();
 }
 
 /// Destructor. Closes and releases serial port.
@@ -154,11 +152,15 @@ DynamixelInterfaceDriver::~DynamixelInterfaceDriver()
 /// @returns true if load successful, false otherwise
 bool DynamixelInterfaceDriver::loadMotorData(void)
 {
+
+  ROS_INFO("Initialising Dynamixel Port Driver");
+
   // read in motor data yaml file
   // load the file containing model info, we're not using the param server here
   std::string path = ros::package::getPath("dynamixel_interface");
   path += "/config/motor_data.yaml";
   YAML::Node doc;
+  ROS_INFO("Loading motor data from file");
   try
   {
     doc = YAML::LoadFile(path);

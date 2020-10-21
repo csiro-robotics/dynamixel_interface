@@ -256,7 +256,9 @@ private:
 
   DynamixelControlMode control_type_;  /// method of control (position/velocity/torque)
 
-  bool first_write_ = false;      ///< Indicate if write has occured
+  bool parameters_parsed_ = false;  ///< Bool indicating if we have parsed parameters
+  bool initialised_ = false;        ///< Bool indicating if we are ready for operation
+
   bool stop_motors_on_shutdown_;  ///< Indicates if the motors should be turned off when the controller stops
   bool ignore_input_velocity_;    ///< can set driver to ignore profile velocity commands in position mode
 
@@ -266,9 +268,6 @@ private:
   double loop_rate_;         ///< Desired loop rate (joint states are published at this rate)
   double diagnostics_rate_;  ///< Desired rate at which servo diagnostic information is published
   double dataport_rate_;     ///< Rate at which the pro external dataport is read
-
-  bool parameters_parsed_ = false;  ///< Bool indicating if we have parsed parameters
-  bool initialised_ = false;        ///< Bool indicating if we are ready for operation
 };
 
 }  // namespace dynamixel_interface

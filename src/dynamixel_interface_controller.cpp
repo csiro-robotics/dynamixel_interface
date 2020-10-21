@@ -215,7 +215,12 @@ bool DynamixelInterfaceController::parseParameters(void)
     // PARSE ARRAY OF PORT INFORMATION
     XmlRpc::XmlRpcValue ports;
     ros::param::get("~ports", ports);
-    parsePortInformation(ports);
+
+    if (!parsePortInformation(ports))
+    {
+      ROS_ERROR("Unable to parse ports from config!");
+      return false;
+    }
 
     // shutdown if no valid ports
     if (dynamixel_ports_.size() == 0)
@@ -240,12 +245,6 @@ bool DynamixelInterfaceController::parseParameters(void)
     dataport_publisher_ = nh_->advertise<dynamixel_interface::DataPorts>("external_dataports", 1);
   }
 
-  // advertise the joint state input and output topics
-  joint_state_publisher_ = nh_->advertise<sensor_msgs::JointState>("joint_states", 1);
-
-  joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("desired_joint_states", 1,
-                                                                    &DynamixelInterfaceController::jointStateCallback,
-                                                                    this, ros::TransportHints().tcpNoDelay());
   parameters_parsed_ = true;
   return true;
 }
@@ -373,7 +372,11 @@ bool DynamixelInterfaceController::parsePortInformation(XmlRpc::XmlRpcValue port
       servos = ports[i]["servos"];
     }
 
-    parseServoInformation(port, servos);
+    if (!parseServoInformation(port, servos))
+    {
+      ROS_ERROR("Unable to parse servo information for port %s", port.port_name.c_str());
+      return false;
+    }
 
     // add port only if dynamixels were found
     if (port.joints.size() > 0)
@@ -524,6 +527,7 @@ bool DynamixelInterfaceController::parseServoInformation(PortInfo &port, XmlRpc:
 
     // add joint to port
     port.joints[info.joint_name] = info;
+    ROS_INFO("Added joint %s (%d) to port %s", info.joint_name.c_str(), info.id, port.port_name.c_str());
   }
 
   return true;
@@ -555,6 +559,13 @@ bool DynamixelInterfaceController::initialise()
     }
   }
 
+  // advertise the joint state input and output topics
+  joint_state_publisher_ = nh_->advertise<sensor_msgs::JointState>("joint_states", 1);
+  joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("desired_joint_states", 1,
+                                                                    &DynamixelInterfaceController::jointStateCallback,
+                                                                    this, ros::TransportHints().tcpNoDelay());
+
+  initialised_ = true;
   return true;
 }
 
@@ -684,7 +695,6 @@ bool DynamixelInterfaceController::initialiseDynamixel(PortInfo &port, Dynamixel
   // only add if ping was successful
   bool success = true;
   uint16_t model_number = 0;
-  bool t_e;
 
   if (!port.driver->getModelNumber(dynamixel.id, &model_number))
   {
@@ -742,7 +752,7 @@ bool DynamixelInterfaceController::initialiseDynamixel(PortInfo &port, Dynamixel
   }
 
   // maintain torque state in motor
-  if (!port.driver->getTorqueEnabled(dynamixel.id, dynamixel.model_spec->type, &t_e))
+  if (!port.driver->getTorqueEnabled(dynamixel.id, dynamixel.model_spec->type, &dynamixel.torque_enabled))
   {
     ROS_ERROR("Unable to get torque_enable status for dynamixel id %d", dynamixel.id);
     return false;
@@ -802,7 +812,7 @@ bool DynamixelInterfaceController::initialiseDynamixel(PortInfo &port, Dynamixel
   }
 
   // preserve torque enable state
-  if (!port.driver->setTorqueEnabled(dynamixel.id, dynamixel.model_spec->type, t_e))
+  if (!port.driver->setTorqueEnabled(dynamixel.id, dynamixel.model_spec->type, dynamixel.torque_enabled))
   {
     ROS_ERROR("Unable to reset torque_enable status for dynamixel id %d", dynamixel.id);
     return false;
@@ -911,37 +921,6 @@ void DynamixelInterfaceController::loop(void)
   dynamixel_interface::ServoDiags diags_reads[dynamixel_ports_.size()];
 
   std::unique_lock<std::mutex> lock(write_mutex_);
-
-  // enable torque only once we start receiving commands
-  if (write_ready_ && first_write_)
-  {
-    // loop over every port
-    for (int i = 0; i < dynamixel_ports_.size(); i++)
-    {
-      // get every joint on that port
-      for (auto &it : dynamixel_ports_[i].joints)
-      {
-        // enable motor torque
-        if (!dynamixel_ports_[i].driver->setTorqueEnabled(it.second.id, it.second.model_spec->type, 1))
-        {
-          ROS_ERROR("failed to enable torque on motor %d", it.second.id);
-        }
-
-        // if in position control mode we enable the default join movement speed (profile velocity)
-        if (control_type_ == kModePositionControl)
-        {
-          int regVal =
-            static_cast<int>((static_cast<double>(it.second.max_vel) * it.second.model_spec->velocity_radps_to_reg));
-          dynamixel_ports_[i].driver->setProfileVelocity(it.second.id, it.second.model_spec->type, regVal);
-        }
-
-        ROS_INFO("Torque enabled on %s joint", it.first.c_str());
-        it.second.torque_enabled = true;
-      }
-    }
-
-    first_write_ = false;
-  }
 
   // Control loop rate of dataport reads
   if (dataport_rate_ > 0)
@@ -1136,6 +1115,30 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
 
     // Retrieve dynamixel information
     DynamixelInfo *info = &port.joints[joint_commands.name[i]];
+
+    // enable torque if not already
+    if (!info->torque_enabled)
+    {
+      if (port.driver->setTorqueEnabled(info->id, info->model_spec->type, true))
+      {
+        // if in position control mode we enable the default join movement speed (profile velocity)
+        if (control_type_ == kModePositionControl)
+        {
+          int regVal = static_cast<int>((static_cast<double>(info->max_vel) * info->model_spec->velocity_radps_to_reg));
+
+          if (!port.driver->setProfileVelocity(info->id, info->model_spec->type, regVal))
+          {
+            ROS_WARN("Unable to set profile velocity on %s joint", info->joint_name.c_str());
+          }
+        }
+        ROS_INFO("Torque enabled on %s joint", info->joint_name.c_str());
+        info->torque_enabled = true;
+      }
+      else
+      {
+        ROS_WARN("Unable to enable torque on %s joint", info->joint_name.c_str());
+      }
+    }
 
     // calculate the position register value for the motor
     if ((has_pos) && (control_type_ == kModePositionControl))
