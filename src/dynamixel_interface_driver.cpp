@@ -109,10 +109,9 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(const std::string &device, in
     ROS_INFO("Using group write methods");
   }
 
-  // Initialize PortHandler instance
-  // Set the port path
-  // Get methods and members of PortHandlerLinux
-  portHandler_ = std::unique_ptr<dynamixel::PortHandler>(dynamixel::PortHandler::getPortHandler(device.c_str()));
+  // set device and baud rate
+  device_ = device;
+  baud_rate_ = baud;
 
   // set indicator for using group comms
   use_legacy_protocol_ = use_legacy_protocol;
@@ -121,6 +120,11 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(const std::string &device, in
 
   // intialise failsafe fallback counter
   single_read_fallback_counter_ = 0;
+
+  // Initialize PortHandler instance
+  // Set the port path
+  // Get methods and members of PortHandlerLinux
+  portHandler_ = std::unique_ptr<dynamixel::PortHandler>(dynamixel::PortHandler::getPortHandler(device.c_str()));
 
   // set packet handler for requested protocol version
   if (use_legacy_protocol_)
@@ -133,19 +137,39 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(const std::string &device, in
     packetHandler_ = std::unique_ptr<dynamixel::PacketHandler>(dynamixel::PacketHandler::getPacketHandler(2.0));
   }
 
+}
+
+/// Destructor. Closes and releases serial port.
+DynamixelInterfaceDriver::~DynamixelInterfaceDriver()
+{
+  if (initialised_)
+  {
+    portHandler_->closePort();
+  }
+}
+
+/// Loads in the motor specifications from the motor_data.yaml file
+/// @returns true if load successful, false otherwise
+bool DynamixelInterfaceDriver::loadMotorData(void)
+{
+
+  ROS_INFO("Initialising Dynamixel Port Driver");
+
   // read in motor data yaml file
   // load the file containing model info, we're not using the param server here
   std::string path = ros::package::getPath("dynamixel_interface");
   path += "/config/motor_data.yaml";
   YAML::Node doc;
+  ROS_INFO("Loading motor data from file");
   try
   {
     doc = YAML::LoadFile(path);
   }
-  catch(const YAML::BadFile &exception)
+  catch (const YAML::BadFile &exception)
   {
     ROS_ERROR("Unable to load motor_data.yaml file, expected at %s", path.c_str());
-    ros::shutdown();
+    return false;
+    ;
   }
 
   // read in the dynamixel model information from the motor data file
@@ -226,33 +250,43 @@ DynamixelInterfaceDriver::DynamixelInterfaceDriver(const std::string &device, in
     model_specs_.insert(std::pair<int, const DynamixelSpec>(spec.model_number, spec));
   }
 
+  initialised_ = true;
+  return true;
+}
+
+/// Parses Motor Data, Opens port and sets up driver
+/// @returns true if initialisation successful, false otherwise
+bool DynamixelInterfaceDriver::initialise(void)
+{
+  if (!loadMotorData())
+  {
+    ROS_ERROR("Unable to parse motor_data.yaml file");
+    return false;
+  }
+
   // Open port
   if (portHandler_->openPort())
   {
-    ROS_INFO("Succeeded to open the port(%s)!", device.c_str());
+    ROS_INFO("Succeeded to open the port(%s)!", device_.c_str());
   }
   else
   {
     ROS_ERROR("Failed to open the port!");
-    ros::shutdown();
+    return false;
   }
 
   // Set port baudrate
-  if (portHandler_->setBaudRate(baud))
+  if (portHandler_->setBaudRate(baud_rate_))
   {
     ROS_INFO("Succeeded to change the baudrate(%d)\n!", portHandler_->getBaudRate());
   }
   else
   {
     ROS_ERROR("Failed to change the baudrate!");
-    ros::shutdown();
+    return false;
   }
-}
 
-/// Destructor. Closes and releases serial port.
-DynamixelInterfaceDriver::~DynamixelInterfaceDriver()
-{
-  portHandler_->closePort();
+  return true;
 }
 
 /// Ping the specified id, used to check if a dynamixel with that ID is on the bus
@@ -305,8 +339,7 @@ bool DynamixelInterfaceDriver::getModelNumber(int servo_id, uint16_t *model_numb
 /// @param[in] type the type of the servo to read from
 /// @param[out] error Stores the returned error code
 /// @return True on comm success, false otherwise.
-bool DynamixelInterfaceDriver::getErrorStatus(int servo_id, DynamixelSeriesType type,
-                                                    uint8_t *error_status) const
+bool DynamixelInterfaceDriver::getErrorStatus(int servo_id, DynamixelSeriesType type, uint8_t *error_status) const
 {
   uint8_t error;
   int dxl_comm_result = -1;
@@ -406,8 +439,7 @@ bool DynamixelInterfaceDriver::getMaxTorque(int servo_id, DynamixelSeriesType ty
 /// @param[in] type the type of the servo to read from
 /// @param[out] torque_enabled Stores the status of torque enable
 /// @return True on comm success, false otherwise.
-bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, DynamixelSeriesType type,
-                                                      bool *torque_enabled) const
+bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, DynamixelSeriesType type, bool *torque_enabled) const
 {
   uint8_t error;
   int dxl_comm_result;
@@ -458,8 +490,7 @@ bool DynamixelInterfaceDriver::getTorqueEnabled(int servo_id, DynamixelSeriesTyp
 /// @param[in] type the type of the servo to read from
 /// @param[out] target_velocity Stores the value returned
 /// @return True on comm success, false otherwise.
-bool DynamixelInterfaceDriver::getTargetTorque(int servo_id, DynamixelSeriesType type,
-                                                     int16_t *target_torque) const
+bool DynamixelInterfaceDriver::getTargetTorque(int servo_id, DynamixelSeriesType type, int16_t *target_torque) const
 {
   uint8_t error;
   int dxl_comm_result;
@@ -511,7 +542,7 @@ bool DynamixelInterfaceDriver::getTargetTorque(int servo_id, DynamixelSeriesType
 /// @param[in] length The number of bytes to read consecutively from the control table
 /// @param[out] response Array to store the raw dynamixel response.
 bool DynamixelInterfaceDriver::readRegisters(int servo_id, uint16_t address, uint16_t length,
-                                                   std::vector<uint8_t> *response) const
+                                             std::vector<uint8_t> *response) const
 {
   uint8_t error;
   int dxl_comm_result;
@@ -1016,7 +1047,7 @@ bool DynamixelInterfaceDriver::getBulkDiagnosticInfo(std::unordered_map<int, Dyn
 /// @param[in] length The number of bytes to read consecutively from the control table
 /// @returns true if at least one dynamixel was successfully read
 bool DynamixelInterfaceDriver::bulkRead(std::unordered_map<int, SyncData*> &read_data, uint16_t address,
-                                              uint16_t length) const
+                                        uint16_t length) const
 {
   int dxl_comm_result;
   bool success = false;
@@ -1076,7 +1107,7 @@ bool DynamixelInterfaceDriver::bulkRead(std::unordered_map<int, SyncData*> &read
 /// @param[in] length The number of bytes to read consecutively from the control table
 /// @returns true if at least one dynamixel was successfully read
 bool DynamixelInterfaceDriver::syncRead(std::unordered_map<int, SyncData*> &read_data, uint16_t address,
-                                              uint16_t length) const
+                                        uint16_t length) const
 {
   int dxl_comm_result;
   bool success = false;
@@ -1148,7 +1179,7 @@ bool DynamixelInterfaceDriver::syncRead(std::unordered_map<int, SyncData*> &read
 /// @param[in] operating_mode The method of control
 /// @return True on comm success and valid operating mode, false otherwise.
 bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesType type,
-                                                      DynamixelControlMode operating_mode) const
+                                                DynamixelControlMode operating_mode) const
 {
   uint8_t error;
   int dxl_comm_result = 0;
@@ -1242,7 +1273,7 @@ bool DynamixelInterfaceDriver::setOperatingMode(int servo_id, DynamixelSeriesTyp
 /// @param[in] max_angle the maximum angle limit (in encoder values)
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setAngleLimits(int servo_id, DynamixelSeriesType type, int32_t min_angle,
-                                                    int32_t max_angle) const
+                                              int32_t max_angle) const
 {
   if (setMaxAngleLimit(servo_id, type, max_angle) == true)
   {
@@ -1547,8 +1578,8 @@ bool DynamixelInterfaceDriver::setTorqueControlEnabled(int servo_id, DynamixelSe
 /// @param[in] i_gain The integral gain value to write
 /// @param[in] d_gain The derivative gain value to write
 /// @return True on comm success, false otherwise.
-bool DynamixelInterfaceDriver::setPositionPIDGains(int servo_id, DynamixelSeriesType type, double p_gain,
-                                                         double i_gain, double d_gain) const
+bool DynamixelInterfaceDriver::setPositionPIDGains(int servo_id, DynamixelSeriesType type, double p_gain, double i_gain,
+                                                   double d_gain) const
 {
   uint16_t p_val, i_val, d_val;
 
@@ -1613,8 +1644,7 @@ bool DynamixelInterfaceDriver::setPositionPIDGains(int servo_id, DynamixelSeries
 /// @param[in] type the type of the servo to read from
 /// @param[in] gain The proportional gain value to write
 /// @return True on comm success, false otherwise.
-bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, DynamixelSeriesType type,
-                                                                 uint16_t gain) const
+bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, DynamixelSeriesType type, uint16_t gain) const
 {
   uint8_t error;
   int dxl_comm_result;
@@ -1629,8 +1659,8 @@ bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, Dynamix
       return false;
 
     case kSeriesLegacyMX:
-      dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, kRegLegacy_PGain, (uint8_t)(gain & 0x00FF), &error);
+      dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, kRegLegacy_PGain,
+                                                       (uint8_t)(gain & 0x00FF), &error);
       break;
 
     case kSeriesMX:
@@ -1665,8 +1695,7 @@ bool DynamixelInterfaceDriver::setPositionProportionalGain(int servo_id, Dynamix
 /// @param[in] type the type of the servo to read from
 /// @param[in] gain The integral gain value to write
 /// @return True on comm success, false otherwise.
-bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, DynamixelSeriesType type,
-                                                             uint16_t gain) const
+bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, DynamixelSeriesType type, uint16_t gain) const
 {
   uint8_t error;
   int dxl_comm_result;
@@ -1681,8 +1710,8 @@ bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, DynamixelSe
       return false;
 
     case kSeriesLegacyMX:
-      dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, kRegLegacy_IGain, (uint8_t)(gain & 0x00FF), &error);
+      dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, kRegLegacy_IGain,
+                                                       (uint8_t)(gain & 0x00FF), &error);
       break;
 
     case kSeriesMX:
@@ -1715,8 +1744,7 @@ bool DynamixelInterfaceDriver::setPositionIntegralGain(int servo_id, DynamixelSe
 /// @param[in] type the type of the servo to read from
 /// @param[in] gain The derivative gain value to write
 /// @return True on comm success, false otherwise.
-bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, DynamixelSeriesType type,
-                                                               uint16_t gain) const
+bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, DynamixelSeriesType type, uint16_t gain) const
 {
   uint8_t error;
   int dxl_comm_result;
@@ -1731,8 +1759,8 @@ bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, Dynamixel
       return false;
 
     case kSeriesLegacyMX:
-      dxl_comm_result =
-        packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, kRegLegacy_DGain, (uint8_t)(gain & 0x00FF), &error);
+      dxl_comm_result = packetHandler_->write1ByteTxRx(portHandler_.get(), servo_id, kRegLegacy_DGain,
+                                                       (uint8_t)(gain & 0x00FF), &error);
       break;
 
     case kSeriesMX:
@@ -1768,7 +1796,7 @@ bool DynamixelInterfaceDriver::setPositionDerivativeGain(int servo_id, Dynamixel
 /// @param[in] d_gain The derivative gain value to write
 /// @return True on comm success, false otherwise.
 bool DynamixelInterfaceDriver::setVelocityPIDGains(int servo_id, DynamixelSeriesType type, double p_gain,
-                                                         double i_gain) const
+                                                   double i_gain) const
 {
   uint16_t p_val, i_val, d_val;
 
@@ -1817,8 +1845,7 @@ bool DynamixelInterfaceDriver::setVelocityPIDGains(int servo_id, DynamixelSeries
 /// @param[in] type the type of the servo to read from
 /// @param[in] gain The proportional gain value to write
 /// @return True on comm success, false otherwise.
-bool DynamixelInterfaceDriver::setVelocityProportionalGain(int servo_id, DynamixelSeriesType type,
-                                                                 uint16_t gain) const
+bool DynamixelInterfaceDriver::setVelocityProportionalGain(int servo_id, DynamixelSeriesType type, uint16_t gain) const
 {
   uint8_t error;
   int dxl_comm_result;
@@ -1864,8 +1891,7 @@ bool DynamixelInterfaceDriver::setVelocityProportionalGain(int servo_id, Dynamix
 /// @param[in] type the type of the servo to read from
 /// @param[in] gain The integral gain value to write
 /// @return True on comm success, false otherwise.
-bool DynamixelInterfaceDriver::setVelocityIntegralGain(int servo_id, DynamixelSeriesType type,
-                                                             uint16_t gain) const
+bool DynamixelInterfaceDriver::setVelocityIntegralGain(int servo_id, DynamixelSeriesType type, uint16_t gain) const
 {
   uint8_t error;
   int dxl_comm_result;
@@ -1924,8 +1950,8 @@ bool DynamixelInterfaceDriver::setProfileVelocity(int servo_id, DynamixelSeriesT
     case kSeriesDX:
     case kSeriesEX:
     case kSeriesLegacyMX:
-      dxl_comm_result =
-        packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, kRegLegacy_MovingSpeed, (uint16_t)velocity, &error);
+      dxl_comm_result = packetHandler_->write2ByteTxRx(portHandler_.get(), servo_id, kRegLegacy_MovingSpeed,
+                                                       (uint16_t)velocity, &error);
       return false;
 
     case kSeriesMX:
@@ -2179,7 +2205,7 @@ bool DynamixelInterfaceDriver::setMultiTorque(std::unordered_map<int, SyncData> 
 /// @param[in] length The number of bytes to write
 /// @returns true on successful write, false otherwise
 bool DynamixelInterfaceDriver::syncWrite(std::unordered_map<int, SyncData> &write_data, uint16_t address,
-                                               uint16_t length) const
+                                         uint16_t length) const
 {
   uint8_t dxl_comm_result;
   bool success = true;

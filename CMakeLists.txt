@@ -74,27 +74,26 @@ catkin_package(
 ## Build ##
 ###########
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-add_library(dynamixel_interface_driver src/dynamixel_interface_driver.cpp)
-add_dependencies(dynamixel_interface_driver ${dynamixel_interface_EXPORTED_TARGETS})
-target_include_directories(dynamixel_interface_driver
+## Library
+add_library(dynamixel_interface src/dynamixel_interface_controller.cpp src/dynamixel_interface_driver.cpp)
+add_dependencies(dynamixel_interface ${dynamixel_interface_EXPORTED_TARGETS})
+target_include_directories(dynamixel_interface
   PRIVATE
     include
   )
-target_include_directories(dynamixel_interface_driver SYSTEM
+target_include_directories(dynamixel_interface SYSTEM
   PRIVATE
     "${catkin_INCLUDE_DIRS}"
     "${yaml-cpp_INCLUDE_DIRS}"
   )
-target_link_libraries(dynamixel_interface_driver
+target_link_libraries(dynamixel_interface
   PRIVATE
     yaml-cpp
     ${catkin_LIBRARIES}
     ${yaml-cpp_LIBRARIES}
   )
 
-add_executable(dynamixel_interface_controller_node src/dynamixel_interface_controller.cpp src/dynamixel_interface_driver.cpp)
+add_executable(dynamixel_interface_controller_node src/dynamixel_interface_main.cpp)
 add_dependencies(dynamixel_interface_controller_node ${dynamixel_interface_EXPORTED_TARGETS} dynamixel_interface_generate_messages_cpp)
 target_include_directories(dynamixel_interface_controller_node
   PRIVATE
@@ -107,6 +106,7 @@ target_include_directories(dynamixel_interface_controller_node SYSTEM
 )
 target_link_libraries(dynamixel_interface_controller_node
   PRIVATE
+    dynamixel_interface
     yaml-cpp
     ${catkin_LIBRARIES}
     ${yaml-cpp_LIBRARIES}
@@ -118,7 +118,7 @@ target_link_libraries(dynamixel_interface_controller_node
 #############
 
 ## Mark executables and/or libraries for installation
-install(TARGETS dynamixel_interface_driver dynamixel_interface_controller_node
+install(TARGETS dynamixel_interface dynamixel_interface_controller_node
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
