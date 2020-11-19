@@ -1072,6 +1072,7 @@ void DynamixelInterfaceController::loop(void)
   // publish joint states
   if (read_msg.name.size() > 0)
   {
+    read_msg.header.stamp = ros::Time::now();
     joint_state_publisher_.publish(read_msg);
   }
 
@@ -1485,7 +1486,6 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
       // put effort in message
       read_msg.effort.push_back(effort);
     }
-    read_msg.header.stamp = ros::Time::now();
   }
   else
   {
