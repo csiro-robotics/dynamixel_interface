@@ -116,6 +116,7 @@ struct SyncData
   int id;                     ///< id of dynamixel
   DynamixelSeriesType type;   ///< type of dynamixel
   bool success;               ///< bool indicating comms success
+  uint8_t error;              ///< Error code
   std::vector<uint8_t> data;  ///< IO data array
 };
 

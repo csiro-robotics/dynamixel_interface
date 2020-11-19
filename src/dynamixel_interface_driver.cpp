@@ -1087,6 +1087,8 @@ bool DynamixelInterfaceDriver::bulkRead(std::unordered_map<int, SyncData*> &read
       }
       it.second->success = true;
     }
+    // also get and store error code
+    GroupBulkRead.getError(it.first, &(it.second->error));
   }
 
   if (!success)
@@ -1155,6 +1157,8 @@ bool DynamixelInterfaceDriver::syncRead(std::unordered_map<int, SyncData*> &read
     {
       it.second->success = false;
     }
+    // also get and store error code
+    GroupSyncRead.getError(it.first, &(it.second->error));
   }
 
   if (!success)

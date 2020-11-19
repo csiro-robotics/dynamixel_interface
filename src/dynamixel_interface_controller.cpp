@@ -145,7 +145,6 @@ bool DynamixelInterfaceController::parseParameters(void)
   ros::param::param<double>("~loop_rate", loop_rate_, 50.0);
   ros::param::param<bool>("~disable_torque_on_shutdown", stop_motors_on_shutdown_, false);
 
-
   ros::param::param<bool>("~ignore_input_velocity", ignore_input_velocity_, false);
 
   ros::param::param<double>("~dataport_rate", dataport_rate_, 0.0);
@@ -1551,6 +1550,9 @@ void DynamixelInterfaceController::multiThreadedRead(PortInfo &port, sensor_msgs
         msg.name = it.first;
         msg.id = it.second.id;
         msg.model_name = it.second.model_spec->name;
+
+        // get error code
+        msg.error_code = diag_map[it.second.id].error;
 
         // get voltage (div 10 as units are 0.1V)
         msg.voltage = diag_map[it.second.id].voltage / 10.0;
