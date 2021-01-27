@@ -1077,13 +1077,13 @@ void DynamixelInterfaceController::loop(void)
   }
 
   // publish external dataport message
-  if ((read_dataport_) && (dataports_msg.states.size() > 0))
+  if ((read_dataport_) && (dataports_msg.states.size() > 0) && (dataport_rate_ > 0))
   {
     dataport_publisher_.publish(dataports_msg);
     read_dataport_ = false;
   }
 
-  if (read_diagnostics_ && (diags_msg.diagnostics.size() > 0))
+  if (read_diagnostics_ && (diags_msg.diagnostics.size() > 0) && (diagnostics_rate_ > 0))
   {
     diagnostics_publisher_.publish(diags_msg);
     read_diagnostics_ = false;
