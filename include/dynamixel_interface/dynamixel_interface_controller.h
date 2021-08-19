@@ -271,6 +271,7 @@ private:
   double loop_rate_;         ///< Desired loop rate (joint states are published at this rate)
   double diagnostics_rate_;  ///< Desired rate at which servo diagnostic information is published
   double dataport_rate_;     ///< Rate at which the pro external dataport is read
+  int recv_queue_size_ = 1;  ///< Receive queue size for desired_joint_states topic
 };
 
 }  // namespace dynamixel_interface
