@@ -149,6 +149,7 @@ bool DynamixelInterfaceController::parseParameters(void)
 
   ros::param::param<double>("~dataport_rate", dataport_rate_, 0.0);
   ros::param::param<double>("~diagnostics_rate", diagnostics_rate_, 0.0);
+  ros::param::param<int>("~recv_queue_size", recv_queue_size_, 1);
 
   ros::param::param<std::string>("~control_mode", mode, "Position");
 
@@ -161,7 +162,12 @@ bool DynamixelInterfaceController::parseParameters(void)
   {
     ROS_ERROR("Loop rate must be > 0!");
     return false;
-    ;
+  }
+
+  if (recv_queue_size_ <= 0)
+  {
+    ROS_ERROR("recv queue size must be >= 1");
+    return false;
   }
 
   if (diagnostics_rate_ < 0)
@@ -587,7 +593,7 @@ bool DynamixelInterfaceController::initialise()
 
   // advertise the joint state input and output topics
   joint_state_publisher_ = nh_->advertise<sensor_msgs::JointState>("joint_states", 1);
-  joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("desired_joint_states", 1,
+  joint_state_subscriber_ = nh_->subscribe<sensor_msgs::JointState>("desired_joint_states", recv_queue_size_,
                                                                     &DynamixelInterfaceController::jointStateCallback,
                                                                     this, ros::TransportHints().tcpNoDelay());
 
