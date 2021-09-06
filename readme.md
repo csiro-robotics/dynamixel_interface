@@ -1,4 +1,4 @@
-# The Dynamixel Interface Package
+# Dynamixel Interface
 
 This package aims to provide a scalable and easily configurable interface for controlling many dynamixel's across multiple serial devices. Currently the following series of motors are supported:
 
