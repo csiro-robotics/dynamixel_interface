@@ -22,17 +22,35 @@ Features:
 
 *current control not available on all models.
 
-## INSTALLATION NOTES
+## INSTALLATION
 
-This package depends on the dynamixel_sdk ROS package released by Robotis. To install the sdk:
+### Requirements
 
-``` bash
+* Ubuntu 18.04 LTS and ROS Melodic; or
+* Ubuntu 20.04 LTS and ROS Noetic
 
-sudo apt install ros-$ROS_DISTRO-dynamixel-sdk
+### Dependencies
 
+* [dynamixel_sdk](http://wiki.ros.org/dynamixel_sdk)
+
+### Building from source
+
+```bash
+mkdir -p catkin_ws/src
+cd catkin_ws/src
+git clone https://github.com/csiro-robotics/dynamixel_interface.git
+cd ..
+rosdep install --from-paths src --ignore-src -r -y
+catkin build
 ```
 
-Also required is for the user to have access to the dialout group (for serial communications)
+## USAGE NOTES
+
+(For detailed instructions, consult the tutorials in the subdirectory of this package)
+
+### Serial Access
+
+For serial communications, give the user access to the dialout group
 
 ```bash
 
@@ -40,13 +58,11 @@ sudo usermod -a -G dialout $USER
 
 ```
 
-## USAGE NOTES
-
-(For detailed setup instructions, consult the tutorials in the subdirectory of this package)
+### Operation
 
 To use the dynamixel_interface_controller to operate servos:
 
-- Create a controller_config.yaml with the necessary parameters for each servo (see the example in the config/ folder for an example and explanation of the various configuration options)
+- Create a controller_config.yaml with the necessary parameters for each servo (see the tutorials as well as the example in the config/ folder for an example and explanation of the various configuration options)
 - Launch the dynamixel_interface_controller_node, loading in the custom config file (see the example in the launch/ folder)
 
 During operation:
@@ -55,19 +71,17 @@ During operation:
 - Current joint states are published to /joint_states
 - Commands should be sent to /desired_joint_states
 - For each control mode
-  - Position Control: only position and velocity are considered in the command message, velocity controls the moving speed to the goal position of the dynamixel.
-    If no velocity is specified the default is used
+  - Position Control: only position and velocity are considered in the command message, velocity controls the moving speed to the goal position of the dynamixel. If no velocity is specified the default is used
   - Velocity Control: only the velocity value is considered
   - Torque Control: only the effort value is considered
 
   - Note that all non-empty arrays must have the same length as the array of joint_names, otherwise the command is invalid
 
-  A note on units:
+A note on units:
+
   - Positions are in radians
   - Velocities are in radians/second
   - Effort is in mA of current
-
-Dynamixel Interface Controller. Provides a simple abstracted interface that can control many dynamixels across multiple serial ports using only two topics.
 
 ## IMPROVING DRIVER PERFORMANCE
 
@@ -108,3 +122,19 @@ If setserial is not available as a command on your system, the value for the dev
 echo "1" | sudo tee /sys/bus/usb-serial/devices/<device>/latency_timer
 
 ```
+
+## Authors
+- Thomas Molnar
+- Ryan Steindl
+- Marisa Bucolo
+- Benjamin Tam
+- Jacob Oestreich
+
+## License
+This project is licensed under the CSIRO Open Source Software Licence Agreement (variation of the BSD / MIT License) - see the LICENSE file for details.
+
+## Contributing
+Thank you for being interested in contributing. We encourage the community to create new features and to fix bugs. If it is a new feature, please create a new issue via the Issue Tracker and describe the intended feature so that we can discuss the implementation. Else, search for the existing issue and comment on your proposed work. Please fork the repo, work on your changes and then send a pull request.
+
+## Issues
+Please report bugs using Issue Tracker or contact us via email shc-support@csiro.au.
