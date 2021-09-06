@@ -123,6 +123,13 @@ echo "1" | sudo tee /sys/bus/usb-serial/devices/<device>/latency_timer
 
 ```
 
+## Authors
+- Thomas Molnar
+- Ryan Steindl
+- Marisa Bucolo
+- Benjamin Tam
+- Jacob Oestreich
+
 ## License
 This project is licensed under the CSIRO Open Source Software Licence Agreement (variation of the BSD / MIT License) - see the LICENSE file for details.
 
