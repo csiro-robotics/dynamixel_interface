@@ -21,6 +21,7 @@
   <depend>roslib</depend>
   <depend>yaml-cpp</depend>
   <depend>xmlrpcpp</depend>
+  <depend>setserial</depend>
 
   <export>
   </export>
