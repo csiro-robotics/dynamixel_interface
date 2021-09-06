@@ -3,7 +3,7 @@
 # ABN 41 687 119 230
 #
 # Author: Tom Molnar
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(dynamixel_interface)
 
 # C++ standards setup.
