@@ -12,9 +12,10 @@ This package aims to provide a scalable and easily configurable interface for co
 
 Features:
 
+- Fast C++ implementation capable of controlling 10's of dynamixels at very high (>100Hz) rates.
 - Easily configure all dynamixels in a single yaml file
 - Synchronous across multiple serial ports (using threaded IO)
-- All dynamixel states are published to a single JointState message
+- All dynamixel states/commands are exchanged via a single sensor_msgs/JointState message
 - Supports position, velocity and current* control modes.
   - In position control mode, can supply profile velocities as well
 
@@ -56,7 +57,10 @@ catkin build
 
 ## USAGE NOTES
 
-(For detailed instructions, consult the tutorials in the subdirectory of this package)
+For detailed instructions, consult the tutorials in the subdirectory of this package:
+
+- [Tutorial 1: Using the controller](tutorials/tutorial_1_using_the_controller.md)
+- [Tutorial 2: Multi Port Communications](tutorials/tutorial_2_multi_port_communication.md)
 
 ### Serial Access
 
