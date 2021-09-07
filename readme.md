@@ -1,6 +1,26 @@
-# Dynamixel Interface
+# Dynamixel Interface: A Fast, Scalable Dynamixel Driver
 
-This package aims to provide a scalable and easily configurable interface for controlling many dynamixel's across multiple serial devices. Currently the following series of motors are supported:
+
+[![Version](https://img.shields.io/badge/Current%20version-1.0.0-orange "Version")](https://github.com/csiro-robotics/dynamixel_interface) [![License](
+https://img.shields.io/badge/License-BSD%2FMIT-blue "License")](https://github.com/csiro-robotics/dynamixel_interface/blob/master/LICENSE)
+
+<p align="center">
+<a href="https://research.csiro.au/robotics/our-work/research-areas/legged-robots/"><img alt="Gizmo Wizmo Zero" align="center" width="500" src="https://i.imgur.com/HCrmRDS.gif"/></a>
+</p>
+
+This package aims to provide a scalable and easily configurable interface for controlling many dynamixel's across multiple serial devices.
+
+Features:
+
+- Easily configure all dynamixels in a single yaml file
+- Synchronous across multiple serial ports (using threaded IO)
+- All dynamixel states are published to a single JointState message
+- Supports position, velocity and current* control modes.
+  - In position control mode, can supply profile velocities as well
+
+*current control not available on all models.
+
+Currently the following series of motors are supported:
 
 - AX
 - RX
@@ -11,16 +31,6 @@ This package aims to provide a scalable and easily configurable interface for co
 - PRO
 - PRO+
 - P
-
-Features:
-
-- Easily adjustable configuration file
-- Synchronous across multiple serial ports (using threaded IO)
-- All dynamixel states are published to a single message
-- Supports position, velocity and current* control modes.
-  - In position control mode, can supply profile velocities as well
-
-*current control not available on all models.
 
 ## INSTALLATION
 
