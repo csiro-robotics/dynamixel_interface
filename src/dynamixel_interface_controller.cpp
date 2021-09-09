@@ -1252,7 +1252,7 @@ void DynamixelInterfaceController::multiThreadedWrite(PortInfo &port, sensor_msg
       double rad_s_vel = joint_commands.velocity[i];
 
       // clamp to joint speed limit
-      rad_s_vel = std::clamp(rad_s_vel, -info->max_vel, info->max_vel);
+      rad_s_vel = std::min(std::max(rad_s_vel, -info->max_vel), info->max_vel);
 
       // convert to motor encoder value
       int vel = (int)((rad_s_vel * info->model_spec->velocity_radps_to_reg));
