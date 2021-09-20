@@ -10,51 +10,50 @@ This tutorial assumes that you have a package setup according to the previous tu
 
 ```yaml
 
-publish_rate: 200                 # desired rate for joint state updates. actual rate may be less depending on number
+# GLOBAL OPERATION PARAMETERS
+loop_rate: 100                    # desired rate for joint state updates. actual rate may be less depending on number
                                   # of dynamixels on each port
-control_mode: Position            # control mode, either 'Position', 'Velocity', or 'Torque'
-disable_torque_on_shutdown: true  # with this enabled the servos will switch off when the controller closes
-echo_joint_commands: false        # debug flag to echo write commands sent to the controller, useful for measuring write rates
+control_mode: position            # control mode, either 'position', 'velocity', or 'effort'
+disable_torque_on_shutdown: true  # with this enabled the motors will switch off when the controller closes
+ignore_input_velocity: false      # ignore input velocity commands in position mode (no profile velocity)
+diagnostics_rate: 1               # rate to publish diagnostic information
+dataport_rate: 1                  # rate to read from dynamixel external dataports
 
-## The below values are used as global defaults and are applied for each servo unless overridden in the entry for the servo below
-
-global_joint_speed: 5.0           # maximum joint speed (rad/s) (in position or velocity control)
+# The below values are used as global defaults and are applied for each servo unless overridden in the entry for the servo below
+global_max_vel: 5.0               # maximum joint speed (rad/s) (in position or velocity control)
 global_torque_limit: 1.0          # maximum motor torque for all modes, given as a fraction of rated max (0-1)
-global_p_gain: -1.0               # proportional gain value (values > 0 are set, -1.0 indicates to leave on default)
-global_i_gain: -1.0               # integral gain value (values > 0 are set, -1.0 indicates to leave on default)
-global_d_gain: -1.0               # derivative gain value (values > 0 are set, -1.0 indicates to leave on default)
 
-## PORT AND SERVO CONFIGURATIONS
+# PORT AND SERVO CONFIGURATIONS
 ports:
+
   # PORT LIST
-  - name: Port_1                  # name for this port in config
-    device: /dev/ttyUSB0          # serial device this port will communicate on
-    baudrate: 2000000             # baudrate in use (see dynamixel_driver.h for valid values)
-    series: MX                    # motor series in use, must be 'MX', 'XM', or 'PRO'
+  - name: Port_1               # name for this port in config
+    device: /dev/ttyUSB0       # serial device this port will communicate on
+    baudrate: 1000000          # baudrate in use
+    use_legacy_protocol: false # wether to use new 2.0 protocol (false) or legacy 1.0 protocol (true)
+    group_read_enabled: true   # specify whether to use group comms for reading
+    group_write_enabled: true  # specify whether to use group comms for writing
     servos:
-    # SERVO LIST FOR THIS PORT
+        # SERVO LIST FOR THIS PORT
         - id: 1                   # (ID set in servo eeprom, must be unique on this port)
           joint_name: joint_1     # (MUST BE UNIQUE ACROSS ALL PORTS)
           #
           # The three values below are mandatory, they define the orientation and zeroing of the dynamixel:
           #
-          init: 2048              # initial (0 rad) servo position (in raw encoder count)
-          min: 0                  # minimum servo position (in raw encoder count)
-          max: 4095               # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
+          zero_pos: 2048          # initial (0 rad) servo position (in raw encoder count)
+          min_pos: 0              # minimum servo position (in raw encoder count)
+          max_pos: 4095           # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
           #
           # The below arguments are all optional and override the global values:
           #
           joint_speed: 5.0        # maximum joint speed (rad/s) (in position or velocity control)
           torque_limit: 1.0       # maximum motor torque for all modes, given as a fraction of rated max (0-1)
-          p_gain: -1.0            # proportional gain value (values > 0 are set, -1.0 indicates to leave on default)
-          i_gain: -1.0            # integral gain value (values > 0 are set, -1.0 indicates to leave on default)
-          d_gain: -1.0            # derivative gain value (values > 0 are set, -1.0 indicates to leave on default)
 
         - id: 2
           joint_name: joint_2
-          init: 2048
-          min: 0
-          max: 4095
+          zero_pos: 2048
+          min_pos: 0
+          max_pos: 4095
           #
           # This servo doesn't have any optional values defined, the global defaults will be used
           #
@@ -74,15 +73,15 @@ Adding a second serial port is very very easy, simply paste in the following at 
     servos:
         - id: 1               # id only needs to be unique for each port and so id 1 can be reused here
           joint_name: joint_3 # name DOES have to be unique though, so we continue the naming scheme
-          init: 1000
-          min: 1000
+          zero_pos: 1000
+          min_pos: 1000
           max: 3000
 
         - id: 2
           joint_name: joint_4
-          init: 2048
-          min: 0
-          max: 4095
+          zero_pos: 2048
+          min_pos: 0
+          max_pos: 4095
 
 ```
 
