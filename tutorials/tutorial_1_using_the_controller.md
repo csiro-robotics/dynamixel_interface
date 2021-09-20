@@ -63,19 +63,19 @@ ports:
     group_write_enabled: true  # specify whether to use group comms for writing
     servos:
         # SERVO LIST FOR THIS PORT
-        - id: 1                   # (ID set in servo eeprom, must be unique on this port)
-          joint_name: joint_1     # (MUST BE UNIQUE ACROSS ALL PORTS)
+        - id: 1                # (ID set in servo eeprom, must be unique on this port)
+          joint_name: joint_1  # (MUST BE UNIQUE ACROSS ALL PORTS)
           #
           # The three values below are mandatory, they define the orientation and zeroing of the dynamixel:
           #
-          zero_pos: 2048          # initial (0 rad) servo position (in raw encoder count)
-          min_pos: 0              # minimum servo position (in raw encoder count)
-          max_pos: 4095           # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
+          zero_pos: 2048       # initial (0 rad) servo position (in raw encoder count)
+          min_pos: 0           # minimum servo position (in raw encoder count)
+          max_pos: 4095        # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
           #
           # The below arguments are all optional and override the global values:
           #
-          joint_speed: 5.0        # maximum joint speed (rad/s) (in position or velocity control)
-          torque_limit: 1.0       # maximum motor torque for all modes, given as a fraction of rated max (0-1)
+          max_vel: 5.0         # maximum joint speed (rad/s) (in position or velocity control)
+          torque_limit: 1.0    # maximum motor torque for all modes, given as a fraction of rated max (0-1)
 
         - id: 2
           joint_name: joint_2
