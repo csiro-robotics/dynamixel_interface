@@ -31,7 +31,7 @@ Next, create the config file. In the config folder, create a file named controll
 ```yaml
 
 # GLOBAL OPERATION PARAMETERS
-publish_rate: 20                  # desired rate for joint state updates. actual rate may be less depending on number
+loop_rate: 100                    # desired rate for joint state updates. actual rate may be less depending on number
                                   # of dynamixels on each port
 control_mode: position            # control mode, either 'position', 'velocity', or 'effort'
 disable_torque_on_shutdown: true  # with this enabled the motors will switch off when the controller closes
@@ -40,7 +40,7 @@ diagnostics_rate: 1               # rate to publish diagnostic information
 dataport_rate: 1                  # rate to read from dynamixel external dataports
 
 # The below values are used as global defaults and are applied for each servo unless overridden in the entry for the servo below
-global_joint_speed: 5.0           # maximum joint speed (rad/s) (in position or velocity control)
+global_max_vel: 5.0               # maximum joint speed (rad/s) (in position or velocity control)
 global_torque_limit: 1.0          # maximum motor torque for all modes, given as a fraction of rated max (0-1)
 
 ```
@@ -63,25 +63,25 @@ ports:
     group_write_enabled: true  # specify whether to use group comms for writing
     servos:
         # SERVO LIST FOR THIS PORT
-        - id: 1                   # (ID set in servo eeprom, must be unique on this port)
-          joint_name: joint_1     # (MUST BE UNIQUE ACROSS ALL PORTS)
+        - id: 1                # (ID set in servo eeprom, must be unique on this port)
+          joint_name: joint_1  # (MUST BE UNIQUE ACROSS ALL PORTS)
           #
           # The three values below are mandatory, they define the orientation and zeroing of the dynamixel:
           #
-          init: 2048              # initial (0 rad) servo position (in raw encoder count)
-          min: 0                  # minimum servo position (in raw encoder count)
-          max: 4095               # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
+          zero_pos: 2048       # initial (0 rad) servo position (in raw encoder count)
+          min_pos: 0           # minimum servo position (in raw encoder count)
+          max_pos: 4095        # maximum servo position, Note when MIN > MAX ROTATION IS REVERSED
           #
           # The below arguments are all optional and override the global values:
           #
-          joint_speed: 5.0        # maximum joint speed (rad/s) (in position or velocity control)
-          torque_limit: 1.0       # maximum motor torque for all modes, given as a fraction of rated max (0-1)
+          max_vel: 5.0         # maximum joint speed (rad/s) (in position or velocity control)
+          torque_limit: 1.0    # maximum motor torque for all modes, given as a fraction of rated max (0-1)
 
         - id: 2
           joint_name: joint_2
-          init: 2048
-          min: 0
-          max: 4095
+          zero_pos: 2048
+          min_pos: 0
+          max_pos: 4095
           #
           # This servo doesn't have any optional values defined, the global defaults will be used
           #
@@ -109,8 +109,8 @@ Then, in the launch folder, create a file named dynamixel_interface_controller.l
 ```xml
 
 <launch>
-  <node name="dynamixel_interface_node" pkg="dynamixel_interface_controller" type="dynamixel_interface_controller_node" output="screen">
-    <rosparam command="load" file="$(find dynamixel_interface_controller)/config/controller_config.yaml" />
+  <node name="dynamixel_interface_node" pkg="dynamixel_interface" type="dynamixel_interface_controller_node" output="screen">
+    <rosparam command="load" file="$(find dynamixel_interface)/config/controller_config.yaml" />
   </node>
 </launch>
 
