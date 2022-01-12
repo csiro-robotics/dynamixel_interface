@@ -699,7 +699,7 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
       // read data
       if (use_group_read_)
       {
-        bulkRead(read_map, kRegLegacyPro_PresentPosition, 10);  // bulk method
+        bulkRead(read_map, kRegLegacyPro_PresentPosition, 12);  // bulk method
       }
       else
       {
@@ -721,7 +721,7 @@ bool DynamixelInterfaceDriver::getBulkState(std::unordered_map<int, DynamixelSta
         {
           it.second.position = *(reinterpret_cast<int32_t*>(&it.second.data[0]));
           it.second.velocity = *(reinterpret_cast<int32_t*>(&it.second.data[4]));
-          it.second.effort = *(reinterpret_cast<int16_t*>(&it.second.data[8]));
+          it.second.effort = *(reinterpret_cast<int16_t*>(&it.second.data[10]));
           success = true;
         }
       }

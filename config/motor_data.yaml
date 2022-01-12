@@ -447,7 +447,7 @@
   series: LP
   external_ports: true
   encoder_cpr: 303751
-  velocity_radps_to_reg: 300.0
+  velocity_radps_to_reg: 2900.599
   effort_reg_max: 1395
   effort_reg_to_mA: 4.028
 
